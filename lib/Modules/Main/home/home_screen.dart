@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../Widgets/custom_card.dart';
-import '../../../Widgets/custom_button.dart';
+import '../../../Widgets/translated_custom_button.dart';
+import '../../../Widgets/translated_text.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -51,15 +52,15 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Welcome to Alifi',
+              TranslatedText(
+                'home.welcome',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: AppTheme.primaryGreen,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              Text(
-                'Your pet care companion',
+              TranslatedText(
+                'home.subtitle',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
                 ),
@@ -101,56 +102,61 @@ class HomeScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Quick Actions',
+        TranslatedText(
+          'home.quick_actions',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w600,
           ),
         ),
         SizedBox(height: 16.h),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 12.w,
-          mainAxisSpacing: 12.h,
-          childAspectRatio: 0.9,
+        Row(
           children: [
-            _buildQuickActionCard(
-              context,
-              icon: Icons.medical_services,
-              title: 'Veterinary\nConsultation',
-              color: AppTheme.primaryGreen,
-              onTap: () {
-                // TODO: Navigate to veterinary
-              },
+            Expanded(
+              child: TranslatedCustomButton(
+                textKey: 'home.lost_pet',
+                icon: Icons.search,
+                type: ButtonType.secondary,
+                onPressed: () {
+                  // TODO: Navigate to lost pet report
+                },
+              ),
             ),
-            _buildQuickActionCard(
-              context,
-              icon: Icons.search,
-              title: 'Lost & Found\nPets',
-              color: AppTheme.primaryOrange,
-              onTap: () {
-                // TODO: Navigate to lost & found
-              },
+            SizedBox(width: 12.w),
+            Expanded(
+              child: TranslatedCustomButton(
+                textKey: 'home.found_pet',
+                icon: Icons.pets,
+                type: ButtonType.secondary,
+                onPressed: () {
+                  // TODO: Navigate to found pet report
+                },
+              ),
             ),
-            _buildQuickActionCard(
-              context,
-              icon: Icons.store,
-              title: 'Pet Stores\nNearby',
-              color: AppTheme.info,
-              onTap: () {
-                // TODO: Navigate to stores
-              },
+          ],
+        ),
+        SizedBox(height: 12.h),
+        Row(
+          children: [
+            Expanded(
+              child: TranslatedCustomButton(
+                textKey: 'home.veterinary_consultation',
+                icon: Icons.medical_services,
+                type: ButtonType.secondary,
+                onPressed: () {
+                  // TODO: Navigate to veterinary consultation
+                },
+              ),
             ),
-            _buildQuickActionCard(
-              context,
-              icon: Icons.favorite,
-              title: 'Adoption &\nBreeding',
-              color: AppTheme.warning,
-              onTap: () {
-                // TODO: Navigate to adoption
-              },
+            SizedBox(width: 12.w),
+            Expanded(
+              child: TranslatedCustomButton(
+                textKey: 'home.add_pet',
+                icon: Icons.add,
+                type: ButtonType.secondary,
+                onPressed: () {
+                  // TODO: Navigate to add pet
+                },
+              ),
             ),
           ],
         ),
@@ -217,55 +223,45 @@ class HomeScreen extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Latest Community Posts',
+            TranslatedText(
+              'home.latest_posts',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
-            TextButton(
+            TranslatedCustomButton(
+              textKey: 'home.view_all',
+              type: ButtonType.text,
               onPressed: () {
-                // TODO: View all posts
+                // TODO: Navigate to all posts
               },
-              child: Text(
-                'View All',
-                style: TextStyle(
-                  color: AppTheme.primaryGreen,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ),
           ],
         ),
         SizedBox(height: 16.h),
+        // Mock data for latest posts
         _buildPostCard(
           context,
           title: 'Lost Golden Retriever',
-          description: 'Lost my 3-year-old Golden Retriever named Max in Central Park area. Please help!',
-          location: 'Central Park, New York',
+          location: 'Downtown Area',
           time: '2 hours ago',
-          type: 'Lost',
-          color: AppTheme.primaryOrange,
+          isLost: true,
         ),
         SizedBox(height: 12.h),
         _buildPostCard(
           context,
           title: 'Found Black Cat',
-          description: 'Found a friendly black cat with white paws near the library. Looking for owner.',
-          location: 'Downtown Library',
+          location: 'Park Street',
           time: '4 hours ago',
-          type: 'Found',
-          color: AppTheme.primaryGreen,
+          isLost: false,
         ),
         SizedBox(height: 12.h),
         _buildPostCard(
           context,
-          title: 'Veterinary Consultation Available',
-          description: 'Dr. Sarah Johnson is available for online consultations today. Book your slot!',
-          location: 'Online',
+          title: 'Lost Beagle Puppy',
+          location: 'Shopping Mall',
           time: '6 hours ago',
-          type: 'Veterinary',
-          color: AppTheme.info,
+          isLost: true,
         ),
       ],
     );
@@ -274,11 +270,9 @@ class HomeScreen extends StatelessWidget {
   Widget _buildPostCard(
     BuildContext context, {
     required String title,
-    required String description,
     required String location,
     required String time,
-    required String type,
-    required Color color,
+    required bool isLost,
   }) {
     return CustomCard(
       onTap: () {
@@ -294,13 +288,13 @@ class HomeScreen extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: isLost ? AppTheme.primaryOrange.withOpacity(0.1) : AppTheme.primaryGreen.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: Text(
-                    type,
+                    isLost ? 'Lost' : 'Found',
                     style: TextStyle(
-                      color: color,
+                      color: isLost ? AppTheme.primaryOrange : AppTheme.primaryGreen,
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w600,
                     ),
@@ -323,15 +317,6 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             SizedBox(height: 4.h),
-            Text(
-              description,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            SizedBox(height: 8.h),
             Row(
               children: [
                 Icon(

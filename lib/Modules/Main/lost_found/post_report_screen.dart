@@ -5,6 +5,9 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../../core/Theme/app_theme.dart';
 import '../../../Widgets/custom_button.dart';
+import '../../../Widgets/custom_card.dart';
+import '../../../Widgets/translated_custom_button.dart' hide ButtonType;
+import '../../../Widgets/translated_text.dart';
 import '../../../Models/pet_report_model.dart';
 import '../../../core/services/location_service.dart';
 import 'lost_found_screen.dart';
@@ -26,13 +29,15 @@ class _PostReportScreenState extends State<PostReportScreen> {
   final _imagePicker = ImagePicker();
   final _locationService = LocationService();
   
-  // Form controllers
+  // Controllers
   final _petNameController = TextEditingController();
   final _breedController = TextEditingController();
   final _colorController = TextEditingController();
+  final _ageController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _contactNameController = TextEditingController();
   final _contactPhoneController = TextEditingController();
+  final _locationController = TextEditingController();
   
   // Form data
   String _selectedPetType = 'Dog';
@@ -57,9 +62,11 @@ class _PostReportScreenState extends State<PostReportScreen> {
     _petNameController.dispose();
     _breedController.dispose();
     _colorController.dispose();
+    _ageController.dispose();
     _descriptionController.dispose();
     _contactNameController.dispose();
     _contactPhoneController.dispose();
+    _locationController.dispose();
     super.dispose();
   }
 
@@ -135,7 +142,7 @@ class _PostReportScreenState extends State<PostReportScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_photos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please add at least one photo')),
+        SnackBar(content: TranslatedText('post_report.photo_required')),
       );
       return;
     }
@@ -194,7 +201,11 @@ class _PostReportScreenState extends State<PostReportScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${widget.reportType == ReportType.lost ? 'Lost' : 'Found'} pet report submitted successfully!'),
+          content: TranslatedText(
+            widget.reportType == ReportType.lost 
+              ? 'post_report.success_lost' 
+              : 'post_report.success_found'
+          ),
           backgroundColor: AppTheme.success,
         ),
       );
@@ -203,7 +214,7 @@ class _PostReportScreenState extends State<PostReportScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to submit report. Please try again.'),
+          content: TranslatedText('post_report.error'),
           backgroundColor: AppTheme.error,
         ),
       );
@@ -219,12 +230,10 @@ class _PostReportScreenState extends State<PostReportScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        title: Text(
-          widget.reportType == ReportType.lost ? 'Report Lost Pet' : 'Report Found Pet',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
-          ),
+        title: TranslatedText(
+          widget.reportType == ReportType.lost 
+            ? 'post_report.lost_pet_title' 
+            : 'post_report.found_pet_title',
         ),
         centerTitle: true,
         elevation: 0,
@@ -247,11 +256,13 @@ class _PostReportScreenState extends State<PostReportScreen> {
                     SizedBox(height: 24.h),
                     _buildContactSection(),
                     SizedBox(height: 32.h),
-                    CustomButton(
-                      text: _isSubmitting ? 'Submitting...' : 'Submit Report',
-                      isFullWidth: true,
-                      isLoading: _isSubmitting,
-                      onPressed: _isSubmitting ? null : _submitReport,
+                    SizedBox(
+                      width: double.infinity,
+                      child: TranslatedCustomButton(
+                        textKey: _isSubmitting ? 'post_report.submitting' : 'post_report.submit',
+                        onPressed: _isSubmitting ? null : _submitReport,
+                        isLoading: _isSubmitting,
+                      ),
                     ),
                   ],
                 ),
@@ -426,165 +437,101 @@ class _PostReportScreenState extends State<PostReportScreen> {
           ),
         ),
         SizedBox(height: 16.h),
-        if (widget.reportType == ReportType.lost)
-          TextFormField(
-            controller: _petNameController,
-            decoration: InputDecoration(
-              labelText: 'Pet Name',
-              hintText: 'Enter pet name',
+        TextFormField(
+          controller: _petNameController,
+          decoration: InputDecoration(
+            labelText: 'post_report.pet_name',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
             ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter pet name';
-              }
-              return null;
-            },
           ),
-        SizedBox(height: 16.h),
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: _selectedPetType,
-                decoration: InputDecoration(
-                  labelText: 'Pet Type',
-                ),
-                items: ['Dog', 'Cat', 'Bird', 'Fish', 'Rabbit', 'Hamster', 'Other']
-                    .map((type) => DropdownMenuItem(value: type, child: Text(type)))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedPetType = value!;
-                  });
-                },
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: _selectedGender,
-                decoration: InputDecoration(
-                  labelText: 'Gender',
-                ),
-                items: ['Male', 'Female']
-                    .map((gender) => DropdownMenuItem(value: gender, child: Text(gender)))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedGender = value!;
-                  });
-                },
-              ),
-            ),
-          ],
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'post_report.required_field';
+            }
+            return null;
+          },
         ),
         SizedBox(height: 16.h),
-        if (widget.reportType == ReportType.lost)
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _breedController,
-                  decoration: InputDecoration(
-                    labelText: 'Breed',
-                    hintText: 'Enter breed',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter breed';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Age (years)',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Row(
-                      children: [
-                        IconButton(
-                          onPressed: _age > 1 ? () => setState(() => _age--) : null,
-                          icon: Icon(Icons.remove_circle_outline),
-                        ),
-                        Expanded(
-                          child: Text(
-                            _age.toString(),
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: _age < 20 ? () => setState(() => _age++) : null,
-                          icon: Icon(Icons.add_circle_outline),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+        DropdownButtonFormField<String>(
+          value: _selectedPetType,
+          decoration: InputDecoration(
+            labelText: 'post_report.pet_type',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
           ),
-        if (widget.reportType == ReportType.lost) SizedBox(height: 16.h),
+          items: ['Dog', 'Cat', 'Bird', 'Fish', 'Rabbit', 'Hamster', 'Other'].map((type) => DropdownMenuItem(
+            value: type,
+            child: Text(type),
+          )).toList(),
+          onChanged: (value) {
+            setState(() {
+              _selectedPetType = value??'';
+            });
+          },
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'post_report.required_field';
+            }
+            return null;
+          },
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: _breedController,
+          decoration: InputDecoration(
+            labelText: 'post_report.breed',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
         TextFormField(
           controller: _colorController,
           decoration: InputDecoration(
-            labelText: 'Color',
-            hintText: 'Enter pet color',
+            labelText: 'post_report.color',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
           ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter color';
-            }
-            return null;
-          },
         ),
         SizedBox(height: 16.h),
         TextFormField(
-          controller: _descriptionController,
+          controller: _ageController,
           decoration: InputDecoration(
-            labelText: 'Description',
-            hintText: 'Describe the pet and any additional details',
+            labelText: 'post_report.age',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
           ),
-          maxLines: 3,
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter description';
-            }
-            return null;
-          },
         ),
         SizedBox(height: 16.h),
-        if (widget.reportType == ReportType.lost)
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text('Date Lost'),
-            subtitle: Text(
-              '${_dateLost.day}/${_dateLost.month}/${_dateLost.year}',
+        DropdownButtonFormField<String>(
+          value: _selectedGender,
+          decoration: InputDecoration(
+            labelText: 'post_report.gender',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
             ),
-            trailing: Icon(Icons.calendar_today),
-            onTap: () async {
-              final date = await showDatePicker(
-                context: context,
-                initialDate: _dateLost,
-                firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                lastDate: DateTime.now(),
-              );
-              if (date != null) {
-                setState(() {
-                  _dateLost = date;
-                });
-              }
-            },
           ),
+          items: [
+            DropdownMenuItem(
+              value: 'Male',
+              child: TranslatedText('post_report.male'),
+            ),
+            DropdownMenuItem(
+              value: 'Female',
+              child: TranslatedText('post_report.female'),
+            ),
+          ],
+          onChanged: (value) {
+            setState(() {
+              _selectedGender = value??'';
+            });
+          },
+        ),
       ],
     );
   }
@@ -601,23 +548,16 @@ class _PostReportScreenState extends State<PostReportScreen> {
         ),
         SizedBox(height: 16.h),
         TextFormField(
-          initialValue: _address,
+          controller: _locationController,
           decoration: InputDecoration(
-            labelText: 'Address',
-            hintText: 'Enter address where pet was lost/found',
-            suffixIcon: IconButton(
-              onPressed: _getCurrentLocation,
-              icon: Icon(Icons.my_location),
+            labelText: 'post_report.location',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
             ),
           ),
-          onChanged: (value) {
-            setState(() {
-              _address = value;
-            });
-          },
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return 'Please enter address';
+              return 'post_report.required_field';
             }
             return null;
           },
@@ -640,12 +580,14 @@ class _PostReportScreenState extends State<PostReportScreen> {
         TextFormField(
           controller: _contactNameController,
           decoration: InputDecoration(
-            labelText: 'Contact Name',
-            hintText: 'Enter your name',
+            labelText: 'post_report.contact_name',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return 'Please enter contact name';
+              return 'post_report.required_field';
             }
             return null;
           },
@@ -654,13 +596,14 @@ class _PostReportScreenState extends State<PostReportScreen> {
         TextFormField(
           controller: _contactPhoneController,
           decoration: InputDecoration(
-            labelText: 'Contact Phone',
-            hintText: 'Enter your phone number',
+            labelText: 'post_report.contact_phone',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
           ),
-          keyboardType: TextInputType.phone,
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return 'Please enter contact phone';
+              return 'post_report.required_field';
             }
             return null;
           },

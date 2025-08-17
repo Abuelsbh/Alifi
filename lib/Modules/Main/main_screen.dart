@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../core/Theme/app_theme.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../core/Theme/app_theme.dart';
+import '../../../Widgets/translated_bottom_navigation_bar.dart';
 import 'home/home_screen.dart';
 import 'veterinary/veterinary_screen.dart';
 import 'lost_found/lost_found_screen.dart';
@@ -42,7 +43,7 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ],
         ),
-        child: BottomNavigationBar(
+        child: TranslatedBottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (index) {
             setState(() {
@@ -56,25 +57,25 @@ class _MainScreenState extends State<MainScreen> {
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
           items: const [
-            BottomNavigationBarItem(
+            TranslatedBottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),
               activeIcon: Icon(Icons.home),
-              label: 'Home',
+              labelKey: 'navigation.home',
             ),
-            BottomNavigationBarItem(
+            TranslatedBottomNavigationBarItem(
               icon: Icon(Icons.medical_services_outlined),
               activeIcon: Icon(Icons.medical_services),
-              label: 'Veterinary',
+              labelKey: 'navigation.veterinary',
             ),
-            BottomNavigationBarItem(
+            TranslatedBottomNavigationBarItem(
               icon: Icon(Icons.search_outlined),
               activeIcon: Icon(Icons.search),
-              label: 'Lost & Found',
+              labelKey: 'navigation.lost_found',
             ),
-            BottomNavigationBarItem(
+            TranslatedBottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
               activeIcon: Icon(Icons.person),
-              label: 'Profile',
+              labelKey: 'navigation.profile',
             ),
           ],
         ),

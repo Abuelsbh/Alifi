@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../Widgets/custom_card.dart';
 import '../../../Widgets/custom_button.dart';
+import '../../../Widgets/translated_text.dart';
 import '../../../Models/chat_model.dart';
 import 'chat_screen.dart';
 
@@ -144,8 +145,8 @@ class _VeterinaryScreenState extends State<VeterinaryScreen>
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        title: Text(
-          'Veterinary Consultation',
+        title: TranslatedText(
+          'veterinary.title',
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
@@ -163,8 +164,8 @@ class _VeterinaryScreenState extends State<VeterinaryScreen>
           labelStyle: const TextStyle(fontWeight: FontWeight.w600),
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
           tabs: const [
-            Tab(text: 'Veterinarians'),
-            Tab(text: 'My Chats'),
+            Tab(child: TranslatedText('veterinary.veterinarians')),
+            Tab(child: TranslatedText('veterinary.my_chats')),
           ],
         ),
       ),
@@ -188,7 +189,7 @@ class _VeterinaryScreenState extends State<VeterinaryScreen>
             controller: _searchController,
             onChanged: (value) => _filterVeterinarians(),
             decoration: InputDecoration(
-              hintText: 'Search veterinarians...',
+              hintText: 'veterinary.search_placeholder',
               prefixIcon: Icon(Icons.search, color: AppTheme.primaryGreen),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
@@ -226,15 +227,15 @@ class _VeterinaryScreenState extends State<VeterinaryScreen>
             color: Theme.of(context).colorScheme.onBackground.withOpacity(0.5),
           ),
           SizedBox(height: 16.h),
-          Text(
-            'No veterinarians found',
+          TranslatedText(
+            'veterinary.no_veterinarians',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
             ),
           ),
           SizedBox(height: 8.h),
-          Text(
-            'Try adjusting your search',
+          TranslatedText(
+            'veterinary.try_adjusting_search',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onBackground.withOpacity(0.5),
             ),
@@ -287,7 +288,7 @@ class _VeterinaryScreenState extends State<VeterinaryScreen>
                   children: [
                     Row(
                       children: [
-                        Text(
+                        TranslatedText(
                           vet.name,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
@@ -304,7 +305,7 @@ class _VeterinaryScreenState extends State<VeterinaryScreen>
                         ),
                       ],
                     ),
-                    Text(
+                    TranslatedText(
                       vet.specialization,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
@@ -318,7 +319,7 @@ class _VeterinaryScreenState extends State<VeterinaryScreen>
                           color: AppTheme.warning,
                         ),
                         SizedBox(width: 4.w),
-                        Text(
+                        TranslatedText(
                           '${vet.rating} (${vet.reviewCount} reviews)',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
@@ -338,7 +339,7 @@ class _VeterinaryScreenState extends State<VeterinaryScreen>
                         color: AppTheme.error.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12.r),
                       ),
-                      child: Text(
+                      child: TranslatedText(
                         'Busy',
                         style: TextStyle(
                           color: AppTheme.error,
@@ -349,7 +350,7 @@ class _VeterinaryScreenState extends State<VeterinaryScreen>
                     ),
                   SizedBox(height: 8.h),
                   CustomButton(
-                    text: 'Chat',
+                    text: TranslatedText('Chat').textKey,
                     type: ButtonType.secondary,
                     onPressed: vet.isAvailable ? () => _startChat(vet) : null,
                   ),
@@ -367,7 +368,7 @@ class _VeterinaryScreenState extends State<VeterinaryScreen>
               ),
               SizedBox(width: 4.w),
               Expanded(
-                child: Text(
+                child: TranslatedText(
                   vet.address??'',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
@@ -400,14 +401,14 @@ class _VeterinaryScreenState extends State<VeterinaryScreen>
             color: Theme.of(context).colorScheme.onBackground.withOpacity(0.5),
           ),
           SizedBox(height: 16.h),
-          Text(
+          TranslatedText(
             'No chats yet',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
             ),
           ),
           SizedBox(height: 8.h),
-          Text(
+          TranslatedText(
             'Start a conversation with a veterinarian',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onBackground.withOpacity(0.5),
@@ -477,13 +478,13 @@ class _VeterinaryScreenState extends State<VeterinaryScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                TranslatedText(
                   vet.name,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                Text(
+                TranslatedText(
                   chat.lastMessage,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
@@ -497,7 +498,7 @@ class _VeterinaryScreenState extends State<VeterinaryScreen>
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
+              TranslatedText(
                 _formatTimeAgo(chat.lastMessageTime),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),

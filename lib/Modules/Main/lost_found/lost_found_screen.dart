@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../Widgets/custom_card.dart';
-import '../../../Widgets/custom_button.dart';
+import '../../../Widgets/translated_custom_button.dart';
+import '../../../Widgets/translated_text.dart';
 import 'lost_pets_tab.dart';
 import 'found_pets_tab.dart';
 import 'post_report_screen.dart';
@@ -35,8 +36,8 @@ class _LostFoundScreenState extends State<LostFoundScreen>
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        title: Text(
-          'Lost & Found Pets',
+        title: TranslatedText(
+          'lost_found.title',
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
@@ -54,8 +55,8 @@ class _LostFoundScreenState extends State<LostFoundScreen>
           labelStyle: const TextStyle(fontWeight: FontWeight.w600),
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
           tabs: const [
-            Tab(text: 'Lost Pets'),
-            Tab(text: 'Found Pets'),
+            Tab(child: TranslatedText('lost_found.lost_pets')),
+            Tab(child: TranslatedText('lost_found.found_pets')),
           ],
         ),
         actions: [
@@ -110,8 +111,8 @@ class _LostFoundScreenState extends State<LostFoundScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Post a Report',
+                  TranslatedText(
+                    'lost_found.post_report',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -120,8 +121,8 @@ class _LostFoundScreenState extends State<LostFoundScreen>
                   Row(
                     children: [
                       Expanded(
-                        child: CustomButton(
-                          text: 'Lost Pet',
+                        child: TranslatedCustomButton(
+                          textKey: 'lost_found.lost_pet',
                           icon: Icons.search,
                           type: ButtonType.secondary,
                           onPressed: () {
@@ -139,9 +140,10 @@ class _LostFoundScreenState extends State<LostFoundScreen>
                       ),
                       SizedBox(width: 16.w),
                       Expanded(
-                        child: CustomButton(
-                          text: 'Found Pet',
+                        child: TranslatedCustomButton(
+                          textKey: 'lost_found.found_pet',
                           icon: Icons.favorite,
+                          type: ButtonType.secondary,
                           onPressed: () {
                             Navigator.pop(context);
                             Navigator.push(

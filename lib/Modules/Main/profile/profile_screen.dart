@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../Widgets/custom_card.dart';
-import '../../../Widgets/custom_button.dart';
+import '../../../Widgets/translated_custom_button.dart';
+import '../../../Widgets/translated_text.dart';
 import '../../../Models/user_model.dart';
 import '../../../Models/pet_report_model.dart';
+import 'settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -128,20 +130,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        title: Text(
-          'Profile',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        title: const TranslatedText('profile.my_profile'),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
           IconButton(
             onPressed: () {
-              // TODO: Open settings
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
             },
             icon: Icon(Icons.settings, color: AppTheme.primaryGreen),
           ),
@@ -179,26 +180,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: Theme.of(context).colorScheme.onBackground.withOpacity(0.5),
           ),
           SizedBox(height: 16.h),
-          Text(
-            'Please log in',
+          TranslatedText(
+            'auth.login',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
             ),
           ),
           SizedBox(height: 8.h),
-          Text(
-            'Sign in to access your profile',
+          TranslatedText(
+            'profile.login_prompt',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onBackground.withOpacity(0.5),
             ),
           ),
           SizedBox(height: 24.h),
-          CustomButton(
-            text: 'Sign In',
-            onPressed: () {
-              // TODO: Navigate to login
-            },
-          ),
+                      TranslatedCustomButton(
+              textKey: 'auth.login',
+              onPressed: () {
+                // TODO: Navigate to login
+              },
+            ),
         ],
       ),
     );
@@ -260,8 +261,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
-              CustomButton(
-                text: 'Edit',
+              TranslatedCustomButton(
+                textKey: 'common.edit',
                 type: ButtonType.secondary,
                 onPressed: () {
                   // TODO: Navigate to edit profile
@@ -300,14 +301,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'My Pets',
+            TranslatedText(
+              'profile.my_pets',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
-            CustomButton(
-              text: 'Add Pet',
+            TranslatedCustomButton(
+              textKey: 'profile.add_pet',
               type: ButtonType.text,
               onPressed: () {
                 // TODO: Navigate to add pet
@@ -347,23 +348,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
               color: Theme.of(context).colorScheme.onBackground.withOpacity(0.5),
             ),
             SizedBox(height: 16.h),
-            Text(
-              'No pets added yet',
+            TranslatedText(
+              'profile.no_pets',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
               ),
             ),
             SizedBox(height: 8.h),
-            Text(
-              'Add your pets to get personalized care',
+            TranslatedText(
+              'profile.add_pets_prompt',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onBackground.withOpacity(0.5),
               ),
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 16.h),
-            CustomButton(
-              text: 'Add Your First Pet',
+            TranslatedCustomButton(
+              textKey: 'profile.add_first_pet',
               onPressed: () {
                 // TODO: Navigate to add pet
               },
@@ -519,8 +520,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Settings',
+        TranslatedText(
+          'profile.settings',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -528,48 +529,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
         SizedBox(height: 16.h),
         _buildSettingItem(
           icon: Icons.notifications_outlined,
-          title: 'Notifications',
-          subtitle: 'Manage your notification preferences',
+          title: 'profile.notifications',
+          subtitle: 'profile.notifications_subtitle',
           onTap: () {
             // TODO: Navigate to notifications settings
           },
         ),
         _buildSettingItem(
           icon: Icons.language_outlined,
-          title: 'Language',
-          subtitle: 'English',
+          title: 'profile.language',
+          subtitle: 'profile.language_subtitle',
           onTap: () {
-            // TODO: Navigate to language settings
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SettingsScreen(),
+              ),
+            );
           },
         ),
         _buildSettingItem(
           icon: Icons.dark_mode_outlined,
-          title: 'Theme',
-          subtitle: 'Light',
+          title: 'profile.theme',
+          subtitle: 'profile.theme_subtitle',
           onTap: () {
-            // TODO: Navigate to theme settings
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SettingsScreen(),
+              ),
+            );
           },
         ),
         _buildSettingItem(
           icon: Icons.security_outlined,
-          title: 'Privacy & Security',
-          subtitle: 'Manage your privacy settings',
+          title: 'profile.privacy',
+          subtitle: 'profile.privacy_subtitle',
           onTap: () {
             // TODO: Navigate to privacy settings
           },
         ),
         _buildSettingItem(
           icon: Icons.help_outline,
-          title: 'Help & Support',
-          subtitle: 'Get help and contact support',
+          title: 'profile.help',
+          subtitle: 'profile.help_subtitle',
           onTap: () {
             // TODO: Navigate to help
           },
         ),
         _buildSettingItem(
           icon: Icons.logout,
-          title: 'Sign Out',
-          subtitle: 'Sign out of your account',
+          title: 'auth.logout',
+          subtitle: 'auth.logout_subtitle',
           onTap: () {
             _showSignOutDialog();
           },
@@ -600,14 +611,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                TranslatedText(
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w500,
                     color: isDestructive ? AppTheme.error : null,
                   ),
                 ),
-                Text(
+                SizedBox(height: 4.h),
+                TranslatedText(
                   subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
@@ -618,7 +630,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           Icon(
             Icons.chevron_right,
-            color: Theme.of(context).colorScheme.onBackground.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.onBackground.withOpacity(0.4),
+            size: 20.sp,
           ),
         ],
       ),
@@ -629,22 +642,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Sign Out'),
-        content: Text('Are you sure you want to sign out?'),
+        title: TranslatedText('profile.sign_out_confirm'),
+        content: TranslatedText('profile.sign_out_confirm'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: TranslatedText('profile.cancel'),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Sign out user
+              // TODO: Implement sign out
             },
-            child: Text(
-              'Sign Out',
-              style: TextStyle(color: AppTheme.error),
-            ),
+            child: TranslatedText('auth.logout'),
           ),
         ],
       ),

@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../Widgets/custom_card.dart';
 import '../../../Widgets/custom_button.dart';
+import '../../../Widgets/translated_text.dart';
 import '../../../Models/pet_report_model.dart';
 
 class FoundPetsTab extends StatefulWidget {
@@ -15,8 +16,8 @@ class FoundPetsTab extends StatefulWidget {
 
 class _FoundPetsTabState extends State<FoundPetsTab> {
   final TextEditingController _searchController = TextEditingController();
-  String _selectedPetType = 'All';
-  String _selectedBreed = 'All';
+  String? _selectedPetType;
+  String? _selectedBreed;
   bool _isLoading = false;
   List<FoundPetModel> _foundPets = [];
   List<FoundPetModel> _filteredPets = [];
@@ -95,8 +96,8 @@ class _FoundPetsTabState extends State<FoundPetsTab> {
             pet.description.toLowerCase().contains(_searchController.text.toLowerCase()) ||
             pet.address.toLowerCase().contains(_searchController.text.toLowerCase());
 
-        bool matchesPetType = _selectedPetType == 'All' || pet.petType == _selectedPetType;
-        bool matchesBreed = _selectedBreed == 'All' || pet.breed == _selectedBreed;
+        bool matchesPetType = _selectedPetType == null || pet.petType == _selectedPetType;
+        bool matchesBreed = _selectedBreed == null || pet.breed == _selectedBreed;
 
         return matchesSearch && matchesPetType && matchesBreed;
       }).toList();
@@ -132,7 +133,7 @@ class _FoundPetsTabState extends State<FoundPetsTab> {
             controller: _searchController,
             onChanged: (value) => _filterPets(),
             decoration: InputDecoration(
-              hintText: 'Search found pets...',
+              hintText: 'lost_found.search_placeholder',
               prefixIcon: Icon(Icons.search, color: AppTheme.primaryGreen),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
@@ -151,30 +152,58 @@ class _FoundPetsTabState extends State<FoundPetsTab> {
           Row(
             children: [
               Expanded(
-                child: _buildFilterDropdown(
+                child: DropdownButtonFormField<String>(
                   value: _selectedPetType,
-                  items: ['All', 'Dog', 'Cat', 'Bird', 'Other'],
+                  decoration: InputDecoration(
+                    labelText: 'lost_found.filter_by_type',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: null,
+                      child: TranslatedText('lost_found.all_types'),
+                    ),
+                    ...['Dog', 'Cat', 'Bird', 'Other'].map((type) => DropdownMenuItem(
+                      value: type,
+                      child: Text(type),
+                    )),
+                  ],
                   onChanged: (value) {
                     setState(() {
-                      _selectedPetType = value!;
+                      _selectedPetType = value;
                     });
                     _filterPets();
                   },
-                  label: 'Pet Type',
                 ),
               ),
               SizedBox(width: 12.w),
               Expanded(
-                child: _buildFilterDropdown(
+                child: DropdownButtonFormField<String>(
                   value: _selectedBreed,
-                  items: ['All', 'Labrador', 'Maine Coon', 'Golden Retriever', 'Persian'],
+                  decoration: InputDecoration(
+                    labelText: 'lost_found.filter_by_breed',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: null,
+                      child: TranslatedText('lost_found.all_breeds'),
+                    ),
+                    ...['Golden Retriever', 'Labrador', 'Persian', 'Siamese', 'Other'].map((breed) => DropdownMenuItem(
+                      value: breed,
+                      child: Text(breed),
+                    )),
+                  ],
                   onChanged: (value) {
                     setState(() {
-                      _selectedBreed = value!;
+                      _selectedBreed = value;
                     });
                     _filterPets();
                   },
-                  label: 'Breed',
                 ),
               ),
             ],
@@ -371,20 +400,20 @@ class _FoundPetsTabState extends State<FoundPetsTab> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Contact Information'),
+        title: TranslatedText('lost_found.contact_information'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Name: ${pet.contactName}'),
+            TranslatedText('lost_found.name: ${pet.contactName}'),
             SizedBox(height: 8.h),
-            Text('Phone: ${pet.contactPhone}'),
+            TranslatedText('lost_found.phone: ${pet.contactPhone}'),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
+            child: TranslatedText('lost_found.close'),
           ),
         ],
       ),

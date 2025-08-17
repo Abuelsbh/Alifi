@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../../core/Theme/app_theme.dart';
 import '../../../Widgets/custom_button.dart';
+import '../../../Widgets/translated_text.dart';
 import '../../../Models/chat_model.dart';
 import '../../../Models/user_model.dart';
 
@@ -138,10 +139,10 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImage(ImageSource source) async {
     try {
       final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         imageQuality: 80,
       );
 
@@ -245,15 +246,23 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   ListTile(
                     leading: Icon(Icons.photo, color: AppTheme.primaryGreen),
-                    title: Text('Photo'),
+                    title: TranslatedText('chat.photo'),
                     onTap: () {
                       Navigator.pop(context);
-                      _pickImage();
+                      _pickImage(ImageSource.gallery);
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.camera_alt, color: AppTheme.primaryGreen),
+                    title: TranslatedText('chat.camera'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickImage(ImageSource.camera);
                     },
                   ),
                   ListTile(
                     leading: Icon(Icons.videocam, color: AppTheme.primaryGreen),
-                    title: Text('Video'),
+                    title: TranslatedText('chat.video'),
                     onTap: () {
                       Navigator.pop(context);
                       _pickVideo();
@@ -273,61 +282,16 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 20.r,
-              backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
-              child: Text(
-                widget.veterinarian.name.split(' ').map((e) => e[0]).join(''),
-                style: TextStyle(
-                  color: AppTheme.primaryGreen,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14.sp,
-                ),
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.veterinarian.name,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      Container(
-                        width: 6.w,
-                        height: 6.h,
-                        decoration: BoxDecoration(
-                          color: widget.veterinarian.isOnline ? AppTheme.success : Colors.grey,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        widget.veterinarian.isOnline ? 'Online' : 'Offline',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+        title: TranslatedText('chat.title'),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
           IconButton(
             onPressed: () {
-              // TODO: Show veterinarian profile
+              // TODO: Open chat options
             },
-            icon: Icon(Icons.info_outline, color: AppTheme.primaryGreen),
+            icon: Icon(Icons.more_vert, color: AppTheme.primaryGreen),
           ),
         ],
       ),
@@ -588,16 +552,26 @@ class _ChatScreenState extends State<ChatScreen> {
             child: TextField(
               controller: _messageController,
               decoration: InputDecoration(
-                hintText: 'Type a message...',
+                hintText: 'chat.type_message',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24.r),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Theme.of(context).colorScheme.background,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16.w,
-                  vertical: 12.h,
+                fillColor: Theme.of(context).colorScheme.surface,
+                contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: _showMediaOptions,
+                      icon: Icon(Icons.attach_file, color: AppTheme.primaryGreen),
+                    ),
+                    IconButton(
+                      onPressed: _sendMessage,
+                      icon: Icon(Icons.send, color: AppTheme.primaryGreen),
+                    ),
+                  ],
                 ),
               ),
               maxLines: null,
