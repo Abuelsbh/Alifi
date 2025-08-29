@@ -1,11 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/Theme/app_theme.dart';
+import '../../../core/services/pet_reports_service.dart';
 import '../../../Widgets/custom_card.dart';
 import '../../../Widgets/custom_button.dart';
-import '../../../Widgets/translated_text.dart';
-import '../../../Models/pet_report_model.dart';
+import 'pet_report_details_screen.dart';
 
 class FoundPetsTab extends StatefulWidget {
   const FoundPetsTab({super.key});
@@ -19,8 +18,8 @@ class _FoundPetsTabState extends State<FoundPetsTab> {
   String? _selectedPetType;
   String? _selectedBreed;
   bool _isLoading = false;
-  List<FoundPetModel> _foundPets = [];
-  List<FoundPetModel> _filteredPets = [];
+  List<Map<String, dynamic>> _foundPets = [];
+  List<Map<String, dynamic>> _filteredPets = [];
 
   @override
   void initState() {
@@ -40,49 +39,18 @@ class _FoundPetsTabState extends State<FoundPetsTab> {
     });
 
     try {
-      // TODO: Load from service
-      // Mock data for now
-      await Future.delayed(const Duration(seconds: 1));
-      _foundPets = [
-        FoundPetModel(
-          id: '1',
-          userId: 'user3',
-          petType: 'Dog',
-          breed: 'Labrador',
-          color: 'Black',
-          photos: [],
-          description: 'Found a friendly black Labrador near the park. Very well-behaved and seems to be lost.',
-          location: const GeoPoint(40.7589, -73.9851),
-          address: 'Central Park, New York',
-          foundDate: DateTime.now().subtract(const Duration(hours: 3)),
-          contactPhone: '+1234567892',
-          contactName: 'Mike Johnson',
-          isActive: true,
-          createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-          updatedAt: DateTime.now().subtract(const Duration(hours: 3)),
-        ),
-        FoundPetModel(
-          id: '2',
-          userId: 'user4',
-          petType: 'Cat',
-          breed: 'Maine Coon',
-          color: 'Orange',
-          photos: [],
-          description: 'Found an orange Maine Coon cat in my backyard. Very friendly and seems to be looking for its owner.',
-          location: const GeoPoint(40.7505, -73.9934),
-          address: 'Downtown Manhattan',
-          foundDate: DateTime.now().subtract(const Duration(days: 1)),
-          contactPhone: '+1234567893',
-          contactName: 'Sarah Wilson',
-          isActive: true,
-          createdAt: DateTime.now().subtract(const Duration(days: 1)),
-          updatedAt: DateTime.now().subtract(const Duration(days: 1)),
-        ),
-      ];
-      _filteredPets = _foundPets;
+      // Listen to real-time found pets stream
+      PetReportsService.getFoundPetsStream().listen((foundPets) {
+        if (mounted) {
+          setState(() {
+            _foundPets = foundPets;
+            _filterPets();
+            _isLoading = false;
+          });
+        }
+      });
     } catch (e) {
-      // Handle error
-    } finally {
+      print('Error loading found pets: $e');
       setState(() {
         _isLoading = false;
       });
@@ -92,12 +60,20 @@ class _FoundPetsTabState extends State<FoundPetsTab> {
   void _filterPets() {
     setState(() {
       _filteredPets = _foundPets.where((pet) {
+        final petDetails = pet['petDetails'] as Map<String, dynamic>? ?? {};
+        final petName = petDetails['name'] ?? '';
+        final petType = petDetails['type'] ?? '';
+        final breed = petDetails['breed'] ?? '';
+        final description = pet['description'] ?? '';
+        
         bool matchesSearch = _searchController.text.isEmpty ||
-            pet.description.toLowerCase().contains(_searchController.text.toLowerCase()) ||
-            pet.address.toLowerCase().contains(_searchController.text.toLowerCase());
+            petName.toLowerCase().contains(_searchController.text.toLowerCase()) ||
+            petType.toLowerCase().contains(_searchController.text.toLowerCase()) ||
+            breed.toLowerCase().contains(_searchController.text.toLowerCase()) ||
+            description.toLowerCase().contains(_searchController.text.toLowerCase());
 
-        bool matchesPetType = _selectedPetType == null || pet.petType == _selectedPetType;
-        bool matchesBreed = _selectedBreed == null || pet.breed == _selectedBreed;
+        bool matchesPetType = _selectedPetType == null || petType == _selectedPetType;
+        bool matchesBreed = _selectedBreed == null || breed == _selectedBreed;
 
         return matchesSearch && matchesPetType && matchesBreed;
       }).toList();
@@ -131,45 +107,40 @@ class _FoundPetsTabState extends State<FoundPetsTab> {
           // Search Bar
           TextField(
             controller: _searchController,
-            onChanged: (value) => _filterPets(),
+            onChanged: (_) => _filterPets(),
             decoration: InputDecoration(
-              hintText: 'lost_found.search_placeholder',
+              hintText: 'ابحث عن الحيوانات الموجودة...',
               prefixIcon: Icon(Icons.search, color: AppTheme.primaryGreen),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.clear, color: AppTheme.primaryGreen),
-                      onPressed: () {
-                        _searchController.clear();
-                        _filterPets();
-                      },
-                    )
-                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Colors.grey[100],
             ),
           ),
-          SizedBox(height: 16.h),
           
-          // Filter Row
+          SizedBox(height: 12.h),
+          
+          // Filter Options
           Row(
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
                   value: _selectedPetType,
+                  hint: const Text('نوع الحيوان'),
                   decoration: InputDecoration(
-                    labelText: 'lost_found.filter_by_type',
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.r),
+                      borderSide: BorderSide.none,
                     ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
                   ),
-                  items: [
-                    DropdownMenuItem(
-                      value: null,
-                      child: TranslatedText('lost_found.all_types'),
-                    ),
-                    ...['Dog', 'Cat', 'Bird', 'Other'].map((type) => DropdownMenuItem(
-                      value: type,
-                      child: Text(type),
-                    )),
-                  ],
+                  items: ['كلب', 'قطة', 'أرنب', 'طائر', 'أخرى'].map((type) {
+                    return DropdownMenuItem(value: type, child: Text(type));
+                  }).toList(),
                   onChanged: (value) {
                     setState(() {
                       _selectedPetType = value;
@@ -178,26 +149,25 @@ class _FoundPetsTabState extends State<FoundPetsTab> {
                   },
                 ),
               ),
+              
               SizedBox(width: 12.w),
+              
               Expanded(
                 child: DropdownButtonFormField<String>(
                   value: _selectedBreed,
+                  hint: const Text('السلالة'),
                   decoration: InputDecoration(
-                    labelText: 'lost_found.filter_by_breed',
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.r),
+                      borderSide: BorderSide.none,
                     ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
                   ),
-                  items: [
-                    DropdownMenuItem(
-                      value: null,
-                      child: TranslatedText('lost_found.all_breeds'),
-                    ),
-                    ...['Golden Retriever', 'Labrador', 'Persian', 'Siamese', 'Other'].map((breed) => DropdownMenuItem(
-                      value: breed,
-                      child: Text(breed),
-                    )),
-                  ],
+                  items: ['جولدن ريتريفر', 'شيرازي', 'سيامي', 'بلدي'].map((breed) {
+                    return DropdownMenuItem(value: breed, child: Text(breed));
+                  }).toList(),
                   onChanged: (value) {
                     setState(() {
                       _selectedBreed = value;
@@ -213,53 +183,30 @@ class _FoundPetsTabState extends State<FoundPetsTab> {
     );
   }
 
-  Widget _buildFilterDropdown({
-    required String value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-    required String label,
-  }) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      items: items.map((String item) {
-        return DropdownMenuItem<String>(
-          value: item,
-          child: Text(item),
-        );
-      }).toList(),
-      onChanged: onChanged,
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.r),
-        ),
-      ),
-    );
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.search_off,
+            Icons.pets,
             size: 64.sp,
-            color: Theme.of(context).colorScheme.onBackground.withOpacity(0.5),
+            color: Colors.grey[400],
           ),
           SizedBox(height: 16.h),
           Text(
-            'No found pets',
+            'لا توجد حيوانات موجودة',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
+              color: Colors.grey[600],
             ),
           ),
           SizedBox(height: 8.h),
           Text(
-            'Try adjusting your search or filters',
+            'لم يتم العثور على أي حيوانات مطابقة للبحث',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onBackground.withOpacity(0.5),
+              color: Colors.grey[500],
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -271,167 +218,199 @@ class _FoundPetsTabState extends State<FoundPetsTab> {
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       itemCount: _filteredPets.length,
       itemBuilder: (context, index) {
-        final pet = _filteredPets[index];
-        return Padding(
-          padding: EdgeInsets.only(bottom: 12.h),
-          child: _buildPetCard(pet),
-        );
+        return _buildPetCard(_filteredPets[index]);
       },
     );
   }
 
-  Widget _buildPetCard(FoundPetModel pet) {
-    return CustomCard(
-      onTap: () {
-        // TODO: Navigate to pet details
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+  Widget _buildPetCard(Map<String, dynamic> pet) {
+    final petDetails = pet['petDetails'] as Map<String, dynamic>? ?? {};
+    final petName = petDetails['name'] ?? 'حيوان موجود';
+    final petType = petDetails['type'] ?? 'غير محدد';
+    final breed = petDetails['breed'] ?? '';
+    final color = petDetails['color'] ?? '';
+    final foundLocation = pet['foundLocation'] ?? pet['address'] ?? 'موقع غير محدد';
+    final foundDate = pet['foundDate'] ?? pet['createdAt'];
+    final isInShelter = pet['isInShelter'] ?? false;
+    final imageUrls = pet['imageUrls'] as List<dynamic>? ?? [];
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 16.h),
+      child: CustomCard(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PetReportDetailsScreen(report: pet),
+            ),
+          );
+        },
+        child: Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 60.w,
-                height: 60.h,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-                child: Icon(
-                  Icons.pets,
-                  color: AppTheme.primaryGreen,
-                  size: 24.sp,
-                ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Found ${pet.petType}',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+              Row(
+                children: [
+                  // Pet image
+                  Container(
+                    width: 80.w,
+                    height: 80.h,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8.r),
+                      color: Colors.grey[300],
                     ),
-                    Text(
-                      '${pet.breed} • ${pet.color}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
-                      ),
+                    child: imageUrls.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8.r),
+                            child: Image.network(
+                              imageUrls.first.toString(),
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => 
+                                  Icon(Icons.pets, size: 40.sp, color: AppTheme.success),
+                            ),
+                          )
+                        : Icon(Icons.pets, size: 40.sp, color: AppTheme.success),
+                  ),
+                  
+                  SizedBox(width: 12.w),
+                  
+                  // Pet info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                petName,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                              decoration: BoxDecoration(
+                                color: AppTheme.success,
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Text(
+                                'موجود',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          '$petType${breed.isNotEmpty ? ' - $breed' : ''}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.success,
+                          ),
+                        ),
+                        if (color.isNotEmpty) ...[
+                          SizedBox(height: 2.h),
+                          Text(
+                            'اللون: $color',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                        SizedBox(height: 4.h),
+                        Row(
+                          children: [
+                            Icon(Icons.location_on, size: 14.sp, color: Colors.grey[600]),
+                            SizedBox(width: 4.w),
+                            Expanded(
+                              child: Text(
+                                foundLocation.isNotEmpty ? foundLocation : 'موقع غير محدد',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.grey[600],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (isInShelter) ...[
+                          SizedBox(height: 4.h),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                            decoration: BoxDecoration(
+                              color: AppTheme.info.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8.r),
+                            ),
+                            child: Text(
+                              'في مأوى آمن',
+                              style: TextStyle(
+                                color: AppTheme.info,
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Text(
-                  'FOUND',
-                  style: TextStyle(
-                    color: AppTheme.primaryGreen,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-          SizedBox(height: 12.h),
-          Text(
-            pet.description,
-            style: Theme.of(context).textTheme.bodyMedium,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          SizedBox(height: 8.h),
-          Row(
-            children: [
-              Icon(
-                Icons.location_on_outlined,
-                size: 16.sp,
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
-              ),
-              SizedBox(width: 4.w),
-              Expanded(
-                child: Text(
-                  pet.address,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 8.h),
-          Row(
-            children: [
-              Icon(
-                Icons.access_time,
-                size: 16.sp,
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
-              ),
-              SizedBox(width: 4.w),
+              
+              SizedBox(height: 12.h),
+              
               Text(
-                _formatTimeAgo(pet.foundDate),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
-                ),
+                pet['description'] ?? 'لا يوجد وصف',
+                style: Theme.of(context).textTheme.bodySmall,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              const Spacer(),
-              CustomButton(
-                text: 'Contact',
-                type: ButtonType.text,
-                onPressed: () {
-                  _showContactInfo(pet);
-                },
+              
+              SizedBox(height: 12.h),
+              
+              Row(
+                children: [
+                  Expanded(
+                    child: CustomButton(
+                      text: 'تفاصيل',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PetReportDetailsScreen(report: pet),
+                          ),
+                        );
+                      },
+                      backgroundColor: AppTheme.success,
+                      textColor: Colors.white,
+                      
+                      height: 36.h,
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: CustomButton(
+                      text: 'تواصل',
+                      onPressed: () {
+                        // TODO: Implement contact functionality
+                      },
+                      backgroundColor: AppTheme.primaryOrange,
+                      textColor: Colors.white,
+                      
+                      height: 36.h,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  void _showContactInfo(FoundPetModel pet) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: TranslatedText('lost_found.contact_information'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TranslatedText('lost_found.name: ${pet.contactName}'),
-            SizedBox(height: 8.h),
-            TranslatedText('lost_found.phone: ${pet.contactPhone}'),
-          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: TranslatedText('lost_found.close'),
-          ),
-        ],
       ),
     );
-  }
-
-  String _formatTimeAgo(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inDays > 0) {
-      return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago';
-    } else {
-      return 'Just now';
-    }
   }
 } 

@@ -1,308 +1,751 @@
+import 'dart:io';
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import '../firebase/firebase_config.dart';
 
-import '../../Models/pet_report_model.dart';
 
 class PetReportsService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static final FirebaseFirestore _firestore = FirebaseConfig.firestore;
+  static final FirebaseStorage _storage = FirebaseConfig.storage;
+  static final ImagePicker _picker = ImagePicker();
 
-  // Post a lost pet report
-  Future<String> postLostPet(LostPetModel lostPet) async {
-    try {
-      DocumentReference docRef = await _firestore
-          .collection('lost_pets')
-          .add(lostPet.toFirestore());
-      return docRef.id;
-    } catch (e) {
-      print('Error posting lost pet: $e');
-      throw Exception('Failed to post lost pet report');
-    }
+  // Get lost pets stream - Enhanced Real-time
+  static Stream<List<Map<String, dynamic>>> getLostPetsStream() {
+    print('📱 Starting real-time lost pets stream');
+    return _firestore
+        .collection('lost_pets')
+        .orderBy('createdAt', descending: true)
+        .limit(50) // Limit for performance
+        .snapshots()
+        .map((snapshot) {
+          print('📱 Real-time update: ${snapshot.docs.length} lost pets received');
+          return snapshot.docs
+              .where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                return data['isActive'] == true;
+              })
+              .map((doc) => {
+                'id': doc.id,
+                ...doc.data() as Map<String, dynamic>,
+              })
+              .toList();
+        });
   }
 
-  // Post a found pet report
-  Future<String> postFoundPet(FoundPetModel foundPet) async {
-    try {
-      DocumentReference docRef = await _firestore
-          .collection('found_pets')
-          .add(foundPet.toFirestore());
-      return docRef.id;
-    } catch (e) {
-      print('Error posting found pet: $e');
-      throw Exception('Failed to post found pet report');
-    }
+  // Get found pets stream - Enhanced Real-time
+  static Stream<List<Map<String, dynamic>>> getFoundPetsStream() {
+    print('📱 Starting real-time found pets stream');
+    return _firestore
+        .collection('found_pets')
+        .orderBy('createdAt', descending: true)
+        .limit(50) // Limit for performance
+        .snapshots()
+        .map((snapshot) {
+          print('📱 Real-time update: ${snapshot.docs.length} found pets received');
+          return snapshot.docs
+              .where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                return data['isActive'] == true;
+              })
+              .map((doc) => {
+                'id': doc.id,
+                ...doc.data() as Map<String, dynamic>,
+              })
+              .toList();
+        });
   }
 
-  // Get lost pets with location filter
-  Future<List<LostPetModel>> getLostPets({
-    GeoPoint? userLocation,
-    double radiusInKm = 50.0,
+  // Get user's reports - Enhanced with both lost and found
+  static Stream<List<Map<String, dynamic>>> getUserReportsStream(String userId) {
+    print('📱 Starting real-time user reports stream for: $userId');
+    
+    // Combine lost and found reports
+    final lostStream = _firestore
+        .collection('lost_pets')
+        .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+        
+    final foundStream = _firestore
+        .collection('found_pets')
+        .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+
+    return lostStream.asyncMap((lostSnapshot) async {
+      final foundSnapshot = await foundStream.first;
+      
+      final reports = <Map<String, dynamic>>[];
+      
+      // Add lost pets
+      for (var doc in lostSnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        data['type'] = 'lost';
+        reports.add(data);
+      }
+      
+      // Add found pets
+      for (var doc in foundSnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        data['type'] = 'found';
+        reports.add(data);
+      }
+      
+      // Sort by creation date
+      reports.sort((a, b) {
+        final aTime = (a['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+        final bTime = (b['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+        return bTime.compareTo(aTime);
+      });
+      
+      print('📱 User reports update: ${reports.length} reports for user');
+      return reports;
+    });
+  }
+
+  // Search pets by filters
+  static Stream<List<Map<String, dynamic>>> searchPets({
+    required String type, // 'lost' or 'found' 
     String? petType,
     String? breed,
-    bool activeOnly = true,
+    String? area,
+    String? color,
+  }) {
+    print('🔍 Searching $type pets with filters');
+    
+    Query query = _firestore
+        .collection('${type}_pets')
+        .orderBy('createdAt', descending: true)
+        .limit(30);
+    
+    return query
+        .snapshots()
+        .map((snapshot) {
+          final results = snapshot.docs
+              .where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                // Filter for active pets
+                if (data['isActive'] != true) return false;
+                
+                // Filter by pet type
+                if (petType != null && petType.isNotEmpty) {
+                  final docPetType = data['petDetails']?['type']?.toString() ?? '';
+                  if (docPetType != petType) return false;
+                }
+                
+                // Filter by area
+                if (area != null && area.isNotEmpty) {
+                  final docArea = data['location']?['area']?.toString() ?? '';
+                  if (docArea != area) return false;
+                }
+                
+                return true;
+              })
+              .map((doc) => {
+                'id': doc.id,
+                ...doc.data() as Map<String, dynamic>,
+              })
+              .where((pet) {
+                // Additional filtering for breed and color
+                if (breed != null && breed.isNotEmpty) {
+                  final petBreed = pet['petDetails']?['breed']?.toString().toLowerCase() ?? '';
+                  if (!petBreed.contains(breed.toLowerCase())) return false;
+                }
+                
+                if (color != null && color.isNotEmpty) {
+                  final petColor = pet['petDetails']?['color']?.toString().toLowerCase() ?? '';
+                  if (!petColor.contains(color.toLowerCase())) return false;
+                }
+                
+                return true;
+              })
+              .toList();
+              
+          print('🔍 Search results: ${results.length} pets found');
+          return results;
+        });
+  }
+
+  // Create lost pet report - Enhanced
+  static Future<String> createLostPetReport({
+    required Map<String, dynamic> report,
+    required List<File> images,
   }) async {
     try {
-      Query query = _firestore.collection('lost_pets');
+      print('📤 Creating lost pet report for user: ${report['userId']}');
+      
+      // Upload images with progress
+      final imageUrls = await _uploadImages(images, 'lost_pets');
+      print('📷 Uploaded ${imageUrls.length} images for lost pet report');
 
-      if (activeOnly) {
-        query = query.where('isActive', isEqualTo: true);
-      }
+      // Create comprehensive report data
+      final reportData = Map<String, dynamic>.from(report);
+      reportData.addAll({
+        'id': DateTime.now().millisecondsSinceEpoch.toString(),
+        'imageUrls': imageUrls,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'isActive': true,
+        'status': 'lost',
+        'type': 'lost_pet',
+        'viewCount': 0,
+        'shareCount': 0,
+        'helpCount': 0,
+        'isUrgent': report['isUrgent'] ?? false,
+        'reward': report['reward'] ?? 0,
+        'contactInfo': {
+          'phone': report['contactPhone'] ?? '',
+          'email': report['contactEmail'] ?? '',
+          'preferredContact': report['preferredContact'] ?? 'phone',
+        },
+        'location': {
+          'address': report['lastSeenLocation'] ?? '',
+          'coordinates': report['coordinates'] ?? null,
+          'area': report['area'] ?? '',
+          'landmark': report['landmark'] ?? '',
+        },
+        'petDetails': {
+          'name': report['petName'] ?? '',
+          'type': report['petType'] ?? '',
+          'breed': report['breed'] ?? '',
+          'age': report['age'] ?? '',
+          'gender': report['gender'] ?? '',
+          'color': report['color'] ?? '',
+          'size': report['size'] ?? '',
+          'distinguishingMarks': report['distinguishingMarks'] ?? '',
+          'personality': report['personality'] ?? '',
+          'medicalConditions': report['medicalConditions'] ?? '',
+        },
+      });
 
-      if (petType != null && petType.isNotEmpty) {
-        query = query.where('petType', isEqualTo: petType);
-      }
+      // Add to Firestore
+      final docRef = await _firestore
+          .collection('lost_pets')
+          .add(reportData);
 
-      if (breed != null && breed.isNotEmpty) {
-        query = query.where('breed', isEqualTo: breed);
-      }
+      print('✅ Lost pet report created successfully: ${docRef.id}');
 
-      query = query.orderBy('createdAt', descending: true);
+      // Update user's reports count
+      await _updateUserReports(report['userId'], docRef.id, 'lost');
 
-      QuerySnapshot querySnapshot = await query.get();
-      List<LostPetModel> lostPets = [];
-
-      for (DocumentSnapshot doc in querySnapshot.docs) {
-        LostPetModel lostPet = LostPetModel.fromFirestore(doc);
-        
-        // Filter by location if user location is provided
-        if (userLocation != null) {
-          double distance = Geolocator.distanceBetween(
-            userLocation.latitude,
-            userLocation.longitude,
-            lostPet.location.latitude,
-            lostPet.location.longitude,
-          ) / 1000; // Convert to kilometers
-
-          if (distance <= radiusInKm) {
-            lostPets.add(lostPet);
-          }
-        } else {
-          lostPets.add(lostPet);
-        }
-      }
-
-      return lostPets;
+      return docRef.id;
     } catch (e) {
-      print('Error getting lost pets: $e');
-      throw Exception('Failed to get lost pets');
+      print('❌ Error creating lost pet report: $e');
+      throw Exception('Failed to create lost pet report: $e');
     }
   }
 
-  // Get found pets with location filter
-  Future<List<FoundPetModel>> getFoundPets({
-    GeoPoint? userLocation,
-    double radiusInKm = 50.0,
-    String? petType,
-    String? breed,
-    bool activeOnly = true,
+  // Create found pet report - Enhanced
+  static Future<String> createFoundPetReport({
+    required Map<String, dynamic> report,
+    required List<File> images,
   }) async {
     try {
-      Query query = _firestore.collection('found_pets');
+      print('📤 Creating found pet report for user: ${report['userId']}');
+      
+      // Upload images with progress
+      final imageUrls = await _uploadImages(images, 'found_pets');
+      print('📷 Uploaded ${imageUrls.length} images for found pet report');
 
-      if (activeOnly) {
-        query = query.where('isActive', isEqualTo: true);
-      }
+      // Create comprehensive report data
+      final reportData = Map<String, dynamic>.from(report);
+      reportData.addAll({
+        'id': DateTime.now().millisecondsSinceEpoch.toString(),
+        'imageUrls': imageUrls,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'isActive': true,
+        'status': 'found',
+        'type': 'found_pet',
+        'viewCount': 0,
+        'shareCount': 0,
+        'helpCount': 0,
+        'isInShelter': report['isInShelter'] ?? false,
+        'shelterInfo': report['shelterInfo'] ?? '',
+        'contactInfo': {
+          'phone': report['contactPhone'] ?? '',
+          'email': report['contactEmail'] ?? '',
+          'preferredContact': report['preferredContact'] ?? 'phone',
+        },
+        'location': {
+          'address': report['foundLocation'] ?? '',
+          'coordinates': report['coordinates'] ?? null,
+          'area': report['area'] ?? '',
+          'landmark': report['landmark'] ?? '',
+        },
+        'petDetails': {
+          'type': report['petType'] ?? '',
+          'breed': report['breed'] ?? '',
+          'approximateAge': report['approximateAge'] ?? '',
+          'gender': report['gender'] ?? '',
+          'color': report['color'] ?? '',
+          'size': report['size'] ?? '',
+          'distinguishingMarks': report['distinguishingMarks'] ?? '',
+          'temperament': report['temperament'] ?? '',
+          'healthStatus': report['healthStatus'] ?? '',
+          'hasCollar': report['hasCollar'] ?? false,
+          'collarDescription': report['collarDescription'] ?? '',
+        },
+      });
 
-      if (petType != null && petType.isNotEmpty) {
-        query = query.where('petType', isEqualTo: petType);
-      }
-
-      if (breed != null && breed.isNotEmpty) {
-        query = query.where('breed', isEqualTo: breed);
-      }
-
-      query = query.orderBy('createdAt', descending: true);
-
-      QuerySnapshot querySnapshot = await query.get();
-      List<FoundPetModel> foundPets = [];
-
-      for (DocumentSnapshot doc in querySnapshot.docs) {
-        FoundPetModel foundPet = FoundPetModel.fromFirestore(doc);
-        
-        // Filter by location if user location is provided
-        if (userLocation != null) {
-          double distance = Geolocator.distanceBetween(
-            userLocation.latitude,
-            userLocation.longitude,
-            foundPet.location.latitude,
-            foundPet.location.longitude,
-          ) / 1000; // Convert to kilometers
-
-          if (distance <= radiusInKm) {
-            foundPets.add(foundPet);
-          }
-        } else {
-          foundPets.add(foundPet);
-        }
-      }
-
-      return foundPets;
-    } catch (e) {
-      print('Error getting found pets: $e');
-      throw Exception('Failed to get found pets');
-    }
-  }
-
-  // Get user's lost pet reports
-  Future<List<LostPetModel>> getUserLostPets(String userId) async {
-    try {
-      QuerySnapshot querySnapshot = await _firestore
-          .collection('lost_pets')
-          .where('userId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
-          .get();
-
-      return querySnapshot.docs
-          .map((doc) => LostPetModel.fromFirestore(doc))
-          .toList();
-    } catch (e) {
-      print('Error getting user lost pets: $e');
-      throw Exception('Failed to get user lost pets');
-    }
-  }
-
-  // Get user's found pet reports
-  Future<List<FoundPetModel>> getUserFoundPets(String userId) async {
-    try {
-      QuerySnapshot querySnapshot = await _firestore
+      // Add to Firestore
+      final docRef = await _firestore
           .collection('found_pets')
-          .where('userId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
-          .get();
+          .add(reportData);
 
-      return querySnapshot.docs
-          .map((doc) => FoundPetModel.fromFirestore(doc))
-          .toList();
+      print('✅ Found pet report created successfully: ${docRef.id}');
+
+      // Update user's reports count
+      await _updateUserReports(report['userId'], docRef.id, 'found');
+
+      return docRef.id;
     } catch (e) {
-      print('Error getting user found pets: $e');
-      throw Exception('Failed to get user found pets');
+      print('❌ Error creating found pet report: $e');
+      throw Exception('Failed to create found pet report: $e');
     }
   }
 
-  // Update lost pet report
-  Future<void> updateLostPet(LostPetModel lostPet) async {
+  // Update report
+  static Future<void> updateReport({
+    required String reportId,
+    required String collection,
+    required Map<String, dynamic> updates,
+    List<File>? newImages,
+  }) async {
+    try {
+      final reportData = Map<String, dynamic>.from(updates);
+      reportData['updatedAt'] = FieldValue.serverTimestamp();
+
+      // Upload new images if provided
+      if (newImages != null && newImages.isNotEmpty) {
+        final imageUrls = await _uploadImages(newImages, collection);
+        reportData['imageUrls'] = imageUrls;
+      }
+
+      await _firestore
+          .collection(collection)
+          .doc(reportId)
+          .update(reportData);
+    } catch (e) {
+      throw Exception('Failed to update report: $e');
+    }
+  }
+
+  // Delete report
+  static Future<void> deleteReport({
+    required String reportId,
+    required String collection,
+  }) async {
     try {
       await _firestore
-          .collection('lost_pets')
-          .doc(lostPet.id)
-          .update(lostPet.toFirestore());
-    } catch (e) {
-      print('Error updating lost pet: $e');
-      throw Exception('Failed to update lost pet report');
-    }
-  }
-
-  // Update found pet report
-  Future<void> updateFoundPet(FoundPetModel foundPet) async {
-    try {
-      await _firestore
-          .collection('found_pets')
-          .doc(foundPet.id)
-          .update(foundPet.toFirestore());
-    } catch (e) {
-      print('Error updating found pet: $e');
-      throw Exception('Failed to update found pet report');
-    }
-  }
-
-  // Delete lost pet report
-  Future<void> deleteLostPet(String lostPetId) async {
-    try {
-      await _firestore.collection('lost_pets').doc(lostPetId).delete();
-    } catch (e) {
-      print('Error deleting lost pet: $e');
-      throw Exception('Failed to delete lost pet report');
-    }
-  }
-
-  // Delete found pet report
-  Future<void> deleteFoundPet(String foundPetId) async {
-    try {
-      await _firestore.collection('found_pets').doc(foundPetId).delete();
-    } catch (e) {
-      print('Error deleting found pet: $e');
-      throw Exception('Failed to delete found pet report');
-    }
-  }
-
-  // Mark lost pet as found (deactivate)
-  Future<void> markLostPetAsFound(String lostPetId) async {
-    try {
-      await _firestore.collection('lost_pets').doc(lostPetId).update({
+          .collection(collection)
+          .doc(reportId)
+          .update({
         'isActive': false,
+        'deletedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('Failed to delete report: $e');
+    }
+  }
+
+  // Mark report as resolved
+  static Future<void> markReportAsResolved({
+    required String reportId,
+    required String collection,
+  }) async {
+    try {
+      await _firestore
+          .collection(collection)
+          .doc(reportId)
+          .update({
+        'isResolved': true,
+        'resolvedAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      print('Error marking lost pet as found: $e');
-      throw Exception('Failed to mark lost pet as found');
+      throw Exception('Failed to mark report as resolved: $e');
     }
   }
 
-  // Mark found pet as claimed (deactivate)
-  Future<void> markFoundPetAsClaimed(String foundPetId) async {
+  // Search reports
+  static Future<List<Map<String, dynamic>>> searchReports({
+    required String collection,
+    String? petType,
+    String? breed,
+    String? location,
+    String? searchQuery,
+  }) async {
     try {
-      await _firestore.collection('found_pets').doc(foundPetId).update({
-        'isActive': false,
+      Query query = _firestore
+          .collection(collection)
+          .orderBy('createdAt', descending: true);
+
+      final snapshot = await query.get();
+      List<Map<String, dynamic>> reports = snapshot.docs
+          .where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            // Filter for active reports
+            if (data['isActive'] != true) return false;
+            
+            // Filter by pet type
+            if (petType != null && petType.isNotEmpty) {
+              if (data['petType'] != petType) return false;
+            }
+            
+            // Filter by breed
+            if (breed != null && breed.isNotEmpty) {
+              if (data['breed'] != breed) return false;
+            }
+            
+            return true;
+          })
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+
+      // Filter by location and search query
+      if (location != null && location.isNotEmpty) {
+        reports = reports.where((report) =>
+            (report['location'] as String?)?.toLowerCase().contains(location.toLowerCase()) ?? false).toList();
+      }
+
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        reports = reports.where((report) {
+          final petName = report['petName'] as String?;
+          final description = report['description'] as String?;
+          final breed = report['breed'] as String?;
+          
+          return (petName?.toLowerCase().contains(searchQuery.toLowerCase()) ?? false) ||
+                 (description?.toLowerCase().contains(searchQuery.toLowerCase()) ?? false) ||
+                 (breed?.toLowerCase().contains(searchQuery.toLowerCase()) ?? false);
+        }).toList();
+      }
+
+      return reports;
+    } catch (e) {
+      throw Exception('Failed to search reports: $e');
+    }
+  }
+
+  // Get report by ID
+  static Future<Map<String, dynamic>?> getReportById({
+    required String reportId,
+    required String collection,
+  }) async {
+    try {
+      final doc = await _firestore
+          .collection(collection)
+          .doc(reportId)
+          .get();
+
+      if (doc.exists) {
+        return doc.data();
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to get report: $e');
+    }
+  }
+
+  // Pick images from gallery
+  static Future<List<File>> pickImagesFromGallery({
+    int maxImages = 5,
+  }) async {
+    try {
+      final List<XFile> images = await _picker.pickMultiImage(
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (images.length > maxImages) {
+        images.removeRange(maxImages, images.length);
+      }
+
+      return images.map((image) => File(image.path)).toList();
+    } catch (e) {
+      throw Exception('Failed to pick images: $e');
+    }
+  }
+
+  // Take photo with camera
+  static Future<File?> takePhotoWithCamera() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      return image != null ? File(image.path) : null;
+    } catch (e) {
+      throw Exception('Failed to take photo: $e');
+    }
+  }
+
+  // Upload images to Firebase Storage
+  static Future<List<String>> _uploadImages(
+    List<File> images,
+    String folder,
+  ) async {
+    try {
+      final List<String> imageUrls = [];
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+      for (int i = 0; i < images.length; i++) {
+        final file = images[i];
+        final fileName = '${folder}_${timestamp}_$i.jpg';
+        final ref = _storage.ref().child('pet_reports/$folder/$fileName');
+
+        final uploadTask = ref.putFile(file);
+        final snapshot = await uploadTask;
+        final downloadUrl = await snapshot.ref.getDownloadURL();
+
+        imageUrls.add(downloadUrl);
+      }
+
+      return imageUrls;
+    } catch (e) {
+      throw Exception('Failed to upload images: $e');
+    }
+  }
+
+  // Update user's reports
+  static Future<void> _updateUserReports(
+    String userId,
+    String reportId,
+    String type,
+  ) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .update({
+        'reports': FieldValue.arrayUnion([
+          {
+            'reportId': reportId,
+            'type': type,
+            'createdAt': FieldValue.serverTimestamp(),
+          }
+        ]),
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      print('Error marking found pet as claimed: $e');
-      throw Exception('Failed to mark found pet as claimed');
+      // Don't throw error for this, as it's not critical
+      print('Failed to update user reports: $e');
     }
   }
 
-  // Get pet types for filtering
-  Future<List<String>> getPetTypes() async {
+  // Get nearby reports based on location
+  static Future<List<Map<String, dynamic>>> getNearbyReports({
+    required double latitude,
+    required double longitude,
+    required double radiusKm,
+    required String collection,
+  }) async {
     try {
-      QuerySnapshot lostPetsSnapshot = await _firestore.collection('lost_pets').get();
-      QuerySnapshot foundPetsSnapshot = await _firestore.collection('found_pets').get();
+      // This is a simplified version. In a real app, you'd use GeoFirestore
+      // or implement proper geospatial queries
+      final snapshot = await _firestore
+          .collection(collection)
+          .orderBy('createdAt', descending: true)
+          .get();
 
-      Set<String> petTypes = {};
+      final reports = snapshot.docs
+          .where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return data['isActive'] == true;
+          })
+          .map((doc) => doc.data())
+          .toList();
 
-      // Add pet types from lost pets
-      for (DocumentSnapshot doc in lostPetsSnapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        if (data['petType'] != null) {
-          petTypes.add(data['petType']);
-        }
-      }
-
-      // Add pet types from found pets
-      for (DocumentSnapshot doc in foundPetsSnapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        if (data['petType'] != null) {
-          petTypes.add(data['petType']);
-        }
-      }
-
-      return petTypes.toList()..sort();
+      // Filter by distance (simplified)
+      return reports.where((report) {
+        final reportLat = report['latitude'] as double?;
+        final reportLng = report['longitude'] as double?;
+        if (reportLat == null || reportLng == null) return false;
+        
+        final distance = _calculateDistance(
+          latitude,
+          longitude,
+          reportLat,
+          reportLng,
+        );
+        
+        return distance <= radiusKm;
+      }).toList();
     } catch (e) {
-      print('Error getting pet types: $e');
-      return ['Dog', 'Cat', 'Bird', 'Fish', 'Rabbit', 'Hamster', 'Other'];
+      throw Exception('Failed to get nearby reports: $e');
     }
   }
 
-  // Get breeds for filtering
-  Future<List<String>> getBreeds({String? petType}) async {
+  // Calculate distance between two points (Haversine formula)
+  static double _calculateDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const double earthRadius = 6371; // Earth's radius in kilometers
+
+    final dLat = _degreesToRadians(lat2 - lat1);
+    final dLon = _degreesToRadians(lon2 - lon1);
+
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+    return earthRadius * c;
+  }
+
+  static double _degreesToRadians(double degrees) {
+    return degrees * (pi / 180);
+  }
+
+  // Get report statistics
+  static Future<Map<String, dynamic>> getReportStatistics() async {
     try {
-      Query query = _firestore.collection('lost_pets');
-      if (petType != null && petType.isNotEmpty) {
-        query = query.where('petType', isEqualTo: petType);
-      }
+      final lostSnapshot = await _firestore
+          .collection('lost_pets')
+          .get();
 
-      QuerySnapshot querySnapshot = await query.get();
-      Set<String> breeds = {};
+      final foundSnapshot = await _firestore
+          .collection('found_pets')
+          .get();
 
-      for (DocumentSnapshot doc in querySnapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        if (data['breed'] != null) {
-          breeds.add(data['breed']);
-        }
-      }
+      final resolvedLostSnapshot = await _firestore
+          .collection('lost_pets')
+          .where('isResolved', isEqualTo: true)
+          .get();
 
-      return breeds.toList()..sort();
+      final resolvedFoundSnapshot = await _firestore
+          .collection('found_pets')
+          .where('isResolved', isEqualTo: true)
+          .get();
+
+      // Filter active reports
+      final activeLostCount = lostSnapshot.docs
+          .where((doc) => (doc.data() as Map<String, dynamic>)['isActive'] == true)
+          .length;
+      final activeFoundCount = foundSnapshot.docs
+          .where((doc) => (doc.data() as Map<String, dynamic>)['isActive'] == true)
+          .length;
+
+      return {
+        'totalLost': activeLostCount,
+        'totalFound': activeFoundCount,
+        'resolvedLost': resolvedLostSnapshot.docs.length,
+        'resolvedFound': resolvedFoundSnapshot.docs.length,
+        'totalActive': activeLostCount + activeFoundCount,
+        'totalResolved': resolvedLostSnapshot.docs.length + resolvedFoundSnapshot.docs.length,
+      };
     } catch (e) {
-      print('Error getting breeds: $e');
-      return [];
+      throw Exception('Failed to get statistics: $e');
     }
   }
+
+  // Mark report as resolved
+  // static Future<void> markReportAsResolved({
+  //   required String reportId,
+  //   required String collection,
+  // }) async {
+  //   try {
+  //     await _firestore.collection(collection).doc(reportId).update({
+  //       'isResolved': true,
+  //       'isActive': false,
+  //       'resolvedAt': FieldValue.serverTimestamp(),
+  //       'updatedAt': FieldValue.serverTimestamp(),
+  //     });
+  //
+  //     print('✅ Report marked as resolved successfully');
+  //   } catch (e) {
+  //     print('❌ Error marking report as resolved: $e');
+  //     throw Exception('Failed to mark report as resolved: $e');
+  //   }
+  // }
+
+  // Delete report
+  // static Future<void> deleteReport({
+  //   required String reportId,
+  //   required String collection,
+  // }) async {
+  //   try {
+  //     // Get the report first to access image URLs for deletion
+  //     final doc = await _firestore.collection(collection).doc(reportId).get();
+  //
+  //     if (doc.exists) {
+  //       final data = doc.data() as Map<String, dynamic>;
+  //       final imageUrls = data['imageUrls'] as List<dynamic>? ?? [];
+  //
+  //       // Delete images from Firebase Storage
+  //       for (String imageUrl in imageUrls) {
+  //         try {
+  //           final ref = _storage.refFromURL(imageUrl);
+  //           await ref.delete();
+  //         } catch (e) {
+  //           print('Warning: Could not delete image: $e');
+  //           // Continue even if image deletion fails
+  //         }
+  //       }
+  //
+  //       // Delete the document
+  //       await _firestore.collection(collection).doc(reportId).delete();
+  //       print('✅ Report deleted successfully');
+  //     }
+  //   } catch (e) {
+  //     print('❌ Error deleting report: $e');
+  //     throw Exception('Failed to delete report: $e');
+  //   }
+  // }
+
+  // Get user reports stream (for My Reports screen)
+  // static Stream<List<Map<String, dynamic>>> getUserReportsStream(String userId) {
+  //   print('📱 Starting real-time user reports stream for user: $userId');
+  //
+  //   // Create a combined stream of both lost and found pets
+  //   final lostStream = _firestore
+  //       .collection('lost_pets')
+  //       .where('userId', isEqualTo: userId)
+  //       .orderBy('createdAt', descending: true)
+  //       .snapshots()
+  //       .map((snapshot) => snapshot.docs.map((doc) {
+  //             final data = doc.data();
+  //             data['id'] = doc.id;
+  //             data['type'] = 'lost';
+  //             return data;
+  //           }).toList());
+  //
+  //   final foundStream = _firestore
+  //       .collection('found_pets')
+  //       .where('userId', isEqualTo: userId)
+  //       .orderBy('createdAt', descending: true)
+  //       .snapshots()
+  //       .map((snapshot) => snapshot.docs.map((doc) {
+  //             final data = doc.data();
+  //             data['id'] = doc.id;
+  //             data['type'] = 'found';
+  //             return data;
+  //           }).toList());
+  //
+  //   return lostStream.combineLatest(foundStream, (lost, found) {
+  //     final combined = <Map<String, dynamic>>[];
+  //     combined.addAll(lost);
+  //     combined.addAll(found);
+  //
+  //     // Sort by creation date (most recent first)
+  //     combined.sort((a, b) {
+  //       final aTime = a['createdAt'] as Timestamp?;
+  //       final bTime = b['createdAt'] as Timestamp?;
+  //       if (aTime == null || bTime == null) return 0;
+  //       return bTime.compareTo(aTime);
+  //     });
+  //
+  //     return combined;
+  //   });
+  // }
 } 

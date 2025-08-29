@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "470661629842",
+    "project_id": "bookingplayground-3f74b",
+    "storage_bucket": "bookingplayground-3f74b.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:470661629842:android:acba6cbfd1a488abc3e34b",
+        "android_client_info": {
+          "package_name": "com.example.template_2025"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "470661629842-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrzOlXjtKLa-xsY--c3ijkMbejVJcGIwM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "470661629842-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

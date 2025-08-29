@@ -15,6 +15,7 @@ import 'core/Language/locales.dart';
 import 'core/Theme/theme_provider.dart';
 import 'core/firebase/firebase_config.dart';
 import 'core/Theme/app_theme.dart';
+import 'core/services/data_seeding_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +34,15 @@ Future<void> main() async {
   FastHttpConfig.init();
 
   await GitIt.initGitIt();
+
+  // Initialize demo data if Firebase is available
+  if (!FirebaseConfig.isDemoMode) {
+    try {
+      await DataSeedingService.initializeAllDemoData();
+    } catch (e) {
+      print('Could not initialize demo data: $e');
+    }
+  }
   
   runApp(
       MultiProvider(

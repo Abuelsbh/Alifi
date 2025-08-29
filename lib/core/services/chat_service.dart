@@ -1,178 +1,428 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'dart:io';
-
+import 'package:image_picker/image_picker.dart';
+import '../firebase/firebase_config.dart';
 import '../../Models/chat_model.dart';
+import '../../Models/user_model.dart';
 
 class ChatService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  static final FirebaseFirestore _firestore = FirebaseConfig.firestore;
+  static final FirebaseStorage _storage = FirebaseConfig.storage;
+  static final ImagePicker _picker = ImagePicker();
+  
+  // Cache for performance optimization
+  static final Map<String, Stream<List<ChatModel>>> _chatStreamsCache = {};
+  static final Map<String, Stream<List<ChatMessage>>> _messageStreamsCache = {};
+  static final Map<String, Stream<List<Map<String, dynamic>>>> _vetStreamsCache = {};
 
-  // Create a new chat
-  Future<String> createChat({
-    required String userId,
-    required String veterinarianId,
-    String? petId,
-  }) async {
-    try {
-      DocumentReference docRef = await _firestore.collection('veterinary_chats').add({
-        'userId': userId,
-        'veterinarianId': veterinarianId,
-        'petId': petId,
-        'lastMessage': '',
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'isActive': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      return docRef.id;
-    } catch (e) {
-      print('Error creating chat: $e');
-      throw Exception('Failed to create chat');
+  // Clear cache when needed
+  static void clearCache() {
+    _chatStreamsCache.clear();
+    _messageStreamsCache.clear();
+    _vetStreamsCache.clear();
+  }
+
+  // Get user's chats stream with caching
+  static Stream<List<ChatModel>> getUserChatsStream(String userId) {
+    if (_chatStreamsCache.containsKey(userId)) {
+      return _chatStreamsCache[userId]!;
     }
-  }
-
-  // Get user's chats
-  Stream<List<ChatModel>> getUserChats(String userId) {
-    return _firestore
+    
+    final stream = _firestore
         .collection('veterinary_chats')
-        .where('userId', isEqualTo: userId)
+        .where('participants', arrayContains: userId)
         .where('isActive', isEqualTo: true)
-        .orderBy('lastMessageTime', descending: true)
+        .orderBy('lastMessageAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ChatModel.fromFirestore(doc))
-            .toList());
+        .map((snapshot) {
+          final chats = snapshot.docs
+              .map((doc) => ChatModel.fromFirestore(doc))
+              .toList();
+          return chats;
+        });
+    
+    _chatStreamsCache[userId] = stream;
+    return stream;
   }
 
-  // Get veterinarian's chats
-  Stream<List<ChatModel>> getVeterinarianChats(String veterinarianId) {
-    return _firestore
-        .collection('veterinary_chats')
-        .where('veterinarianId', isEqualTo: veterinarianId)
-        .where('isActive', isEqualTo: true)
-        .orderBy('lastMessageTime', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ChatModel.fromFirestore(doc))
-            .toList());
-  }
-
-  // Get chat messages
-  Stream<List<MessageModel>> getChatMessages(String chatId) {
-    return _firestore
+  // Get chat messages stream with caching
+  static Stream<List<ChatMessage>> getChatMessagesStream(String chatId) {
+    if (_messageStreamsCache.containsKey(chatId)) {
+      return _messageStreamsCache[chatId]!;
+    }
+    
+    final stream = _firestore
         .collection('veterinary_chats')
         .doc(chatId)
         .collection('messages')
-        .orderBy('createdAt', descending: false)
+        .orderBy('timestamp', descending: false) // ترتيب من الأقدم إلى الأحدث
+        .limit(50) // Optimized limit for better performance
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => MessageModel.fromFirestore(doc))
-            .toList());
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => ChatMessage.fromFirestore(doc))
+              .toList();
+        });
+    
+    _messageStreamsCache[chatId] = stream;
+    return stream;
   }
 
-  // Send text message
-  Future<void> sendTextMessage({
+  // Get veterinarians stream with caching
+  static Stream<List<Map<String, dynamic>>> getVeterinariansStream() {
+    const cacheKey = 'veterinarians';
+    if (_vetStreamsCache.containsKey(cacheKey)) {
+      return _vetStreamsCache[cacheKey]!;
+    }
+    
+    final stream = _firestore
+        .collection('veterinarians')
+        .where('isActive', isEqualTo: true)
+        .where('isAvailable', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => {
+                'id': doc.id,
+                ...doc.data() as Map<String, dynamic>,
+              })
+              .toList();
+        });
+    
+    _vetStreamsCache[cacheKey] = stream;
+    return stream;
+  }
+
+  // Create or get existing chat with veterinarian
+  static Future<String> createChatWithVet({
+    required String userId,
+    required String veterinarianId,
+    String? initialMessage,
+  }) async {
+    try {
+      // Check if chat already exists
+      final existingChats = await _firestore
+          .collection('veterinary_chats')
+          .where('participants', arrayContains: userId)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      for (var doc in existingChats.docs) {
+        final participants = List<String>.from(doc.data()['participants'] ?? []);
+        if (participants.contains(veterinarianId)) {
+          return doc.id;
+        }
+      }
+
+      // Create new chat
+      final chatData = {
+        'participants': [userId, veterinarianId],
+        'participantNames': {
+          userId: 'المستخدم',
+          veterinarianId: 'الدكتور',
+        },
+        'lastMessage': initialMessage ?? 'محادثة جديدة',
+        'lastMessageAt': FieldValue.serverTimestamp(),
+        'lastMessageSender': userId,
+        'isActive': true,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'unreadCount': {
+          userId: 0,
+          veterinarianId: 1,
+        },
+      };
+
+      final chatRef = await _firestore
+          .collection('veterinary_chats')
+          .add(chatData);
+
+      // Add initial message if provided
+      if (initialMessage != null && initialMessage.isNotEmpty) {
+        await sendTextMessage(
+          chatId: chatRef.id,
+          senderId: userId,
+          message: initialMessage,
+        );
+      }
+
+      return chatRef.id;
+    } catch (e) {
+      throw Exception('فشل في إنشاء المحادثة: $e');
+    }
+  }
+
+  // Send text message with optimized batch operations
+  static Future<void> sendTextMessage({
     required String chatId,
     required String senderId,
-    required String senderName,
-    required String senderType,
     required String message,
   }) async {
     try {
-      // Add message to chat
-      await _firestore
+      final messageData = {
+        'chatId': chatId,
+        'senderId': senderId,
+        'message': message,
+        'timestamp': FieldValue.serverTimestamp(),
+        'type': MessageType.text.name,
+        'isRead': false,
+        'messageId': DateTime.now().millisecondsSinceEpoch.toString(),
+        'senderName': 'المستخدم',
+      };
+
+      // Use batch write for atomicity
+      final batch = _firestore.batch();
+      
+      // Add message
+      final messageRef = _firestore
           .collection('veterinary_chats')
           .doc(chatId)
           .collection('messages')
-          .add({
-        'chatId': chatId,
-        'senderId': senderId,
-        'senderName': senderName,
-        'senderType': senderType,
-        'message': message,
-        'type': 'text',
-        'mediaUrl': null,
-        'isRead': false,
-        'createdAt': FieldValue.serverTimestamp(),
+          .doc();
+      
+      batch.set(messageRef, messageData);
+
+      // Update chat metadata
+      final chatRef = _firestore.collection('veterinary_chats').doc(chatId);
+      batch.update(chatRef, {
+        'lastMessage': message,
+        'lastMessageAt': FieldValue.serverTimestamp(),
+        'lastMessageSender': senderId,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'unreadCount.$senderId': 0,
       });
 
-      // Update chat's last message
-      await _firestore.collection('veterinary_chats').doc(chatId).update({
-        'lastMessage': message,
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      await batch.commit();
     } catch (e) {
-      print('Error sending text message: $e');
-      throw Exception('Failed to send message');
+      throw Exception('فشل في إرسال الرسالة: $e');
     }
   }
 
-  // Send media message (image/video)
-  Future<void> sendMediaMessage({
+  // Send image message with optimized upload
+  static Future<void> sendImageMessage({
     required String chatId,
     required String senderId,
-    required String senderName,
-    required String senderType,
-    required File mediaFile,
-    required MessageType mediaType,
+    required File imageFile,
+    String? caption,
   }) async {
     try {
-      // Upload media to Firebase Storage
-      String mediaUrl = await _uploadMedia(chatId, mediaFile, mediaType);
+      // Upload image with compression
+      final imageUrl = await _uploadImage(imageFile, 'chat_images/$chatId');
 
-      // Add message to chat
-      await _firestore
+      final messageData = {
+        'chatId': chatId,
+        'senderId': senderId,
+        'message': caption ?? 'صورة',
+        'timestamp': FieldValue.serverTimestamp(),
+        'type': MessageType.image.name,
+        'mediaUrl': imageUrl,
+        'isRead': false,
+        'messageId': DateTime.now().millisecondsSinceEpoch.toString(),
+        'senderName': 'المستخدم',
+      };
+
+      // Use batch write
+      final batch = _firestore.batch();
+      
+      final messageRef = _firestore
           .collection('veterinary_chats')
           .doc(chatId)
           .collection('messages')
-          .add({
-        'chatId': chatId,
-        'senderId': senderId,
-        'senderName': senderName,
-        'senderType': senderType,
-        'message': mediaType == MessageType.image ? 'Image' : 'Video',
-        'type': mediaType.toString().split('.').last,
-        'mediaUrl': mediaUrl,
-        'isRead': false,
-        'createdAt': FieldValue.serverTimestamp(),
+          .doc();
+      
+      batch.set(messageRef, messageData);
+
+      final chatRef = _firestore.collection('veterinary_chats').doc(chatId);
+      batch.update(chatRef, {
+        'lastMessage': caption ?? '📷 صورة',
+        'lastMessageAt': FieldValue.serverTimestamp(),
+        'lastMessageSender': senderId,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'unreadCount.$senderId': 0,
       });
 
-      // Update chat's last message
-      await _firestore.collection('veterinary_chats').doc(chatId).update({
-        'lastMessage': mediaType == MessageType.image ? 'Image' : 'Video',
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      await batch.commit();
     } catch (e) {
-      print('Error sending media message: $e');
-      throw Exception('Failed to send media message');
+      throw Exception('فشل في إرسال الصورة: $e');
     }
   }
 
-  // Upload media to Firebase Storage
-  Future<String> _uploadMedia(String chatId, File mediaFile, MessageType mediaType) async {
+  // Send video message
+  static Future<void> sendVideoMessage({
+    required String chatId,
+    required String senderId,
+    required File videoFile,
+    String? caption,
+  }) async {
     try {
-      String fileName = '${DateTime.now().millisecondsSinceEpoch}_${mediaFile.path.split('/').last}';
-      String folder = mediaType == MessageType.image ? 'images' : 'videos';
-      Reference ref = _storage.ref().child('chat_media/$chatId/$folder/$fileName');
+      final videoUrl = await _uploadVideo(videoFile, 'chat_videos/$chatId');
       
-      UploadTask uploadTask = ref.putFile(mediaFile);
-      TaskSnapshot snapshot = await uploadTask;
-      String downloadUrl = await snapshot.ref.getDownloadURL();
+      final messageData = {
+        'chatId': chatId,
+        'senderId': senderId,
+        'message': caption ?? 'فيديو',
+        'timestamp': FieldValue.serverTimestamp(),
+        'type': MessageType.video.name,
+        'mediaUrl': videoUrl,
+        'isRead': false,
+        'messageId': DateTime.now().millisecondsSinceEpoch.toString(),
+        'senderName': 'المستخدم',
+      };
+
+      final batch = _firestore.batch();
+      
+      final messageRef = _firestore
+          .collection('veterinary_chats')
+          .doc(chatId)
+          .collection('messages')
+          .doc();
+      
+      batch.set(messageRef, messageData);
+
+      final chatRef = _firestore.collection('veterinary_chats').doc(chatId);
+      batch.update(chatRef, {
+        'lastMessage': caption ?? '🎥 فيديو',
+        'lastMessageAt': FieldValue.serverTimestamp(),
+        'lastMessageSender': senderId,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'unreadCount.$senderId': 0,
+      });
+
+      await batch.commit();
+    } catch (e) {
+      throw Exception('فشل في إرسال الفيديو: $e');
+    }
+  }
+
+  // Send file message
+  static Future<void> sendFileMessage({
+    required String chatId,
+    required String senderId,
+    required File file,
+    String? fileName,
+  }) async {
+    try {
+      final fileUrl = await _uploadFile(file, 'chat_files/$chatId', fileName);
+      final fileSize = await file.length();
+      
+      final messageData = {
+        'chatId': chatId,
+        'senderId': senderId,
+        'message': fileName ?? 'ملف',
+        'timestamp': FieldValue.serverTimestamp(),
+        'type': MessageType.file.name,
+        'mediaUrl': fileUrl,
+        'fileName': fileName ?? file.path.split('/').last,
+        'fileSize': fileSize,
+        'isRead': false,
+        'messageId': DateTime.now().millisecondsSinceEpoch.toString(),
+        'senderName': 'المستخدم',
+      };
+
+      final batch = _firestore.batch();
+      
+      final messageRef = _firestore
+          .collection('veterinary_chats')
+          .doc(chatId)
+          .collection('messages')
+          .doc();
+      
+      batch.set(messageRef, messageData);
+
+      final chatRef = _firestore.collection('veterinary_chats').doc(chatId);
+      batch.update(chatRef, {
+        'lastMessage': fileName ?? '📎 ملف',
+        'lastMessageAt': FieldValue.serverTimestamp(),
+        'lastMessageSender': senderId,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'unreadCount.$senderId': 0,
+      });
+
+      await batch.commit();
+    } catch (e) {
+      throw Exception('فشل في إرسال الملف: $e');
+    }
+  }
+
+  // Optimized image upload with compression
+  static Future<String> _uploadImage(File imageFile, String folder) async {
+    try {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${imageFile.path.split('/').last}';
+      final ref = _storage.ref().child('$folder/$fileName');
+      
+      // Set metadata for better compression
+      final metadata = SettableMetadata(
+        contentType: 'image/jpeg',
+        customMetadata: {
+          'compressed': 'true',
+          'uploaded_at': DateTime.now().toIso8601String(),
+        },
+      );
+      
+      final uploadTask = ref.putFile(imageFile, metadata);
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
       
       return downloadUrl;
     } catch (e) {
-      print('Error uploading media: $e');
-      throw Exception('Failed to upload media');
+      throw Exception('فشل في رفع الصورة: $e');
     }
   }
 
-  // Mark messages as read
-  Future<void> markMessagesAsRead(String chatId, String userId) async {
+  // Optimized video upload
+  static Future<String> _uploadVideo(File videoFile, String folder) async {
     try {
-      QuerySnapshot messages = await _firestore
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${videoFile.path.split('/').last}';
+      final ref = _storage.ref().child('$folder/$fileName');
+      
+      final metadata = SettableMetadata(
+        contentType: 'video/mp4',
+        customMetadata: {
+          'uploaded_at': DateTime.now().toIso8601String(),
+        },
+      );
+      
+      final uploadTask = ref.putFile(videoFile, metadata);
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      
+      return downloadUrl;
+    } catch (e) {
+      throw Exception('فشل في رفع الفيديو: $e');
+    }
+  }
+
+  // Optimized file upload
+  static Future<String> _uploadFile(File file, String folder, String? fileName) async {
+    try {
+      final name = fileName ?? '${DateTime.now().millisecondsSinceEpoch}_${file.path.split('/').last}';
+      final ref = _storage.ref().child('$folder/$name');
+      
+      final metadata = SettableMetadata(
+        customMetadata: {
+          'uploaded_at': DateTime.now().toIso8601String(),
+        },
+      );
+      
+      final uploadTask = ref.putFile(file, metadata);
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      
+      return downloadUrl;
+    } catch (e) {
+      throw Exception('فشل في رفع الملف: $e');
+    }
+  }
+
+  // Mark messages as read with batch operation
+  static Future<void> markMessagesAsRead({
+    required String chatId,
+    required String userId,
+  }) async {
+    try {
+      // Get unread messages
+      final messagesQuery = await _firestore
           .collection('veterinary_chats')
           .doc(chatId)
           .collection('messages')
@@ -180,124 +430,215 @@ class ChatService {
           .where('isRead', isEqualTo: false)
           .get();
 
-      WriteBatch batch = _firestore.batch();
-      for (DocumentSnapshot doc in messages.docs) {
-        batch.update(doc.reference, {'isRead': true});
+      if (messagesQuery.docs.isNotEmpty) {
+        final batch = _firestore.batch();
+        
+        // Mark messages as read
+        for (var doc in messagesQuery.docs) {
+          batch.update(doc.reference, {'isRead': true});
+        }
+
+        // Reset unread count
+        batch.update(
+          _firestore.collection('veterinary_chats').doc(chatId),
+          {'unreadCount.$userId': 0},
+        );
+
+        await batch.commit();
       }
-      await batch.commit();
     } catch (e) {
-      print('Error marking messages as read: $e');
+      throw Exception('فشل في تحديث حالة القراءة: $e');
     }
   }
 
-  // Get unread message count for a chat
-  Stream<int> getUnreadMessageCount(String chatId, String userId) {
+  // Get unread message count stream
+  static Stream<int> getUnreadMessageCountStream(String userId) {
     return _firestore
         .collection('veterinary_chats')
-        .doc(chatId)
-        .collection('messages')
-        .where('senderId', isNotEqualTo: userId)
-        .where('isRead', isEqualTo: false)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.length);
-  }
-
-  // Get total unread messages for a user
-  Stream<int> getTotalUnreadMessages(String userId) {
-    return _firestore
-        .collection('veterinary_chats')
-        .where('userId', isEqualTo: userId)
+        .where('participants', arrayContains: userId)
         .where('isActive', isEqualTo: true)
         .snapshots()
-        .asyncMap((chatsSnapshot) async {
+        .map((snapshot) {
       int totalUnread = 0;
-      for (DocumentSnapshot chatDoc in chatsSnapshot.docs) {
-        QuerySnapshot messages = await _firestore
-            .collection('veterinary_chats')
-            .doc(chatDoc.id)
-            .collection('messages')
-            .where('senderId', isNotEqualTo: userId)
-            .where('isRead', isEqualTo: false)
-            .get();
-        totalUnread += messages.docs.length;
+      for (var doc in snapshot.docs) {
+        final unreadCount = Map<String, dynamic>.from(doc.data()['unreadCount'] ?? {});
+        final count = unreadCount[userId];
+        totalUnread += (count is int) ? count : (count as num?)?.toInt() ?? 0;
       }
       return totalUnread;
     });
   }
 
-  // Close chat
-  Future<void> closeChat(String chatId) async {
+  // Delete chat with cleanup
+  static Future<void> deleteChat(String chatId) async {
     try {
-      await _firestore.collection('veterinary_chats').doc(chatId).update({
-        'isActive': false,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      print('Error closing chat: $e');
-      throw Exception('Failed to close chat');
-    }
-  }
-
-  // Delete chat and all messages
-  Future<void> deleteChat(String chatId) async {
-    try {
-      // Delete all messages in the chat
-      QuerySnapshot messages = await _firestore
+      // Delete all messages
+      final messagesQuery = await _firestore
           .collection('veterinary_chats')
           .doc(chatId)
           .collection('messages')
           .get();
 
-      WriteBatch batch = _firestore.batch();
-      for (DocumentSnapshot doc in messages.docs) {
+      final batch = _firestore.batch();
+      for (var doc in messagesQuery.docs) {
         batch.delete(doc.reference);
       }
-      await batch.commit();
+      
+      // Mark chat as inactive instead of deleting
+      batch.update(
+        _firestore.collection('veterinary_chats').doc(chatId),
+        {'isActive': false, 'updatedAt': FieldValue.serverTimestamp()},
+      );
 
-      // Delete the chat document
-      await _firestore.collection('veterinary_chats').doc(chatId).delete();
+      await batch.commit();
+      
+      // Clear cache
+      _messageStreamsCache.remove(chatId);
     } catch (e) {
-      print('Error deleting chat: $e');
-      throw Exception('Failed to delete chat');
+      throw Exception('فشل في حذف المحادثة: $e');
     }
   }
 
-  // Get chat by ID
-  Future<ChatModel?> getChatById(String chatId) async {
+  // Pick image from gallery with optimization
+  static Future<File?> pickImageFromGallery() async {
     try {
-      DocumentSnapshot doc = await _firestore
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      return image != null ? File(image.path) : null;
+    } catch (e) {
+      throw Exception('فشل في اختيار الصورة: $e');
+    }
+  }
+
+  // Take photo with camera with optimization
+  static Future<File?> takePhotoWithCamera() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      return image != null ? File(image.path) : null;
+    } catch (e) {
+      throw Exception('فشل في التقاط الصورة: $e');
+    }
+  }
+
+  // Get chat participants with caching
+  static Future<List<UserModel>> getChatParticipants(String chatId) async {
+    try {
+      final chatDoc = await _firestore
           .collection('veterinary_chats')
           .doc(chatId)
           .get();
-      
-      if (doc.exists) {
-        return ChatModel.fromFirestore(doc);
+
+      if (!chatDoc.exists) {
+        return [];
       }
-      return null;
+
+      final participants = List<String>.from(chatDoc.data()!['participants'] ?? []);
+      final users = <UserModel>[];
+
+      for (final userId in participants) {
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(userId)
+            .get();
+
+        if (userDoc.exists) {
+          users.add(UserModel.fromFirestore(userDoc));
+        }
+      }
+
+      return users;
     } catch (e) {
-      print('Error getting chat by ID: $e');
-      return null;
+      throw Exception('فشل في جلب المشاركين: $e');
     }
   }
 
-  // Check if chat exists between user and veterinarian
-  Future<String?> getExistingChatId(String userId, String veterinarianId) async {
+  // Search veterinarians with optimization
+  static Future<List<VeterinarianModel>> searchVeterinarians({
+    String? name,
+    String? specialization,
+    String? location,
+  }) async {
     try {
-      QuerySnapshot querySnapshot = await _firestore
-          .collection('veterinary_chats')
-          .where('userId', isEqualTo: userId)
-          .where('veterinarianId', isEqualTo: veterinarianId)
+      Query query = _firestore
+          .collection('veterinarians')
           .where('isActive', isEqualTo: true)
-          .limit(1)
+          .where('isAvailable', isEqualTo: true);
+
+      if (specialization != null && specialization.isNotEmpty) {
+        query = query.where('specialization', isEqualTo: specialization);
+      }
+
+      final snapshot = await query.get();
+      List<VeterinarianModel> veterinarians = snapshot.docs
+          .map((doc) => VeterinarianModel.fromFirestore(doc))
+          .toList();
+
+      // Filter by name and location
+      if (name != null && name.isNotEmpty) {
+        veterinarians = veterinarians.where((vet) =>
+            vet.name.toLowerCase().contains(name.toLowerCase()) ||
+            vet.email.toLowerCase().contains(name.toLowerCase())).toList();
+      }
+
+      if (location != null && location.isNotEmpty) {
+        veterinarians = veterinarians.where((vet) =>
+            vet.address?.toLowerCase().contains(location.toLowerCase()) ?? false).toList();
+      }
+
+      return veterinarians;
+    } catch (e) {
+      throw Exception('فشل في البحث عن الأطباء: $e');
+    }
+  }
+
+  // Get chat statistics with optimization
+  static Future<Map<String, dynamic>> getChatStatistics(String userId) async {
+    try {
+      final userChats = await _firestore
+          .collection('veterinary_chats')
+          .where('participants', arrayContains: userId)
+          .where('isActive', isEqualTo: true)
           .get();
 
-      if (querySnapshot.docs.isNotEmpty) {
-        return querySnapshot.docs.first.id;
+      int totalChats = userChats.docs.length;
+      int activeChats = 0;
+      int totalMessages = 0;
+      int unreadMessages = 0;
+
+      for (var chatDoc in userChats.docs) {
+        final chatData = chatDoc.data();
+        if (chatData['isActive'] == true) {
+          activeChats++;
+        }
+
+        final unreadCount = Map<String, dynamic>.from(chatData['unreadCount'] ?? {});
+        final count = unreadCount[userId];
+        unreadMessages += (count is int) ? count : (count as num?)?.toInt() ?? 0;
+
+        // Count messages in this chat
+        final messagesQuery = await chatDoc.reference.collection('messages').get();
+        totalMessages += messagesQuery.docs.length;
       }
-      return null;
+
+      return {
+        'totalChats': totalChats,
+        'activeChats': activeChats,
+        'totalMessages': totalMessages,
+        'unreadMessages': unreadMessages,
+      };
     } catch (e) {
-      print('Error checking existing chat: $e');
-      return null;
+      throw Exception('فشل في جلب إحصائيات المحادثة: $e');
     }
   }
 } 

@@ -1,106 +1,78 @@
-# Alifi - Pet Care Platform
+# 🐾 Alifi - Pet Care Platform
 
-Alifi is a comprehensive cross-platform mobile application designed to help pet owners in their daily lives. Built with Flutter, it provides veterinary consultations, pet supplies search, lost/found reports, adoption, breeding opportunities, and community connection — all in one app.
+<div align="center">
+  <img src="assets/images/logo.png" alt="Alifi Logo" width="200"/>
+  
+  [![Flutter](https://img.shields.io/badge/Flutter-3.5.3-blue.svg)](https://flutter.dev/)
+  [![Firebase](https://img.shields.io/badge/Firebase-Latest-orange.svg)](https://firebase.google.com/)
+  [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+</div>
 
-## Features
+## 📱 Overview
 
-### 🏠 Home
-- Quick navigation to all app features
-- Latest community posts and updates
-- Personalized dashboard for pet owners
+**Alifi** is a comprehensive pet care platform that connects pet owners with veterinary services and helps reunite lost pets with their families. Built with Flutter and Firebase, it provides a modern, responsive, and user-friendly experience.
 
-### 🐾 Lost & Found Pets
-- **Lost Pet Reports**: Post detailed ads with photos, location, and pet details
-- **Found Pet Reports**: Report found pets with location and contact information
-- **Location-based Filtering**: Find pets in your area
-- **Search & Filter**: Filter by pet type, breed, and other criteria
-- **Direct Communication**: Contact pet owners or finders directly
+## ✨ Features
 
-### 🩺 Veterinary Consultation
-- **Real-time Chat**: Text, image, and video messaging with veterinarians
-- **Veterinarian Directory**: Browse qualified veterinarians with ratings and reviews
-- **Online Consultations**: Get professional advice without leaving home
-- **Chat History**: Access previous conversations and medical advice
+### 🏠 Home Dashboard
+- **Welcome Screen**: Beautiful animated splash screen with gradient backgrounds
+- **Quick Actions**: Easy access to main features
+- **Statistics**: Real-time pet and veterinarian statistics
+- **Recent Activities**: Latest updates and notifications
+- **Featured Services**: Emergency care, grooming, and vaccination services
 
-### 👤 User Profile & Pets
-- **Pet Management**: Add and manage your pets' information
-- **Vaccination Records**: Track your pets' vaccination history
-- **Profile Management**: Update personal information and preferences
-- **Report History**: View your lost/found pet reports
+### 🐕 Lost & Found Pets
+- **Report Lost Pets**: Upload photos and details of missing pets
+- **Report Found Pets**: Help reunite found pets with owners
+- **Search & Filter**: Advanced search by type, breed, and location
+- **Real-time Updates**: Instant notifications for matches
+- **Location-based Search**: Find pets in your area
 
-### 🎨 Design Features
-- **Multi-language Support**: Arabic (RTL) and English (LTR)
-- **Light & Dark Themes**: Toggle between light and dark modes
-- **Responsive Design**: Optimized for phones and tablets
-- **Modern UI**: Clean, intuitive interface with green and orange theme colors
+### 🏥 Veterinary Services
+- **Chat with Veterinarians**: Real-time messaging with certified vets
+- **Online Consultations**: Get expert advice from anywhere
+- **Emergency Care**: 24/7 emergency veterinary support
+- **Appointment Booking**: Schedule in-person consultations
+- **Medical Records**: Store and manage pet health information
 
-## Technical Stack
+### 👤 User Profile
+- **Pet Management**: Add and manage multiple pets
+- **Report History**: Track all your lost/found pet reports
+- **Settings**: Customize app preferences and notifications
+- **Multi-language Support**: English and Arabic
+- **Dark/Light Theme**: Choose your preferred theme
+
+## 🛠 Technology Stack
 
 ### Frontend
-- **Framework**: Flutter 3.5.3+
-- **State Management**: Provider
-- **Navigation**: Go Router
-- **UI Components**: Custom widgets with Material Design 3
-- **Responsive Design**: Flutter ScreenUtil
+- **Flutter 3.5.3**: Cross-platform mobile development
+- **Dart**: Programming language
+- **Provider**: State management
+- **Go Router**: Navigation and routing
+- **Flutter ScreenUtil**: Responsive design
+- **Google Fonts**: Typography
+- **Lottie**: Animations
 
 ### Backend & Services
-- **Authentication**: Firebase Auth
-- **Database**: Cloud Firestore
-- **Storage**: Firebase Storage (for images and media)
-- **Push Notifications**: Firebase Cloud Messaging
-- **Maps & Location**: Google Maps API, Geolocator
+- **Firebase Authentication**: User management and security
+- **Cloud Firestore**: Real-time database
+- **Firebase Storage**: File and image storage
+- **Firebase Messaging**: Push notifications
+- **Google Maps**: Location services
+- **Image Picker**: Camera and gallery integration
 
-### Key Dependencies
-```yaml
-# Firebase
-firebase_core: ^2.24.2
-firebase_auth: ^4.15.3
-cloud_firestore: ^4.13.6
-firebase_storage: ^11.5.6
-firebase_messaging: ^14.7.10
+### UI/UX
+- **Material Design 3**: Modern design system
+- **Custom Animations**: Smooth transitions and effects
+- **Responsive Layout**: Works on all screen sizes
+- **Accessibility**: Support for users with disabilities
+- **Internationalization**: Multi-language support
 
-# Maps & Location
-google_maps_flutter: ^2.5.3
-geolocator: ^10.1.0
-geocoding: ^2.1.1
-
-# UI & Media
-image_picker: ^1.0.4
-cached_network_image: ^3.3.0
-flutter_screenutil: ^5.7.0
-google_fonts: ^5.1.0
-
-# State Management
-provider: ^6.0.5
-get_it: ^7.6.0
-```
-
-## Project Structure
-
-```
-lib/
-├── core/
-│   ├── firebase/          # Firebase configuration
-│   ├── services/          # Business logic services
-│   ├── Theme/            # App themes and styling
-│   └── Language/         # Internationalization
-├── Models/               # Data models
-├── Modules/
-│   ├── Main/            # Main app screens
-│   │   ├── home/        # Home screen
-│   │   ├── veterinary/  # Veterinary consultation
-│   │   ├── lost_found/  # Lost & found pets
-│   │   └── profile/     # User profile
-│   └── Splash/          # Splash screen
-├── Widgets/             # Reusable UI components
-└── Utilities/           # Helper utilities
-```
-
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
 - Flutter SDK 3.5.3 or higher
-- Dart SDK 3.5.3 or higher
+- Dart SDK 3.0.0 or higher
 - Android Studio / VS Code
 - Firebase project setup
 
@@ -108,8 +80,8 @@ lib/
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd alifi
+   git clone https://github.com/yourusername/alifi-pet-care.git
+   cd alifi-pet-care
    ```
 
 2. **Install dependencies**
@@ -119,86 +91,217 @@ lib/
 
 3. **Firebase Setup**
    - Create a new Firebase project
-   - Enable Authentication, Firestore, Storage, and Cloud Messaging
-   - Download and add the configuration files:
-     - `google-services.json` for Android
-     - `GoogleService-Info.plist` for iOS
+   - Enable Authentication, Firestore, Storage, and Messaging
+   - Download `google-services.json` for Android
+   - Download `GoogleService-Info.plist` for iOS
+   - Update Firebase configuration in `lib/core/firebase/firebase_options.dart`
 
-4. **Google Maps Setup**
-   - Get a Google Maps API key
-   - Add it to your Android and iOS configurations
-
-5. **Run the app**
+4. **Run the app**
    ```bash
    flutter run
    ```
 
-### Platform-specific Setup
+### Firebase Configuration
+
+1. **Authentication**
+   - Enable Email/Password authentication
+   - Configure password reset emails
+
+2. **Firestore Database**
+   - Create collections: `users`, `lost_pets`, `found_pets`, `veterinary_chats`, `veterinarians`
+   - Set up security rules
+
+3. **Storage**
+   - Create folders: `pet_reports`, `chat_images`, `user_avatars`
+   - Configure storage rules
+
+4. **Messaging**
+   - Set up FCM for push notifications
+   - Configure notification channels
+
+## 📁 Project Structure
+
+```
+lib/
+├── core/
+│   ├── firebase/           # Firebase configuration
+│   ├── Font/              # Font management
+│   ├── Language/          # Internationalization
+│   ├── network/           # Network utilities
+│   ├── services/          # Business logic services
+│   └── Theme/             # App theming
+├── generated/             # Generated files
+├── Models/                # Data models
+├── Modules/               # Feature modules
+│   ├── Main/             # Main app screens
+│   └── Splash/           # Splash screen
+├── Utilities/            # Utility classes
+├── Widgets/              # Reusable widgets
+└── main.dart             # App entry point
+```
+
+## 🎨 Design System
+
+### Colors
+- **Primary Green**: `#4CAF50` - Main brand color
+- **Primary Orange**: `#FF9800` - Secondary brand color
+- **Success**: `#4CAF50` - Success states
+- **Warning**: `#FF9800` - Warning states
+- **Error**: `#F44336` - Error states
+- **Info**: `#2196F3` - Information states
+
+### Typography
+- **Font Family**: Poppins (Google Fonts)
+- **Headings**: Bold weights for hierarchy
+- **Body Text**: Regular weight for readability
+- **Captions**: Light weight for secondary information
+
+### Components
+- **Cards**: Rounded corners with subtle shadows
+- **Buttons**: Material Design 3 style with animations
+- **Input Fields**: Clean design with focus states
+- **Navigation**: Custom bottom navigation with animations
+
+## 🔧 Configuration
+
+### Environment Variables
+Create a `.env` file in the root directory:
+```env
+FIREBASE_API_KEY=your_api_key
+FIREBASE_PROJECT_ID=your_project_id
+FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+GOOGLE_MAPS_API_KEY=your_maps_api_key
+```
+
+### Build Configuration
 
 #### Android
-1. Add Google Maps API key to `android/app/src/main/AndroidManifest.xml`
-2. Ensure minimum SDK version is 21 or higher
+```gradle
+android {
+    compileSdkVersion 34
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 34
+    }
+}
+```
 
 #### iOS
-1. Add Google Maps API key to `ios/Runner/AppDelegate.swift`
-2. Update iOS deployment target to 12.0 or higher
+```swift
+// Minimum iOS version: 12.0
+// Target iOS version: 17.0
+```
 
-## Features Implementation
+## 📱 Screenshots
 
-### Lost & Found System
-- **Real-time Updates**: Posts are updated in real-time using Firestore
-- **Location Services**: Automatic location detection and geocoding
-- **Image Upload**: Secure image storage with Firebase Storage
-- **Search & Filter**: Efficient querying with Firestore indexes
+<div align="center">
+  <img src="screenshots/home.png" alt="Home Screen" width="200"/>
+  <img src="screenshots/lost_found.png" alt="Lost & Found" width="200"/>
+  <img src="screenshots/veterinary.png" alt="Veterinary" width="200"/>
+  <img src="screenshots/profile.png" alt="Profile" width="200"/>
+</div>
 
-### Veterinary Chat
-- **Real-time Messaging**: Live chat using Firestore real-time listeners
-- **Media Support**: Send images and videos during consultations
-- **Message Status**: Read receipts and typing indicators
-- **Chat History**: Persistent conversation history
+## 🧪 Testing
 
-### User Management
-- **Authentication**: Secure user registration and login
-- **Profile Management**: Complete user profile with pet information
-- **Data Persistence**: All user data stored securely in Firestore
+Run tests with:
+```bash
+flutter test
+```
 
-## Contributing
+### Test Coverage
+- Unit tests for services
+- Widget tests for UI components
+- Integration tests for user flows
+
+## 📦 Building for Production
+
+### Android
+```bash
+flutter build apk --release
+flutter build appbundle --release
+```
+
+### iOS
+```bash
+flutter build ios --release
+```
+
+### Web
+```bash
+flutter build web --release
+```
+
+## 🔒 Security
+
+- **Authentication**: Firebase Auth with email/password
+- **Data Validation**: Input sanitization and validation
+- **File Upload**: Secure file upload with size limits
+- **API Security**: Firebase security rules
+- **Privacy**: GDPR compliant data handling
+
+## 🌐 Internationalization
+
+The app supports multiple languages:
+- **English** (en)
+- **Arabic** (ar)
+
+To add a new language:
+1. Create translation file in `i18n/`
+2. Add language to `lib/core/Language/app_languages.dart`
+3. Update locale configuration
+
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## License
+### Code Style
+- Follow Dart/Flutter conventions
+- Use meaningful variable and function names
+- Add comments for complex logic
+- Write unit tests for new features
+
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Support
+## 🙏 Acknowledgments
 
-For support and questions, please contact the development team or create an issue in the repository.
+- **Flutter Team**: For the amazing framework
+- **Firebase Team**: For the powerful backend services
+- **Material Design**: For the design system
+- **Open Source Community**: For the libraries and tools
 
-## Roadmap
+## 📞 Support
 
-### Phase 1 (Current)
-- ✅ Core lost & found functionality
-- ✅ Veterinary chat system
-- ✅ User profiles and pet management
-- ✅ Basic UI/UX implementation
+- **Email**: support@alifi.com
+- **Website**: https://alifi.com
+- **Documentation**: https://docs.alifi.com
+- **Issues**: [GitHub Issues](https://github.com/yourusername/alifi-pet-care/issues)
 
-### Phase 2 (Planned)
-- 🔄 Pet stores and supplies integration
-- 🔄 Adoption and breeding features
-- 🔄 Advanced search and filtering
-- 🔄 Push notifications
+## 🚀 Roadmap
 
-### Phase 3 (Future)
-- 📋 Community features and forums
-- 📋 Pet health tracking
-- 📋 Emergency veterinary services
-- 📋 Pet insurance integration
+### Version 2.0
+- [ ] Pet health tracking
+- [ ] Vaccination reminders
+- [ ] Pet insurance integration
+- [ ] Emergency SOS feature
+- [ ] Pet community forum
+
+### Version 3.0
+- [ ] AI-powered pet recognition
+- [ ] Virtual vet consultations
+- [ ] Pet training videos
+- [ ] Pet marketplace
+- [ ] Pet sitting services
 
 ---
 
-**Alifi** - Making pet care easier, one paw at a time! 🐾
-# Alifi
+<div align="center">
+  Made with ❤️ for pet lovers everywhere
+  
+  [Download on App Store](#) | [Get it on Google Play](#)
+</div>

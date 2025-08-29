@@ -1,0 +1,96 @@
+{
+  "navigation": {
+    "home": "الرئيسية",
+    "veterinary": "البيطري",
+    "lost_found": "ضائع ومفقود",
+    "profile": "الملف الشخصي"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "signup": "إنشاء حساب",
+    "logout": "تسجيل الخروج",
+    "logout_subtitle": "تسجيل الخروج من حسابك",
+    "logout_failed": "فشل في تسجيل الخروج",
+    "invalid_credentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+    "enter_email_first": "يرجى إدخال بريدك الإلكتروني أولاً",
+    "password_reset_sent": "تم إرسال رابط إعادة تعيين كلمة المرور",
+    "password_reset_failed": "فشل في إرسال رابط إعادة تعيين كلمة المرور",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "name": "الاسم",
+    "confirm_password": "تأكيد كلمة المرور",
+    "forgot_password": "نسيت كلمة المرور؟",
+    "dont_have_account": "ليس لديك حساب؟",
+    "already_have_account": "لديك حساب بالفعل؟"
+  },
+  "profile": {
+    "my_profile": "ملفي الشخصي",
+    "login_prompt": "يرجى تسجيل الدخول لعرض ملفك الشخصي",
+    "settings": "الإعدادات",
+    "language": "اللغة",
+    "theme": "المظهر",
+    "notifications": "الإشعارات",
+    "privacy": "الخصوصية",
+    "about": "حول التطبيق",
+    "help": "المساعدة"
+  },
+  "post_report": {
+    "lost_pet_title": "إبلاغ عن حيوان ضائع",
+    "found_pet_title": "إبلاغ عن حيوان مفقود",
+    "age": "العمر",
+    "gender": "الجنس",
+    "male": "ذكر",
+    "female": "أنثى",
+    "color": "اللون",
+    "location": "الموقع",
+    "contact_name": "اسم جهة الاتصال",
+    "contact_phone": "رقم الهاتف",
+    "required_field": "هذا الحقل مطلوب",
+    "pet_name": "اسم الحيوان",
+    "pet_type": "نوع الحيوان",
+    "breed": "السلالة",
+    "description": "الوصف",
+    "photos": "الصور",
+    "submit": "إرسال البلاغ",
+    "cancel": "إلغاء"
+  },
+  "lost_found": {
+    "post_report": "نشر بلاغ",
+    "lost_pet": "حيوان ضائع",
+    "found_pet": "حيوان مفقود",
+    "search": "البحث",
+    "filter": "تصفية",
+    "all": "الكل",
+    "dogs": "الكلاب",
+    "cats": "القطط",
+    "other": "أخرى"
+  },
+  "common": {
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "add": "إضافة",
+    "search": "البحث",
+    "filter": "تصفية",
+    "sort": "ترتيب",
+    "loading": "جاري التحميل...",
+    "error": "خطأ",
+    "success": "نجح",
+    "warning": "تحذير",
+    "info": "معلومات"
+  },
+  "home": {
+    "welcome": "مرحباً بك في Alifi",
+    "quick_actions": "الإجراءات السريعة",
+    "recent_reports": "البلاغات الحديثة",
+    "veterinary_services": "الخدمات البيطرية"
+  },
+  "veterinary": {
+    "title": "الخدمات البيطرية",
+    "chat": "محادثة",
+    "consultation": "استشارة",
+    "emergency": "طوارئ",
+    "appointment": "موعد"
+  }
+} 

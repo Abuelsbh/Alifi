@@ -1,24 +1,35 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
+enum MessageType {
+  text,
+  image,
+  video,
+  audio,
+  file,
+  location,
+}
+
 class ChatModel extends Equatable {
   final String id;
-  final String userId;
-  final String veterinarianId;
-  final String? petId;
+  final List<String> participants;
+  final Map<String, String> participantNames;
   final String lastMessage;
-  final DateTime lastMessageTime;
+  final DateTime lastMessageAt;
+  final String lastMessageSender;
+  final Map<String, int> unreadCount;
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   const ChatModel({
     required this.id,
-    required this.userId,
-    required this.veterinarianId,
-    this.petId,
+    required this.participants,
+    required this.participantNames,
     required this.lastMessage,
-    required this.lastMessageTime,
+    required this.lastMessageAt,
+    required this.lastMessageSender,
+    required this.unreadCount,
     this.isActive = true,
     required this.createdAt,
     required this.updatedAt,
@@ -26,26 +37,29 @@ class ChatModel extends Equatable {
 
   factory ChatModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    
     return ChatModel(
       id: doc.id,
-      userId: data['userId'] ?? '',
-      veterinarianId: data['veterinarianId'] ?? '',
-      petId: data['petId'],
+      participants: List<String>.from(data['participants'] ?? []),
+      participantNames: Map<String, String>.from(data['participantNames'] ?? {}),
       lastMessage: data['lastMessage'] ?? '',
-      lastMessageTime: (data['lastMessageTime'] as Timestamp).toDate(),
+      lastMessageAt: (data['lastMessageAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastMessageSender: data['lastMessageSender'] ?? '',
+      unreadCount: Map<String, int>.from(data['unreadCount'] ?? {}),
       isActive: data['isActive'] ?? true,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 
   Map<String, dynamic> toFirestore() {
     return {
-      'userId': userId,
-      'veterinarianId': veterinarianId,
-      'petId': petId,
+      'participants': participants,
+      'participantNames': participantNames,
       'lastMessage': lastMessage,
-      'lastMessageTime': Timestamp.fromDate(lastMessageTime),
+      'lastMessageAt': Timestamp.fromDate(lastMessageAt),
+      'lastMessageSender': lastMessageSender,
+      'unreadCount': unreadCount,
       'isActive': isActive,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
@@ -55,13 +69,14 @@ class ChatModel extends Equatable {
   factory ChatModel.fromJson(Map<String, dynamic> json) {
     return ChatModel(
       id: json['id'] ?? '',
-      userId: json['userId'] ?? '',
-      veterinarianId: json['veterinarianId'] ?? '',
-      petId: json['petId'],
+      participants: List<String>.from(json['participants'] ?? []),
+      participantNames: Map<String, String>.from(json['participantNames'] ?? {}),
       lastMessage: json['lastMessage'] ?? '',
-      lastMessageTime: json['lastMessageTime'] != null 
-          ? DateTime.parse(json['lastMessageTime']) 
+      lastMessageAt: json['lastMessageAt'] != null 
+          ? DateTime.parse(json['lastMessageAt']) 
           : DateTime.now(),
+      lastMessageSender: json['lastMessageSender'] ?? '',
+      unreadCount: Map<String, int>.from(json['unreadCount'] ?? {}),
       isActive: json['isActive'] ?? true,
       createdAt: json['createdAt'] != null 
           ? DateTime.parse(json['createdAt']) 
@@ -75,11 +90,12 @@ class ChatModel extends Equatable {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'userId': userId,
-      'veterinarianId': veterinarianId,
-      'petId': petId,
+      'participants': participants,
+      'participantNames': participantNames,
       'lastMessage': lastMessage,
-      'lastMessageTime': lastMessageTime.toIso8601String(),
+      'lastMessageAt': lastMessageAt.toIso8601String(),
+      'lastMessageSender': lastMessageSender,
+      'unreadCount': unreadCount,
       'isActive': isActive,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -88,22 +104,24 @@ class ChatModel extends Equatable {
 
   ChatModel copyWith({
     String? id,
-    String? userId,
-    String? veterinarianId,
-    String? petId,
+    List<String>? participants,
+    Map<String, String>? participantNames,
     String? lastMessage,
-    DateTime? lastMessageTime,
+    DateTime? lastMessageAt,
+    String? lastMessageSender,
+    Map<String, int>? unreadCount,
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     return ChatModel(
       id: id ?? this.id,
-      userId: userId ?? this.userId,
-      veterinarianId: veterinarianId ?? this.veterinarianId,
-      petId: petId ?? this.petId,
+      participants: participants ?? this.participants,
+      participantNames: participantNames ?? this.participantNames,
       lastMessage: lastMessage ?? this.lastMessage,
-      lastMessageTime: lastMessageTime ?? this.lastMessageTime,
+      lastMessageAt: lastMessageAt ?? this.lastMessageAt,
+      lastMessageSender: lastMessageSender ?? this.lastMessageSender,
+      unreadCount: unreadCount ?? this.unreadCount,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -113,59 +131,81 @@ class ChatModel extends Equatable {
   @override
   List<Object?> get props => [
         id,
-        userId,
-        veterinarianId,
-        petId,
+        participants,
+        participantNames,
         lastMessage,
-        lastMessageTime,
+        lastMessageAt,
+        lastMessageSender,
+        unreadCount,
         isActive,
         createdAt,
         updatedAt,
       ];
 }
 
-class MessageModel extends Equatable {
+class ChatMessage extends Equatable {
   final String id;
   final String chatId;
   final String senderId;
   final String senderName;
-  final String senderType; // 'user' or 'veterinarian'
   final String message;
   final MessageType type;
   final String? mediaUrl;
+  final String? fileName;
+  final int? fileSize;
   final bool isRead;
-  final DateTime createdAt;
+  final DateTime timestamp;
+  final String? messageId;
 
-  const MessageModel({
+  const ChatMessage({
     required this.id,
     required this.chatId,
     required this.senderId,
     required this.senderName,
-    required this.senderType,
     required this.message,
     required this.type,
     this.mediaUrl,
+    this.fileName,
+    this.fileSize,
     this.isRead = false,
-    required this.createdAt,
+    required this.timestamp,
+    this.messageId,
   });
 
-  factory MessageModel.fromFirestore(DocumentSnapshot doc) {
+  factory ChatMessage.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return MessageModel(
+    
+    return ChatMessage(
       id: doc.id,
       chatId: data['chatId'] ?? '',
       senderId: data['senderId'] ?? '',
       senderName: data['senderName'] ?? '',
-      senderType: data['senderType'] ?? '',
       message: data['message'] ?? '',
-      type: MessageType.values.firstWhere(
-        (e) => e.toString() == 'MessageType.${data['type']}',
-        orElse: () => MessageType.text,
-      ),
-      mediaUrl: data['mediaUrl'],
+      type: _parseMessageType(data['type'] ?? 'text'),
+      mediaUrl: data['mediaUrl'] ?? data['imageUrl'] ?? data['fileUrl'],
+      fileName: data['fileName'],
+      fileSize: data['fileSize'],
       isRead: data['isRead'] ?? false,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      messageId: data['messageId'],
     );
+  }
+
+  static MessageType _parseMessageType(String type) {
+    switch (type.toLowerCase()) {
+      case 'image':
+        return MessageType.image;
+      case 'video':
+        return MessageType.video;
+      case 'audio':
+        return MessageType.audio;
+      case 'file':
+        return MessageType.file;
+      case 'location':
+        return MessageType.location;
+      default:
+        return MessageType.text;
+    }
   }
 
   Map<String, dynamic> toFirestore() {
@@ -173,32 +213,33 @@ class MessageModel extends Equatable {
       'chatId': chatId,
       'senderId': senderId,
       'senderName': senderName,
-      'senderType': senderType,
       'message': message,
-      'type': type.toString().split('.').last,
+      'type': type.name,
       'mediaUrl': mediaUrl,
+      'fileName': fileName,
+      'fileSize': fileSize,
       'isRead': isRead,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'timestamp': Timestamp.fromDate(timestamp),
+      'messageId': messageId,
     };
   }
 
-  factory MessageModel.fromJson(Map<String, dynamic> json) {
-    return MessageModel(
+  factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    return ChatMessage(
       id: json['id'] ?? '',
       chatId: json['chatId'] ?? '',
       senderId: json['senderId'] ?? '',
       senderName: json['senderName'] ?? '',
-      senderType: json['senderType'] ?? '',
       message: json['message'] ?? '',
-      type: MessageType.values.firstWhere(
-        (e) => e.toString() == 'MessageType.${json['type']}',
-        orElse: () => MessageType.text,
-      ),
+      type: _parseMessageType(json['type'] ?? 'text'),
       mediaUrl: json['mediaUrl'],
+      fileName: json['fileName'],
+      fileSize: json['fileSize'],
       isRead: json['isRead'] ?? false,
-      createdAt: json['createdAt'] != null 
-          ? DateTime.parse(json['createdAt']) 
+      timestamp: json['timestamp'] != null 
+          ? DateTime.parse(json['timestamp']) 
           : DateTime.now(),
+      messageId: json['messageId'],
     );
   }
 
@@ -208,38 +249,44 @@ class MessageModel extends Equatable {
       'chatId': chatId,
       'senderId': senderId,
       'senderName': senderName,
-      'senderType': senderType,
       'message': message,
-      'type': type.toString().split('.').last,
+      'type': type.name,
       'mediaUrl': mediaUrl,
+      'fileName': fileName,
+      'fileSize': fileSize,
       'isRead': isRead,
-      'createdAt': createdAt.toIso8601String(),
+      'timestamp': timestamp.toIso8601String(),
+      'messageId': messageId,
     };
   }
 
-  MessageModel copyWith({
+  ChatMessage copyWith({
     String? id,
     String? chatId,
     String? senderId,
     String? senderName,
-    String? senderType,
     String? message,
     MessageType? type,
     String? mediaUrl,
+    String? fileName,
+    int? fileSize,
     bool? isRead,
-    DateTime? createdAt,
+    DateTime? timestamp,
+    String? messageId,
   }) {
-    return MessageModel(
+    return ChatMessage(
       id: id ?? this.id,
       chatId: chatId ?? this.chatId,
       senderId: senderId ?? this.senderId,
       senderName: senderName ?? this.senderName,
-      senderType: senderType ?? this.senderType,
       message: message ?? this.message,
       type: type ?? this.type,
       mediaUrl: mediaUrl ?? this.mediaUrl,
+      fileName: fileName ?? this.fileName,
+      fileSize: fileSize ?? this.fileSize,
       isRead: isRead ?? this.isRead,
-      createdAt: createdAt ?? this.createdAt,
+      timestamp: timestamp ?? this.timestamp,
+      messageId: messageId ?? this.messageId,
     );
   }
 
@@ -249,20 +296,15 @@ class MessageModel extends Equatable {
         chatId,
         senderId,
         senderName,
-        senderType,
         message,
         type,
         mediaUrl,
+        fileName,
+        fileSize,
         isRead,
-        createdAt,
+        timestamp,
+        messageId,
       ];
-}
-
-enum MessageType {
-  text,
-  image,
-  video,
-  audio,
 }
 
 class VeterinarianModel extends Equatable {
@@ -277,6 +319,7 @@ class VeterinarianModel extends Equatable {
   final int reviewCount;
   final bool isOnline;
   final bool isAvailable;
+  final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -292,6 +335,7 @@ class VeterinarianModel extends Equatable {
     this.reviewCount = 0,
     this.isOnline = false,
     this.isAvailable = true,
+    this.isActive = true,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -310,8 +354,9 @@ class VeterinarianModel extends Equatable {
       reviewCount: data['reviewCount'] ?? 0,
       isOnline: data['isOnline'] ?? false,
       isAvailable: data['isAvailable'] ?? true,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      isActive: data['isActive'] ?? true,
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 
@@ -327,6 +372,7 @@ class VeterinarianModel extends Equatable {
       'reviewCount': reviewCount,
       'isOnline': isOnline,
       'isAvailable': isAvailable,
+      'isActive': isActive,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -345,6 +391,7 @@ class VeterinarianModel extends Equatable {
       reviewCount: json['reviewCount'] ?? 0,
       isOnline: json['isOnline'] ?? false,
       isAvailable: json['isAvailable'] ?? true,
+      isActive: json['isActive'] ?? true,
       createdAt: json['createdAt'] != null 
           ? DateTime.parse(json['createdAt']) 
           : DateTime.now(),
@@ -367,6 +414,7 @@ class VeterinarianModel extends Equatable {
       'reviewCount': reviewCount,
       'isOnline': isOnline,
       'isAvailable': isAvailable,
+      'isActive': isActive,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -384,6 +432,7 @@ class VeterinarianModel extends Equatable {
     int? reviewCount,
     bool? isOnline,
     bool? isAvailable,
+    bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -399,6 +448,7 @@ class VeterinarianModel extends Equatable {
       reviewCount: reviewCount ?? this.reviewCount,
       isOnline: isOnline ?? this.isOnline,
       isAvailable: isAvailable ?? this.isAvailable,
+      isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -417,6 +467,7 @@ class VeterinarianModel extends Equatable {
         reviewCount,
         isOnline,
         isAvailable,
+        isActive,
         createdAt,
         updatedAt,
       ];

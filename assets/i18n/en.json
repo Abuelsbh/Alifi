@@ -1,0 +1,44 @@
+{
+  "navigation": {
+    "home": "Home",
+    "veterinary": "Veterinary",
+    "lost_found": "Lost & Found",
+    "profile": "Profile"
+  },
+  "auth": {
+    "login": "Login",
+    "signup": "Sign Up",
+    "logout": "Logout",
+    "logout_subtitle": "Sign out of your account",
+    "logout_failed": "Failed to logout",
+    "invalid_credentials": "Invalid email or password",
+    "enter_email_first": "Please enter your email first",
+    "password_reset_sent": "Password reset email sent",
+    "password_reset_failed": "Failed to send password reset email"
+  },
+  "profile": {
+    "my_profile": "My Profile",
+    "login_prompt": "Please login to view your profile"
+  },
+  "post_report": {
+    "lost_pet_title": "Report Lost Pet",
+    "found_pet_title": "Report Found Pet",
+    "age": "Age",
+    "gender": "Gender",
+    "male": "Male",
+    "female": "Female",
+    "color": "Color",
+    "location": "Location",
+    "contact_name": "Contact Name",
+    "contact_phone": "Contact Phone",
+    "required_field": "This field is required"
+  },
+  "lost_found": {
+    "post_report": "Post Report",
+    "lost_pet": "Lost Pet",
+    "found_pet": "Found Pet"
+  },
+  "common": {
+    "cancel": "Cancel"
+  }
+} 

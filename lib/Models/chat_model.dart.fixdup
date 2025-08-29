@@ -1,0 +1,549 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:equatable/equatable.dart';
+
+class ChatModel extends Equatable {
+  final String id;
+  final String userId;
+  final String veterinarianId;
+  final String? petId;
+  final String lastMessage;
+  final DateTime lastMessageTime;
+  final DateTime lastMessageAt; // For compatibility
+  final int unreadCount;
+  final bool isActive;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  const ChatModel({
+    required this.id,
+    required this.userId,
+    required this.veterinarianId,
+    this.petId,
+    required this.lastMessage,
+    required this.lastMessageTime,
+    required this.lastMessageAt,
+    this.unreadCount = 0,
+    this.isActive = true,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory ChatModel.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final lastMessageTime = (data['lastMessageTime'] as Timestamp?)?.toDate() ?? 
+                           (data['lastMessageAt'] as Timestamp?)?.toDate() ?? 
+                           DateTime.now();
+    return ChatModel(
+      id: doc.id,
+      userId: data['userId'] ?? '',
+      veterinarianId: data['veterinarianId'] ?? '',
+      petId: data['petId'],
+      lastMessage: data['lastMessage'] ?? '',
+      lastMessageTime: lastMessageTime,
+      lastMessageAt: lastMessageTime,
+      unreadCount: data['unreadCount'] ?? 0,
+      isActive: data['isActive'] ?? true,
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'userId': userId,
+      'veterinarianId': veterinarianId,
+      'petId': petId,
+      'lastMessage': lastMessage,
+      'lastMessageTime': Timestamp.fromDate(lastMessageTime),
+      'isActive': isActive,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
+    };
+  }
+
+  factory ChatModel.fromJson(Map<String, dynamic> json) {
+    final lastMessageTime = json['lastMessageTime'] != null 
+        ? DateTime.parse(json['lastMessageTime']) 
+        : DateTime.now();
+    return ChatModel(
+      id: json['id'] ?? '',
+      userId: json['userId'] ?? '',
+      veterinarianId: json['veterinarianId'] ?? '',
+      petId: json['petId'],
+      lastMessage: json['lastMessage'] ?? '',
+      lastMessageTime: lastMessageTime,
+      lastMessageAt: lastMessageTime,
+      unreadCount: json['unreadCount'] ?? 0,
+      isActive: json['isActive'] ?? true,
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt']) 
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null 
+          ? DateTime.parse(json['updatedAt']) 
+          : DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'userId': userId,
+      'veterinarianId': veterinarianId,
+      'petId': petId,
+      'lastMessage': lastMessage,
+      'lastMessageTime': lastMessageTime.toIso8601String(),
+      'isActive': isActive,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
+
+  ChatModel copyWith({
+    String? id,
+    String? userId,
+    String? veterinarianId,
+    String? petId,
+    String? lastMessage,
+    DateTime? lastMessageTime,
+    DateTime? lastMessageAt,
+    int? unreadCount,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return ChatModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      veterinarianId: veterinarianId ?? this.veterinarianId,
+      petId: petId ?? this.petId,
+      lastMessage: lastMessage ?? this.lastMessage,
+      lastMessageTime: lastMessageTime ?? this.lastMessageTime,
+      lastMessageAt: lastMessageAt ?? this.lastMessageAt,
+      unreadCount: unreadCount ?? this.unreadCount,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+        id,
+        userId,
+        veterinarianId,
+        petId,
+        lastMessage,
+        lastMessageTime,
+        lastMessageAt,
+        unreadCount,
+        isActive,
+        createdAt,
+        updatedAt,
+      ];
+}
+
+class MessageModel extends Equatable {
+  final String id;
+  final String chatId;
+  final String senderId;
+  final String senderName;
+  final String senderType; // 'user' or 'veterinarian'
+  final String message;
+  final MessageType type;
+  final String? mediaUrl;
+  final bool isRead;
+  final DateTime createdAt;
+
+  const MessageModel({
+    required this.id,
+    required this.chatId,
+    required this.senderId,
+    required this.senderName,
+    required this.senderType,
+    required this.message,
+    required this.type,
+    this.mediaUrl,
+    this.isRead = false,
+    required this.createdAt,
+  });
+
+  factory MessageModel.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return MessageModel(
+      id: doc.id,
+      chatId: data['chatId'] ?? '',
+      senderId: data['senderId'] ?? '',
+      senderName: data['senderName'] ?? '',
+      senderType: data['senderType'] ?? '',
+      message: data['message'] ?? '',
+      type: MessageType.values.firstWhere(
+        (e) => e.toString() == 'MessageType.${data['type']}',
+        orElse: () => MessageType.text,
+      ),
+      mediaUrl: data['mediaUrl'],
+      isRead: data['isRead'] ?? false,
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'chatId': chatId,
+      'senderId': senderId,
+      'senderName': senderName,
+      'senderType': senderType,
+      'message': message,
+      'type': type.toString().split('.').last,
+      'mediaUrl': mediaUrl,
+      'isRead': isRead,
+      'createdAt': Timestamp.fromDate(createdAt),
+    };
+  }
+
+  factory MessageModel.fromJson(Map<String, dynamic> json) {
+    return MessageModel(
+      id: json['id'] ?? '',
+      chatId: json['chatId'] ?? '',
+      senderId: json['senderId'] ?? '',
+      senderName: json['senderName'] ?? '',
+      senderType: json['senderType'] ?? '',
+      message: json['message'] ?? '',
+      type: MessageType.values.firstWhere(
+        (e) => e.toString() == 'MessageType.${json['type']}',
+        orElse: () => MessageType.text,
+      ),
+      mediaUrl: json['mediaUrl'],
+      isRead: json['isRead'] ?? false,
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt']) 
+          : DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'chatId': chatId,
+      'senderId': senderId,
+      'senderName': senderName,
+      'senderType': senderType,
+      'message': message,
+      'type': type.toString().split('.').last,
+      'mediaUrl': mediaUrl,
+      'isRead': isRead,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
+  MessageModel copyWith({
+    String? id,
+    String? chatId,
+    String? senderId,
+    String? senderName,
+    String? senderType,
+    String? message,
+    MessageType? type,
+    String? mediaUrl,
+    bool? isRead,
+    DateTime? createdAt,
+  }) {
+    return MessageModel(
+      id: id ?? this.id,
+      chatId: chatId ?? this.chatId,
+      senderId: senderId ?? this.senderId,
+      senderName: senderName ?? this.senderName,
+      senderType: senderType ?? this.senderType,
+      message: message ?? this.message,
+      type: type ?? this.type,
+      mediaUrl: mediaUrl ?? this.mediaUrl,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+        id,
+        chatId,
+        senderId,
+        senderName,
+        senderType,
+        message,
+        type,
+        mediaUrl,
+        isRead,
+        createdAt,
+      ];
+}
+
+enum MessageType {
+  text,
+  image,
+  video,
+  audio,
+}
+
+class ChatMessage extends Equatable {
+  final String id;
+  final String chatId;
+  final String senderId;
+  final String senderName;
+  final String message;
+  final String type;
+  final String? imageUrl;
+  final String? fileName;
+  final String? fileUrl;
+  final String? mediaUrl;
+  final int? fileSize;  final String? mediaUrl;
+  final int? fileSize;
+  final bool isRead;
+  final Timestamp timestamp;
+
+  const ChatMessage({
+    required this.id,
+    required this.chatId,
+    required this.senderId,
+    required this.senderName,
+    required this.message,
+    this.type = 'text',
+    this.imageUrl,
+    this.fileName,
+    this.fileUrl,
+    this.mediaUrl,
+    this.fileSize,
+    this.isRead = false,
+    required this.timestamp,
+  });
+
+  factory ChatMessage.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return ChatMessage(
+      id: doc.id,
+      chatId: data['chatId'] ?? '',
+      senderId: data['senderId'] ?? '',
+      senderName: data['senderName'] ?? '',
+      message: data['message'] ?? '',
+      type: data['type'] ?? 'text',
+      imageUrl: data['imageUrl'],
+      fileName: data['fileName'],
+      fileUrl: data['fileUrl'],
+      isRead: data['isRead'] ?? false,
+      timestamp: data['timestamp'] ?? Timestamp.now(),
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'chatId': chatId,
+      'senderId': senderId,
+      'senderName': senderName,
+      'message': message,
+      'type': type,
+      'imageUrl': imageUrl,
+      'fileName': fileName,
+      'fileUrl': fileUrl,
+      'isRead': isRead,
+      'timestamp': timestamp,
+    };
+  }
+
+  ChatMessage copyWith({
+    String? id,
+    String? chatId,
+    String? senderId,
+    String? senderName,
+    String? message,
+    String? type,
+    String? imageUrl,
+    String? fileName,
+    String? fileUrl,
+    bool? isRead,
+    Timestamp? timestamp,
+  }) {
+    return ChatMessage(
+      id: id ?? this.id,
+      chatId: chatId ?? this.chatId,
+      senderId: senderId ?? this.senderId,
+      senderName: senderName ?? this.senderName,
+      message: message ?? this.message,
+      type: type ?? this.type,
+      imageUrl: imageUrl ?? this.imageUrl,
+      fileName: fileName ?? this.fileName,
+      fileUrl: fileUrl ?? this.fileUrl,
+      isRead: isRead ?? this.isRead,
+      timestamp: timestamp ?? this.timestamp,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+        id,
+        chatId,
+        senderId,
+        senderName,
+        message,
+        type,
+        imageUrl,
+        fileName,
+        fileUrl,
+        isRead,
+        timestamp,
+      ];
+}
+
+class VeterinarianModel extends Equatable {
+  final String id;
+  final String name;
+  final String email;
+  final String? profilePhoto;
+  final String specialization;
+  final String? phoneNumber;
+  final String? address;
+  final double rating;
+  final int reviewCount;
+  final bool isOnline;
+  final bool isAvailable;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  const VeterinarianModel({
+    required this.id,
+    required this.name,
+    required this.email,
+    this.profilePhoto,
+    required this.specialization,
+    this.phoneNumber,
+    this.address,
+    this.rating = 0.0,
+    this.reviewCount = 0,
+    this.isOnline = false,
+    this.isAvailable = true,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory VeterinarianModel.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return VeterinarianModel(
+      id: doc.id,
+      name: data['name'] ?? '',
+      email: data['email'] ?? '',
+      profilePhoto: data['profilePhoto'],
+      specialization: data['specialization'] ?? '',
+      phoneNumber: data['phoneNumber'],
+      address: data['address'],
+      rating: (data['rating'] ?? 0.0).toDouble(),
+      reviewCount: data['reviewCount'] ?? 0,
+      isOnline: data['isOnline'] ?? false,
+      isAvailable: data['isAvailable'] ?? true,
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'name': name,
+      'email': email,
+      'profilePhoto': profilePhoto,
+      'specialization': specialization,
+      'phoneNumber': phoneNumber,
+      'address': address,
+      'rating': rating,
+      'reviewCount': reviewCount,
+      'isOnline': isOnline,
+      'isAvailable': isAvailable,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
+    };
+  }
+
+  factory VeterinarianModel.fromJson(Map<String, dynamic> json) {
+    return VeterinarianModel(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      email: json['email'] ?? '',
+      profilePhoto: json['profilePhoto'],
+      specialization: json['specialization'] ?? '',
+      phoneNumber: json['phoneNumber'],
+      address: json['address'],
+      rating: (json['rating'] ?? 0.0).toDouble(),
+      reviewCount: json['reviewCount'] ?? 0,
+      isOnline: json['isOnline'] ?? false,
+      isAvailable: json['isAvailable'] ?? true,
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt']) 
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null 
+          ? DateTime.parse(json['updatedAt']) 
+          : DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'profilePhoto': profilePhoto,
+      'specialization': specialization,
+      'phoneNumber': phoneNumber,
+      'address': address,
+      'rating': rating,
+      'reviewCount': reviewCount,
+      'isOnline': isOnline,
+      'isAvailable': isAvailable,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
+
+  VeterinarianModel copyWith({
+    String? id,
+    String? name,
+    String? email,
+    String? profilePhoto,
+    String? specialization,
+    String? phoneNumber,
+    String? address,
+    double? rating,
+    int? reviewCount,
+    bool? isOnline,
+    bool? isAvailable,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return VeterinarianModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      profilePhoto: profilePhoto ?? this.profilePhoto,
+      specialization: specialization ?? this.specialization,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      address: address ?? this.address,
+      rating: rating ?? this.rating,
+      reviewCount: reviewCount ?? this.reviewCount,
+      isOnline: isOnline ?? this.isOnline,
+      isAvailable: isAvailable ?? this.isAvailable,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+        id,
+        name,
+        email,
+        profilePhoto,
+        specialization,
+        phoneNumber,
+        address,
+        rating,
+        reviewCount,
+        isOnline,
+        isAvailable,
+        createdAt,
+        updatedAt,
+      ];
+} 

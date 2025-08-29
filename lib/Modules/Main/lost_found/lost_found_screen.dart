@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/Theme/app_theme.dart';
-import '../../../Widgets/custom_card.dart';
+
 import '../../../Widgets/translated_custom_button.dart';
 import '../../../Widgets/translated_text.dart';
 import 'lost_pets_tab.dart';

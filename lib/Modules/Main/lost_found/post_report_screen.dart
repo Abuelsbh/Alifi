@@ -4,11 +4,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../../core/Theme/app_theme.dart';
+import '../../../core/services/auth_service.dart';
+import '../../../core/services/pet_reports_service.dart';
 import '../../../Widgets/custom_button.dart';
-import '../../../Widgets/custom_card.dart';
+
 import '../../../Widgets/translated_custom_button.dart' hide ButtonType;
 import '../../../Widgets/translated_text.dart';
-import '../../../Models/pet_report_model.dart';
 import '../../../core/services/location_service.dart';
 import 'lost_found_screen.dart';
 
@@ -50,6 +51,23 @@ class _PostReportScreenState extends State<PostReportScreen> {
   
   bool _isLoading = false;
   bool _isSubmitting = false;
+  
+  // Enhanced form fields
+  bool _isUrgent = false;
+  double _reward = 0;
+  String _contactEmail = '';
+  String _preferredContact = 'phone';
+  String _distinguishingMarks = '';
+  String _personality = '';
+  String _medicalConditions = '';
+  String _shelterInfo = '';
+  bool _isInShelter = false;
+  bool _hasCollar = false;
+  String _collarDescription = '';
+  String _healthStatus = 'جيد';
+  String _temperament = 'ودود';
+  String _area = '';
+  String _landmark = '';
 
   @override
   void initState() {
@@ -142,7 +160,10 @@ class _PostReportScreenState extends State<PostReportScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_photos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: TranslatedText('post_report.photo_required')),
+        const SnackBar(
+          content: Text('يرجى إضافة صورة واحدة على الأقل'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
@@ -152,72 +173,106 @@ class _PostReportScreenState extends State<PostReportScreen> {
     });
 
     try {
-      // TODO: Upload photos and submit report through service
-      await Future.delayed(const Duration(seconds: 2));
+      if (!AuthService.isAuthenticated) {
+        throw Exception('Please login to submit a report');
+      }
+
+      final userId = AuthService.userId!;
       
-      // Mock submission
+      // Enhanced report data with all new fields
+      final reportData = {
+        'userId': userId,
+        'petType': _selectedPetType,
+        'breed': _breedController.text,
+        'color': _colorController.text,
+        'description': _descriptionController.text,
+        'coordinates': _location ?? const GeoPoint(0, 0),
+        'contactPhone': _contactPhoneController.text,
+        'contactEmail': _contactEmail,
+        'contactName': _contactNameController.text,
+        'preferredContact': _preferredContact,
+        'distinguishingMarks': _distinguishingMarks,
+        'area': _area,
+        'landmark': _landmark,
+        'size': _ageController.text.isNotEmpty ? _ageController.text : 'متوسط',
+        'isActive': true,
+      };
+
       if (widget.reportType == ReportType.lost) {
-        // Create lost pet report
-        final lostPet = LostPetModel(
-          id: '',
-          userId: 'user1', // TODO: Get current user ID
-          petName: _petNameController.text,
-          petType: _selectedPetType,
-          breed: _breedController.text,
-          age: _age,
-          gender: _selectedGender,
-          color: _colorController.text,
-          photos: [], // TODO: Upload photos and get URLs
-          description: _descriptionController.text,
-          location: _location ?? const GeoPoint(0, 0),
-          address: _address,
-          lostDate: _dateLost,
-          contactPhone: _contactPhoneController.text,
-          contactName: _contactNameController.text,
-          isActive: true,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
+        // Enhanced lost pet report
+        reportData.addAll({
+          'petName': _petNameController.text,
+          'age': _age.toString(),
+          'gender': _selectedGender,
+          'lastSeenDate': _dateLost,
+          'lastSeenLocation': _address,
+          'isUrgent': _isUrgent,
+          'reward': _reward,
+          'personality': _personality,
+          'medicalConditions': _medicalConditions,
+        });
+        
+        print('📤 Submitting lost pet report...');
+        await PetReportsService.createLostPetReport(
+          report: reportData,
+          images: _photos,
         );
       } else {
-        // Create found pet report
-        final foundPet = FoundPetModel(
-          id: '',
-          userId: 'user1', // TODO: Get current user ID
-          petType: _selectedPetType,
-          breed: _breedController.text,
-          color: _colorController.text,
-          photos: [], // TODO: Upload photos and get URLs
-          description: _descriptionController.text,
-          location: _location ?? const GeoPoint(0, 0),
-          address: _address,
-          foundDate: _dateLost,
-          contactPhone: _contactPhoneController.text,
-          contactName: _contactNameController.text,
-          isActive: true,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
+        // Enhanced found pet report
+        reportData.addAll({
+          'foundDate': _dateLost,
+          'foundLocation': _address,
+          'approximateAge': _ageController.text.isNotEmpty ? _ageController.text : 'غير محدد',
+          'gender': _selectedGender,
+          'temperament': _temperament,
+          'healthStatus': _healthStatus,
+          'hasCollar': _hasCollar,
+          'collarDescription': _collarDescription,
+          'isInShelter': _isInShelter,
+          'shelterInfo': _shelterInfo,
+        });
+        
+        print('📤 Submitting found pet report...');
+        await PetReportsService.createFoundPetReport(
+          report: reportData,
+          images: _photos,
         );
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: TranslatedText(
-            widget.reportType == ReportType.lost 
-              ? 'post_report.success_lost' 
-              : 'post_report.success_found'
+      if (mounted) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: Text(
+                    widget.reportType == ReportType.lost 
+                      ? 'تم نشر تقرير الحيوان المفقود بنجاح! سيتم عرضه للمجتمع للمساعدة في العثور على حيوانك الأليف.'
+                      : 'تم نشر تقرير الحيوان الموجود بنجاح! سيتم عرضه لأصحاب الحيوانات المفقودة.',
+                    style: TextStyle(color: Colors.white, fontSize: 14.sp),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppTheme.success,
+            duration: Duration(seconds: 4),
           ),
-          backgroundColor: AppTheme.success,
-        ),
-      );
+        );
 
-      Navigator.pop(context);
+        Navigator.pop(context);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: TranslatedText('post_report.error'),
-          backgroundColor: AppTheme.error,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: TranslatedText('post_report.error'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
     } finally {
       setState(() {
         _isSubmitting = false;

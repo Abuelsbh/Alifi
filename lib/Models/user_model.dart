@@ -29,16 +29,30 @@ class UserModel extends Equatable {
     return UserModel(
       id: doc.id,
       email: data['email'] ?? '',
-      username: data['username'] ?? '',
-      profilePhoto: data['profilePhoto'],
-      phoneNumber: data['phoneNumber'],
+      username: data['username'] ?? data['name'] ?? '', // Fallback to 'name' for backward compatibility
+      profilePhoto: data['profilePhoto'] ?? data['photoUrl'], // Fallback to 'photoUrl' for backward compatibility
+      phoneNumber: data['phoneNumber'] ?? data['phone'], // Fallback to 'phone' for backward compatibility
       address: data['address'],
       pets: (data['pets'] as List<dynamic>? ?? [])
           .map((pet) => PetModel.fromMap(pet))
           .toList(),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      createdAt: _parseTimestamp(data['createdAt']),
+      updatedAt: _parseTimestamp(data['updatedAt']),
     );
+  }
+
+  // Helper method to safely parse Timestamp (handles null from FieldValue.serverTimestamp())
+  static DateTime _parseTimestamp(dynamic timestamp) {
+    if (timestamp == null) {
+      return DateTime.now();
+    }
+    if (timestamp is Timestamp) {
+      return timestamp.toDate();
+    }
+    if (timestamp is String) {
+      return DateTime.tryParse(timestamp) ?? DateTime.now();
+    }
+    return DateTime.now();
   }
 
   Map<String, dynamic> toFirestore() {
