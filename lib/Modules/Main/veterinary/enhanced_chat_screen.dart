@@ -89,16 +89,16 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
           
           // Auto-scroll to bottom when new messages arrive
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToBottom();
+          _scrollToBottom();
           });
         }
       });
     } catch (e) {
       if (mounted) {
         _showErrorSnackBar('خطأ في تحميل الرسائل: $e');
-        setState(() {
-          _isLoading = false;
-        });
+      setState(() {
+        _isLoading = false;
+      });
       }
     }
   }
@@ -134,9 +134,9 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
       _showErrorSnackBar('خطأ في إرسال الرسالة: $e');
     } finally {
       if (mounted) {
-        setState(() {
-          _isSending = false;
-        });
+      setState(() {
+        _isSending = false;
+      });
       }
     }
   }
@@ -235,9 +235,9 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
       _showErrorSnackBar('خطأ في رفع الملف: $e');
     } finally {
       if (mounted) {
-        setState(() {
-          _isSending = false;
-        });
+      setState(() {
+        _isSending = false;
+      });
       }
     }
   }

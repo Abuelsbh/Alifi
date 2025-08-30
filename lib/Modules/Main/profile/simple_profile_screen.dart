@@ -48,6 +48,13 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back,
+            color: AppTheme.primaryGreen,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text('Profile'),
         centerTitle: true,
         elevation: 0,

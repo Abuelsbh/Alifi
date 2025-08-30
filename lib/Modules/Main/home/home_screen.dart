@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../core/Theme/app_theme.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/pet_reports_service.dart';
 import '../../../core/services/chat_service.dart';
-import '../../../Widgets/translated_text.dart';
+import '../../../core/Theme/app_theme.dart';
+import '../../../core/Language/translation_service.dart';
+import '../lost_found/lost_found_screen.dart';
+import '../veterinary/enhanced_veterinary_screen.dart';
+import '../profile/simple_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,10 +20,15 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _animationController;
   late AnimationController _pulseController;
+  late AnimationController _floatingController;
+  late AnimationController _shimmerController;
+
   late Animation<double> _fadeAnimation;
   late Animation<double> _slideAnimation;
   late Animation<double> _pulseAnimation;
-  
+  late Animation<double> _floatingAnimation;
+  late Animation<double> _shimmerAnimation;
+
   // Real data from Firebase
   int _totalLostPets = 0;
   int _totalFoundPets = 0;
@@ -27,33 +36,78 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _unreadMessages = 0;
   bool _isLoading = true;
 
+  // Using app theme colors
+  Color get _primaryColor => AppTheme.primaryGreen;
+  Color get _secondaryColor => AppTheme.primaryOrange;
+  Color get _backgroundColor => Theme.of(context).colorScheme.background;
+  Color get _surfaceColor => Theme.of(context).colorScheme.surface;
+  Color get _onSurfaceColor => Theme.of(context).colorScheme.onSurface;
+  Color get _onBackgroundColor => Theme.of(context).colorScheme.onBackground;
+  Color get _shadowColor => Colors.black.withOpacity(0.08);
+
   @override
   void initState() {
     super.initState();
+    _loadTranslations();
     _loadData();
+    _setupAnimations();
+  }
+
+  Future<void> _loadTranslations() async {
+    await TranslationService.instance.loadSavedLanguage();
+  }
+
+  void _setupAnimations() {
+    // Main content animations
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1800),
       vsync: this,
     );
+
+    // Pulse animation for interactive elements
     _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 2500),
+      vsync: this,
+    );
+
+    // Floating animation for decorative elements
+    _floatingController = AnimationController(
+      duration: const Duration(milliseconds: 3000),
+      vsync: this,
+    );
+
+    // Shimmer animation for loading states
+    _shimmerController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
-    _slideAnimation = Tween<double>(begin: 50.0, end: 0.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
+
+    _slideAnimation = Tween<double>(begin: 80.0, end: 0.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    _floatingAnimation = Tween<double>(begin: 0.0, end: 10.0).animate(
+      CurvedAnimation(parent: _floatingController, curve: Curves.easeInOut),
+    );
+
+    _shimmerAnimation = Tween<double>(begin: -1.0, end: 2.0).animate(
+      CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
     );
 
     _animationController.forward();
     _pulseController.repeat(reverse: true);
+    _floatingController.repeat(reverse: true);
+    if (_isLoading) _shimmerController.repeat();
   }
-  
+
   Future<void> _loadData() async {
     try {
       if (AuthService.isAuthenticated) {
@@ -61,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         final lostPetsStream = PetReportsService.getLostPetsStream();
         final foundPetsStream = PetReportsService.getFoundPetsStream();
         final userId = AuthService.userId;
-        
+
         // Listen to streams and update counts
         lostPetsStream.listen((lostPets) {
           if (mounted) {
@@ -70,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             });
           }
         });
-        
+
         foundPetsStream.listen((foundPets) {
           if (mounted) {
             setState(() {
@@ -78,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             });
           }
         });
-        
+
         if (userId != null) {
           // Get unread messages count
           final unreadStream = ChatService.getUnreadMessageCountStream(userId);
@@ -90,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             }
           });
         }
-        
+
         // Get veterinarians count
         final vetsStream = ChatService.getVeterinariansStream();
         vetsStream.listen((vets) {
@@ -99,6 +153,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               _totalVeterinarians = vets.length;
               _isLoading = false;
             });
+            _shimmerController.stop();
           }
         });
       }
@@ -107,6 +162,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         setState(() {
           _isLoading = false;
         });
+        _shimmerController.stop();
       }
     }
   }
@@ -115,628 +171,408 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void dispose() {
     _animationController.dispose();
     _pulseController.dispose();
+    _floatingController.dispose();
+    _shimmerController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
-      body: CustomScrollView(
-        slivers: [
-          // Custom App Bar
-          SliverAppBar(
-            expandedHeight: 200.h,
-            floating: false,
-            pinned: true,
-            backgroundColor: AppTheme.primaryGreen,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppTheme.primaryGreen,
-                      AppTheme.lightGreen,
-                      AppTheme.primaryOrange,
-                    ],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    // Background Pattern
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: BackgroundPatternPainter(),
-                      ),
-                    ),
-                    // Content
-                    Padding(
-                      padding: EdgeInsets.only(top: 60.h, left: 20.w, right: 20.w),
-                      child: AnimatedBuilder(
-                        animation: _fadeAnimation,
-                        builder: (context, child) {
-                          return Transform.translate(
-                            offset: Offset(0, _slideAnimation.value),
-                            child: Opacity(
-                              opacity: _fadeAnimation.value,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 25.r,
-                                        backgroundColor: Colors.white.withOpacity(0.2),
-                                        child: Icon(
-                                          Icons.pets,
-                                          color: Colors.white,
-                                          size: 30.sp,
-                                        ),
-                                      ),
-                                      SizedBox(width: 15.w),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            TranslatedText(
-                                              'home.welcome',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 18.sp,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                            SizedBox(height: 5.h),
-                                            TranslatedText(
-                                              'home.subtitle',
-                                              style: TextStyle(
-                                                color: Colors.white.withOpacity(0.9),
-                                                fontSize: 14.sp,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      AnimatedBuilder(
-                                        animation: _pulseAnimation,
-                                        builder: (context, child) {
-                                          return Transform.scale(
-                                            scale: _pulseAnimation.value,
-                                            child: Container(
-                                              padding: EdgeInsets.all(8.w),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withOpacity(0.2),
-                                                borderRadius: BorderRadius.circular(12.r),
-                                              ),
-                                              child: Icon(
-                                                Icons.notifications_outlined,
-                                                color: Colors.white,
-                                                size: 24.sp,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+      body: Container(
+        decoration: BoxDecoration(
+          color: _backgroundColor,
+        ),
+        child: Stack(
+          children: [
+            // Animated background elements
+            _buildBackgroundElements(),
+
+            // Main content
+            SafeArea(
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  // Header Section
+                  SliverToBoxAdapter(child: _buildEnhancedHeader()),
+
+                  // Welcome Section
+                  SliverToBoxAdapter(child: _buildWelcomeSection()),
+
+                  // Statistics Cards
+                  //SliverToBoxAdapter(child: _buildStatisticsCards()),
+
+                  // Menu Items Section
+                  SliverToBoxAdapter(child: _buildEnhancedMenuItems()),
+
+                  // Bottom spacing
+                  SliverToBoxAdapter(child: SizedBox(height: 30.h)),
+                ],
               ),
             ),
+          ],
+        ),
+      ),
+      floatingActionButton: _buildFloatingMedicalButton(),
+    );
+  }
+
+  Widget _buildBackgroundElements() {
+    return Stack(
+      children: [
+        // Floating circles
+        AnimatedBuilder(
+          animation: _floatingAnimation,
+          builder: (context, child) {
+            return Positioned(
+              top: 100.h + _floatingAnimation.value,
+              right: 30.w,
+              child: Container(
+                width: 80.w,
+                height: 80.h,
+                decoration: BoxDecoration(
+                  color: _primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            );
+          },
+        ),
+        AnimatedBuilder(
+          animation: _floatingAnimation,
+          builder: (context, child) {
+            return Positioned(
+              top: 300.h - _floatingAnimation.value * 0.5,
+              left: 20.w,
+              child: Container(
+                width: 60.w,
+                height: 60.h,
+                decoration: BoxDecoration(
+                  color: _secondaryColor.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            );
+          },
+        ),
+        // Dotted pattern
+        Positioned.fill(
+          child: SvgPicture.asset(
+            'assets/images/dotted_pattern.svg',
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.grey.withOpacity(0.2),
+              BlendMode.srcOver,
+            ),
           ),
-          
-          // Main Content
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(20.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEnhancedHeader() {
+    return AnimatedBuilder(
+      animation: _fadeAnimation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _slideAnimation.value * 0.3),
+          child: Opacity(
+            opacity: _fadeAnimation.value,
+            child: Container(
+              margin: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 10.h),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Quick Actions
-                  _buildQuickActions(),
-                  SizedBox(height: 30.h),
-                  
-                  // Statistics Cards
-                  _buildStatisticsCards(),
-                  SizedBox(height: 30.h),
-                  
-                  // Recent Activities
-                  _buildRecentActivities(),
-                  SizedBox(height: 30.h),
-                  
-                  // Featured Services
-                  _buildFeaturedServices(),
+                  // Profile section
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => _navigateToProfile(),
+                        child: Container(
+                          width: 50.w,
+                          height: 50.h,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [_primaryColor, _secondaryColor],
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: _primaryColor.withOpacity(0.3),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.person,
+                            color: Colors.white,
+                            size: 24.sp,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12.w),
+                      GestureDetector(
+                        onTap: () => _navigateToProfile(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                                                      Text(
+                            TranslationService.instance.translate('home.greeting'),
+                            style: TextStyle(
+                              color: _onBackgroundColor,
+                              fontSize: 14.sp,
+                            ),
+                          ),
+                          Text(
+                            TranslationService.instance.translate('home.welcome_message'),
+                            style: TextStyle(
+                              color: _onSurfaceColor,
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Notifications
+                  Stack(
+                    children: [
+                      Container(
+                        width: 45.w,
+                        height: 45.h,
+                        decoration: BoxDecoration(
+                          color: _surfaceColor,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: _shadowColor,
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.notifications_outlined,
+                          color: _primaryColor,
+                          size: 22.sp,
+                        ),
+                      ),
+                      if (_unreadMessages > 0)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            width: 20.w,
+                            height: 20.h,
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                _unreadMessages > 9 ? '9+' : '$_unreadMessages',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildQuickActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TranslatedText(
-          'home.quick_actions',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        SizedBox(height: 20.h),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 15.w,
-          mainAxisSpacing: 15.h,
-          childAspectRatio: 1.2,
-          children: [
-            _buildQuickActionCard(
-              icon: Icons.search,
-              title: 'home.find_pet',
-              subtitle: 'home.find_pet_desc',
-              color: AppTheme.primaryGreen,
-              onTap: () {
-                // Navigate to find pet
-              },
-            ),
-            _buildQuickActionCard(
-              icon: Icons.medical_services,
-              title: 'home.veterinary',
-              subtitle: 'home.veterinary_desc',
-              color: AppTheme.primaryOrange,
-              onTap: () {
-                // Navigate to veterinary
-              },
-            ),
-            _buildQuickActionCard(
-              icon: Icons.add_location,
-              title: 'home.report_lost',
-              subtitle: 'home.report_lost_desc',
-              color: AppTheme.error,
-              onTap: () {
-                // Navigate to report lost
-              },
-            ),
-            _buildQuickActionCard(
-              icon: Icons.find_in_page,
-              title: 'home.report_found',
-              subtitle: 'home.report_found_desc',
-              color: AppTheme.info,
-              onTap: () {
-                // Navigate to report found
-              },
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickActionCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color.withOpacity(0.1),
-              color.withOpacity(0.05),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(
-            color: color.withOpacity(0.2),
-            width: 1,
-          ),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(16.w),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: EdgeInsets.all(8.w),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10.r),
+  Widget _buildWelcomeSection() {
+    return AnimatedBuilder(
+      animation: _fadeAnimation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _slideAnimation.value * 0.5),
+          child: Opacity(
+            opacity: _fadeAnimation.value,
+            child: Container(
+              margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 15.h),
+              padding: EdgeInsets.all(24.w),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    _primaryColor,
+                    _primaryColor.withOpacity(0.8),
+                  ],
                 ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 24.sp,
-                ),
-              ),
-              SizedBox(height: 8.h),
-              Flexible(
-                child: TranslatedText(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
+                borderRadius: BorderRadius.circular(20.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: _primaryColor.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                ],
               ),
-              SizedBox(height: 2.h),
-              Flexible(
-                child: TranslatedText(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 10.sp,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Alife - أليفي',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 24.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 8.h),
+                            Text(
+                              'منصتك المتكاملة لخدمات الحيوانات الأليفة',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 14.sp,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        width: 60.w,
+                        height: 60.h,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.pets,
+                          color: Colors.white,
+                          size: 30.sp,
+                        ),
+                      ),
+                    ],
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   Widget _buildStatisticsCards() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TranslatedText(
-          'home.statistics',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
+    return AnimatedBuilder(
+      animation: _fadeAnimation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _slideAnimation.value * 0.7),
+          child: Opacity(
+            opacity: _fadeAnimation.value,
+            child: Container(
+              height: 135.h,
+              margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
+              child: Row(
+                children: [
+                  _buildStatCard(
+                    title: TranslationService.instance.translate('home.lost_pets'),
+                    count: _totalLostPets,
+                    color: AppTheme.error,
+                    icon: Icons.search,
+                  ),
+                  SizedBox(width: 12.w),
+                  _buildStatCard(
+                    title: TranslationService.instance.translate('home.adoption_pets'),
+                    count: _totalFoundPets,
+                    color: _primaryColor,
+                    icon: Icons.favorite,
+                  ),
+                  SizedBox(width: 12.w),
+                  _buildStatCard(
+                    title: TranslationService.instance.translate('home.veterinarians'),
+                    count: _totalVeterinarians,
+                    color: _secondaryColor,
+                    icon: Icons.medical_services,
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-        SizedBox(height: 20.h),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.search_off,
-                title: 'Lost Pets',
-                value: _isLoading ? '...' : '$_totalLostPets',
-                color: AppTheme.error,
-              ),
-            ),
-            SizedBox(width: 15.w),
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.pets,
-                title: 'Found Pets',
-                value: _isLoading ? '...' : '$_totalFoundPets',
-                color: AppTheme.success,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 15.h),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.medical_services,
-                title: 'Veterinarians',
-                value: _isLoading ? '...' : '$_totalVeterinarians',
-                color: AppTheme.primaryOrange,
-              ),
-            ),
-            SizedBox(width: 15.w),
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.message,
-                title: 'Unread Messages',
-                value: _isLoading ? '...' : '$_unreadMessages',
-                color: AppTheme.info,
-              ),
-            ),
-          ],
-        ),
-      ],
+        );
+      },
     );
   }
 
   Widget _buildStatCard({
-    required IconData icon,
     required String title,
-    required String value,
+    required int count,
     required Color color,
+    required IconData icon,
   }) {
-    return Container(
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: EdgeInsets.all(12.w),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12.r),
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: _surfaceColor,
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(
+              color: _shadowColor,
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 24.sp,
-            ),
-          ),
-          SizedBox(height: 12.h),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24.sp,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          SizedBox(height: 4.h),
-          TranslatedText(
-            title,
-            style: TextStyle(
-              fontSize: 12.sp,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecentActivities() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            TranslatedText(
-              'home.recent_activities',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
+            Container(
+              width: 35.w,
+              height: 35.h,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 18.sp,
               ),
             ),
-            TextButton(
-              onPressed: () {},
-              child: TranslatedText('home.view_all'),
-            ),
-          ],
-        ),
-        SizedBox(height: 20.h),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: 3,
-          itemBuilder: (context, index) {
-            return _buildActivityItem(
-              icon: _getActivityIcon(index),
-              title: _getActivityTitle(index),
-              subtitle: _getActivitySubtitle(index),
-              time: _getActivityTime(index),
-              color: _getActivityColor(index),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActivityItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String time,
-    required Color color,
-  }) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(8.w),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8.r),
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 20.sp,
-            ),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            time,
-            style: TextStyle(
-              fontSize: 12.sp,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeaturedServices() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TranslatedText(
-          'home.featured_services',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        SizedBox(height: 20.h),
-        SizedBox(
-          height: 200.h,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: 3,
-            itemBuilder: (context, index) {
-              return Container(
-                width: 280.w,
-                margin: EdgeInsets.only(right: 15.w),
-                child: _buildServiceCard(index),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildServiceCard(int index) {
-    final services = [
-      {
-        'title': 'home.emergency_care',
-        'description': 'home.emergency_care_desc',
-        'icon': Icons.emergency,
-        'color': AppTheme.error,
-      },
-      {
-        'title': 'home.grooming',
-        'description': 'home.grooming_desc',
-        'icon': Icons.content_cut,
-        'color': AppTheme.info,
-      },
-      {
-        'title': 'home.vaccination',
-        'description': 'home.vaccination_desc',
-        'icon': Icons.vaccines,
-        'color': AppTheme.success,
-      },
-    ];
-
-    final service = services[index];
-
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            service['color'] as Color,
-            (service['color'] as Color).withOpacity(0.8),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: (service['color'] as Color).withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              service['icon'] as IconData,
-              color: Colors.white,
-              size: 32.sp,
-            ),
-            SizedBox(height: 16.h),
-            TranslatedText(
-              service['title'] as String,
+            SizedBox(height: 8.h),
+            Text(
+              _isLoading ? '--' : count.toString(),
               style: TextStyle(
-                color: Colors.white,
+                color: _onSurfaceColor,
                 fontSize: 18.sp,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: 8.h),
-            TranslatedText(
-              service['description'] as String,
+            Text(
+              title,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
-                fontSize: 14.sp,
+                color: _onBackgroundColor,
+                fontSize: 10.sp,
               ),
-            ),
-            const Spacer(),
-            Row(
-              children: [
-                TranslatedText(
-                  'home.book_now',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(width: 8.w),
-                Icon(
-                  Icons.arrow_forward,
-                  color: Colors.white,
-                  size: 16.sp,
-                ),
-              ],
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -744,47 +580,301 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // Helper methods for activity data
-  IconData _getActivityIcon(int index) {
-    final icons = [Icons.pets, Icons.medical_services, Icons.location_on];
-    return icons[index];
+  Widget _buildEnhancedMenuItems() {
+    final menuItems = [
+      {
+        'title': TranslationService.instance.translate('home.lost_animals'),
+        'subtitle': TranslationService.instance.translate('home.lost_animals_subtitle'),
+        'icon': Icons.search,
+        'count': _totalLostPets,
+        'color': AppTheme.error,
+        'onTap': () => _navigateToLostPets(),
+      },
+      {
+        'title': TranslationService.instance.translate('home.adoption_animals'),
+        'subtitle': TranslationService.instance.translate('home.adoption_animals_subtitle'),
+        'icon': Icons.favorite,
+        'count': _totalFoundPets,
+        'color': _primaryColor,
+        'onTap': () => _navigateToAdoption(),
+      },
+      {
+        'title': TranslationService.instance.translate('home.mating_animals'),
+        'subtitle': TranslationService.instance.translate('home.mating_animals_subtitle'),
+        'icon': Icons.favorite_border,
+        'count': 0,
+        'color': _secondaryColor,
+        'onTap': () => _navigateToMating(),
+      },
+      {
+        'title': TranslationService.instance.translate('home.pet_stores'),
+        'subtitle': TranslationService.instance.translate('home.pet_stores_subtitle'),
+        'icon': Icons.store,
+        'count': 0,
+        'color': AppTheme.info,
+        'onTap': () => _navigateToStores(),
+      },
+    ];
+
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 15.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            TranslationService.instance.translate('home.available_services'),
+            style: TextStyle(
+              color: _onSurfaceColor,
+              fontSize: 20.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 15.h),
+          ...menuItems.asMap().entries.map((entry) {
+            int index = entry.key;
+            Map<String, dynamic> item = entry.value;
+
+            return AnimatedBuilder(
+              animation: _fadeAnimation,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(0, _slideAnimation.value * (0.8 + index * 0.1)),
+                  child: Opacity(
+                    opacity: _fadeAnimation.value,
+                    child: Container(
+                      margin: EdgeInsets.only(bottom: 12.h),
+                      child: _buildEnhancedMenuItem(
+                        title: item['title'],
+                        subtitle: item['subtitle'],
+                        icon: item['icon'],
+                        count: item['count'],
+                        color: item['color'],
+                        onTap: item['onTap'],
+                        isHighlighted: item['isHighlighted'] ?? false,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          }).toList(),
+        ],
+      ),
+    );
   }
 
-  String _getActivityTitle(int index) {
-    final titles = ['New pet registered', 'Veterinary consultation', 'Pet found nearby'];
-    return titles[index];
+  Widget _buildEnhancedMenuItem({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required int count,
+    required Color color,
+    required VoidCallback onTap,
+    bool isHighlighted = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _surfaceColor,
+        borderRadius: BorderRadius.circular(18.r),
+        boxShadow: [
+          BoxShadow(
+            color: _shadowColor,
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+        border: isHighlighted
+            ? Border.all(color: _secondaryColor, width: 2)
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18.r),
+          child: Padding(
+            padding: EdgeInsets.all(20.w),
+            child: Row(
+              children: [
+                Container(
+                  width: 50.w,
+                  height: 50.h,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        color.withOpacity(0.8),
+                        color,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(15.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    icon,
+                    color: Colors.white,
+                    size: 24.sp,
+                  ),
+                ),
+                SizedBox(width: 16.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: _onSurfaceColor,
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: _onBackgroundColor,
+                          fontSize: 12.sp,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (count > 0)
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 6.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(15.r),
+                    ),
+                    child: Text(
+                      count.toString(),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                SizedBox(width: 8.w),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: _onBackgroundColor,
+                  size: 16.sp,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
-  String _getActivitySubtitle(int index) {
-    final subtitles = ['Golden Retriever added to your pets', 'Dr. Smith scheduled for tomorrow', 'Lost cat found in your area'];
-    return subtitles[index];
+
+
+  void _navigateToLostPets() {
+    // Navigate to lost-found screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const LostFoundScreen(),
+      ),
+    );
   }
 
-  String _getActivityTime(int index) {
-    final times = ['2h ago', '1d ago', '3d ago'];
-    return times[index];
+  void _navigateToAdoption() {
+    // Navigate to lost-found screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const LostFoundScreen(),
+      ),
+    );
   }
 
-  Color _getActivityColor(int index) {
-    final colors = [AppTheme.primaryGreen, AppTheme.primaryOrange, AppTheme.info];
-    return colors[index];
-  }
-}
-
-class BackgroundPatternPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
-      ..strokeWidth = 1;
-
-    for (int i = 0; i < size.width; i += 30) {
-      for (int j = 0; j < size.height; j += 30) {
-        canvas.drawCircle(Offset(i.toDouble(), j.toDouble()), 1, paint);
-      }
-    }
+  void _navigateToMating() {
+    // For now, show a placeholder dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(TranslationService.instance.translate('home.mating_animals')),
+        content: Text(TranslationService.instance.translate('common.feature_development')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(TranslationService.instance.translate('common.ok')),
+          ),
+        ],
+      ),
+    );
   }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  void _navigateToStores() {
+    // For now, show a placeholder dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(TranslationService.instance.translate('home.pet_stores')),
+        content: Text(TranslationService.instance.translate('common.feature_development')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(TranslationService.instance.translate('common.ok')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToVeterinary() {
+    // Navigate to veterinary screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const EnhancedVeterinaryScreen(),
+      ),
+    );
+  }
+
+  void _navigateToProfile() {
+    // Navigate to profile screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SimpleProfileScreen(),
+      ),
+    );
+  }
+
+  Widget _buildFloatingMedicalButton() {
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _pulseAnimation.value,
+          child: Container(
+
+            child: FloatingActionButton(
+              onPressed: () => _navigateToVeterinary(),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: Icon(
+                Icons.medical_services,
+                color: _primaryColor,
+                size: 40.sp,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

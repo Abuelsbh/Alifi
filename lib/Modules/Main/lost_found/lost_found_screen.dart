@@ -36,6 +36,13 @@ class _LostFoundScreenState extends State<LostFoundScreen>
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back,
+            color: AppTheme.primaryGreen,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: TranslatedText(
           'lost_found.title',
           style: TextStyle(

@@ -173,14 +173,14 @@ class ChatService {
 
       // Use batch write for atomicity
       final batch = _firestore.batch();
-      
+
       // Add message
       final messageRef = _firestore
           .collection('veterinary_chats')
           .doc(chatId)
           .collection('messages')
           .doc();
-      
+
       batch.set(messageRef, messageData);
 
       // Update chat metadata
@@ -431,14 +431,14 @@ class ChatService {
           .get();
 
       if (messagesQuery.docs.isNotEmpty) {
-        final batch = _firestore.batch();
+      final batch = _firestore.batch();
         
         // Mark messages as read
-        for (var doc in messagesQuery.docs) {
-          batch.update(doc.reference, {'isRead': true});
-        }
+      for (var doc in messagesQuery.docs) {
+        batch.update(doc.reference, {'isRead': true});
+      }
 
-        // Reset unread count
+      // Reset unread count
         batch.update(
           _firestore.collection('veterinary_chats').doc(chatId),
           {'unreadCount.$userId': 0},
@@ -491,7 +491,7 @@ class ChatService {
       );
 
       await batch.commit();
-      
+
       // Clear cache
       _messageStreamsCache.remove(chatId);
     } catch (e) {

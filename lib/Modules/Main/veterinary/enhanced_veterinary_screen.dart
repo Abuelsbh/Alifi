@@ -140,6 +140,13 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back,
+            color: AppTheme.primaryGreen,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text('الاستشارات البيطرية'),
         centerTitle: true,
         elevation: 0,
