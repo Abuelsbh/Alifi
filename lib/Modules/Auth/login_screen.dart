@@ -6,6 +6,7 @@ import '../../core/services/auth_service.dart';
 import '../../Widgets/translated_text.dart';
 import '../../Widgets/custom_textfield_widget.dart';
 import '../../Widgets/translated_custom_button.dart';
+import 'veterinarian_login_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   static const String routeName = '/login';
@@ -236,6 +237,35 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                       child: const TranslatedText(
                         'auth.sign_up',
+                        style: TextStyle(
+                          color: AppTheme.primaryGreen,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                SizedBox(height: 16.h),
+                
+                // Veterinarian Login Link
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const TranslatedText(
+                      'veterinary.are_you_veterinarian',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const VeterinarianLoginScreen(),
+                          ),
+                        );
+                      },
+                      child: const TranslatedText(
+                        'veterinary.veterinarian_login',
                         style: TextStyle(
                           color: AppTheme.primaryGreen,
                           fontWeight: FontWeight.bold,

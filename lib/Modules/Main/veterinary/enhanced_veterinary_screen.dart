@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/Theme/app_theme.dart';
@@ -23,6 +24,10 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
   List<Map<String, dynamic>> _filteredVeterinarians = [];
   List<ChatModel> _chats = [];
   bool _isLoading = true;
+  
+  // Stream subscriptions
+  StreamSubscription? _veterinariansSubscription;
+  StreamSubscription? _chatsSubscription;
 
   @override
   void initState() {
@@ -32,24 +37,55 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload data when returning to this screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && (_veterinarians.isEmpty || _chats.isEmpty)) {
+        _loadData();
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    _cancelSubscriptions();
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _loadData() async {
+    // Cancel existing subscriptions
+    await _cancelSubscriptions();
+    
     setState(() {
       _isLoading = true;
     });
 
     try {
+      // Clear all caches to ensure fresh data
+      ChatService.clearAllCaches();
+      
       // Load veterinarians with real-time stream
-      ChatService.getVeterinariansStream().listen((vets) {
+      _veterinariansSubscription = ChatService.getVeterinariansStream().listen((vets) {
         if (mounted) {
           setState(() {
             _veterinarians = vets;
             _filteredVeterinarians = vets;
+            _isLoading = false;
+          });
+          
+          // Log for debugging
+          print('Loaded ${vets.length} veterinarians');
+          if (vets.isNotEmpty) {
+            print('First vet: ${vets.first['name']} - ID: ${vets.first['id']}');
+          }
+        }
+      }, onError: (error) {
+        print('Error in veterinarians stream: $error');
+        if (mounted) {
+          setState(() {
             _isLoading = false;
           });
         }
@@ -58,12 +94,15 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
       // Load user chats if authenticated
       if (AuthService.isAuthenticated) {
         final userId = AuthService.userId!;
-        ChatService.getUserChatsStream(userId).listen((chats) {
+        _chatsSubscription = ChatService.getUserChatsStream(userId).listen((chats) {
           if (mounted) {
             setState(() {
               _chats = chats;
             });
+            print('Loaded ${chats.length} chats');
           }
+        }, onError: (error) {
+          print('Error in chats stream: $error');
         });
       }
     } catch (e) {
@@ -74,6 +113,13 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
       }
       print('Error loading veterinary data: $e');
     }
+  }
+
+  Future<void> _cancelSubscriptions() async {
+    await _veterinariansSubscription?.cancel();
+    await _chatsSubscription?.cancel();
+    _veterinariansSubscription = null;
+    _chatsSubscription = null;
   }
 
   void _filterVeterinarians(String query) {
@@ -151,6 +197,24 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
         centerTitle: true,
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
+        actions: [
+          IconButton(
+            icon: _isLoading 
+              ? SizedBox(
+                  width: 20.w,
+                  height: 20.w,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppTheme.primaryGreen,
+                  ),
+                )
+              : Icon(
+                  Icons.refresh,
+                  color: AppTheme.primaryGreen,
+                ),
+            onPressed: _isLoading ? null : _loadData,
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppTheme.primaryGreen,
@@ -245,17 +309,40 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
                 Icon(
                   Icons.chat_outlined,
                   size: 64.sp,
-                  color: Colors.grey,
+                  color: Colors.grey[400],
                 ),
                 SizedBox(height: 16.h),
-                const Text(
+                Text(
                   'لا توجد محادثات بعد',
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                  style: TextStyle(fontSize: 18, color: Colors.grey[600], fontWeight: FontWeight.w500),
                 ),
                 SizedBox(height: 8.h),
-                const Text(
-                  'ابدأ محادثة مع طبيب بيطري',
-                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                Text(
+                  'ابدأ محادثة مع طبيب بيطري من التبويب الأول',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                ),
+                SizedBox(height: 16.h),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    _tabController.animateTo(0); // Switch to veterinarians tab
+                  },
+                  icon: Icon(Icons.medical_services),
+                  label: Text('عرض الأطباء البيطريين'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGreen,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                ElevatedButton.icon(
+                  onPressed: _loadData,
+                  icon: Icon(Icons.refresh),
+                  label: Text('تحديث المحادثات'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
                 ),
               ],
             ),
@@ -284,14 +371,42 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
             color: Colors.grey,
           ),
           SizedBox(height: 16.h),
-          const Text(
+          Text(
             'لا يوجد أطباء متاحين حالياً',
-            style: TextStyle(fontSize: 18, color: Colors.grey),
+            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
           ),
           SizedBox(height: 8.h),
-          const Text(
-            'جرب البحث أو تحديث الصفحة',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+          Text(
+            'جرب تحديث الصفحة أو تأكد من الاتصال بالإنترنت',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+          ),
+          SizedBox(height: 16.h),
+          ElevatedButton.icon(
+            onPressed: _loadData,
+            icon: Icon(Icons.refresh),
+            label: Text('تحديث'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGreen,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          SizedBox(height: 16.h),
+          Container(
+            padding: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8.r),
+              border: Border.all(color: Colors.blue[200]!),
+            ),
+            child: Text(
+              '💡 إذا استمرت المشكلة، تأكد من أن الأطباء البيطريين مسجلين في النظام',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12.sp,
+                color: Colors.blue[700],
+              ),
+            ),
           ),
         ],
       ),

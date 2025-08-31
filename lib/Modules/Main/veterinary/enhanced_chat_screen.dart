@@ -453,16 +453,7 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
       ),
       backgroundColor: Theme.of(context).colorScheme.surface,
       elevation: 1,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.videocam),
-          onPressed: () => _showComingSoonDialog('مكالمة فيديو'),
-        ),
-        IconButton(
-          icon: const Icon(Icons.call),
-          onPressed: () => _showComingSoonDialog('مكالمة صوتية'),
-        ),
-      ],
+
     );
   }
 

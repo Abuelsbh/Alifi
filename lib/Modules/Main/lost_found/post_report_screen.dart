@@ -7,10 +7,10 @@ import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/pet_reports_service.dart';
 import '../../../Widgets/custom_button.dart';
-
 import '../../../Widgets/translated_custom_button.dart' hide ButtonType;
-import '../../../Widgets/translated_text.dart';
+
 import '../../../core/services/location_service.dart';
+import '../../../core/Language/translation_service.dart';
 import 'lost_found_screen.dart';
 
 class PostReportScreen extends StatefulWidget {
@@ -41,8 +41,8 @@ class _PostReportScreenState extends State<PostReportScreen> {
   final _locationController = TextEditingController();
   
   // Form data
-  String _selectedPetType = 'Dog';
-  String _selectedGender = 'Male';
+  String _selectedPetType = 'كلب';
+  String _selectedGender = 'ذكر';
   int _age = 1;
   DateTime _dateLost = DateTime.now();
   String _address = '';
@@ -68,6 +68,13 @@ class _PostReportScreenState extends State<PostReportScreen> {
   String _temperament = 'ودود';
   String _area = '';
   String _landmark = '';
+
+  // Options for dropdowns
+  final List<String> _petTypes = ['كلب', 'قط', 'طائر', 'أرنب', 'هامستر', 'أخرى'];
+  final List<String> _genders = ['ذكر', 'أنثى'];
+  final List<String> _healthStatuses = ['جيد', 'مقبول', 'يحتاج رعاية'];
+  final List<String> _temperaments = ['ودود', 'هادئ', 'نشيط', 'خجول', 'عدواني'];
+  final List<String> _contactMethods = ['هاتف', 'إيميل', 'واتساب'];
 
   @override
   void initState() {
@@ -156,12 +163,242 @@ class _PostReportScreenState extends State<PostReportScreen> {
     });
   }
 
+  // Bottom sheet for pet type selection
+  void _showPetTypeBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (context) => Container(
+        padding: EdgeInsets.all(20.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40.w,
+              height: 4.h,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.r),
+              ),
+            ),
+            SizedBox(height: 20.h),
+            Text(
+              TranslationService.instance.translate('post_report.select_pet_type'),
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 20.h),
+            ..._petTypes.map((type) => ListTile(
+              title: Text(type),
+              trailing: _selectedPetType == type ? Icon(Icons.check, color: AppTheme.primaryGreen) : null,
+              onTap: () {
+                setState(() {
+                  _selectedPetType = type;
+                });
+                Navigator.pop(context);
+              },
+            )),
+            SizedBox(height: 20.h),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Bottom sheet for gender selection
+  void _showGenderBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (context) => Container(
+        padding: EdgeInsets.all(20.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40.w,
+              height: 4.h,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.r),
+              ),
+            ),
+            SizedBox(height: 20.h),
+            Text(
+              TranslationService.instance.translate('post_report.select_gender'),
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 20.h),
+            ..._genders.map((gender) => ListTile(
+              title: Text(gender),
+              trailing: _selectedGender == gender ? Icon(Icons.check, color: AppTheme.primaryGreen) : null,
+              onTap: () {
+                setState(() {
+                  _selectedGender = gender;
+                });
+                Navigator.pop(context);
+              },
+            )),
+            SizedBox(height: 20.h),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Bottom sheet for health status selection
+  void _showHealthStatusBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (context) => Container(
+        padding: EdgeInsets.all(20.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40.w,
+              height: 4.h,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.r),
+              ),
+            ),
+            SizedBox(height: 20.h),
+            Text(
+              TranslationService.instance.translate('post_report.select_health_status'),
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 20.h),
+            ..._healthStatuses.map((status) => ListTile(
+              title: Text(status),
+              trailing: _healthStatus == status ? Icon(Icons.check, color: AppTheme.primaryGreen) : null,
+              onTap: () {
+                setState(() {
+                  _healthStatus = status;
+                });
+                Navigator.pop(context);
+              },
+            )),
+            SizedBox(height: 20.h),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Bottom sheet for temperament selection
+  void _showTemperamentBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (context) => Container(
+        padding: EdgeInsets.all(20.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40.w,
+              height: 4.h,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.r),
+              ),
+            ),
+            SizedBox(height: 20.h),
+            Text(
+              TranslationService.instance.translate('post_report.select_temperament'),
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 20.h),
+            ..._temperaments.map((temperament) => ListTile(
+              title: Text(temperament),
+              trailing: _temperament == temperament ? Icon(Icons.check, color: AppTheme.primaryGreen) : null,
+              onTap: () {
+                setState(() {
+                  _temperament = temperament;
+                });
+                Navigator.pop(context);
+              },
+            )),
+            SizedBox(height: 20.h),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Bottom sheet for contact method selection
+  void _showContactMethodBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (context) => Container(
+        padding: EdgeInsets.all(20.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40.w,
+              height: 4.h,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.r),
+              ),
+            ),
+            SizedBox(height: 20.h),
+            Text(
+              TranslationService.instance.translate('post_report.select_contact_method'),
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 20.h),
+            ..._contactMethods.map((method) => ListTile(
+              title: Text(method),
+              trailing: _preferredContact == method ? Icon(Icons.check, color: AppTheme.primaryGreen) : null,
+              onTap: () {
+                setState(() {
+                  _preferredContact = method;
+                });
+                Navigator.pop(context);
+              },
+            )),
+            SizedBox(height: 20.h),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate()) return;
     if (_photos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('يرجى إضافة صورة واحدة على الأقل'),
+        SnackBar(
+          content: Text(TranslationService.instance.translate('post_report.add_photo_required')),
           backgroundColor: Colors.red,
         ),
       );
@@ -250,8 +487,8 @@ class _PostReportScreenState extends State<PostReportScreen> {
                 Expanded(
                   child: Text(
                     widget.reportType == ReportType.lost 
-                      ? 'تم نشر تقرير الحيوان المفقود بنجاح! سيتم عرضه للمجتمع للمساعدة في العثور على حيوانك الأليف.'
-                      : 'تم نشر تقرير الحيوان الموجود بنجاح! سيتم عرضه لأصحاب الحيوانات المفقودة.',
+                      ? TranslationService.instance.translate('post_report.lost_success')
+                      : TranslationService.instance.translate('post_report.found_success'),
                     style: TextStyle(color: Colors.white, fontSize: 14.sp),
                   ),
                 ),
@@ -268,7 +505,7 @@ class _PostReportScreenState extends State<PostReportScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: TranslatedText('post_report.error'),
+            content: Text(TranslationService.instance.translate('post_report.error')),
             backgroundColor: AppTheme.error,
           ),
         );
@@ -283,12 +520,12 @@ class _PostReportScreenState extends State<PostReportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: TranslatedText(
+        title: Text(
           widget.reportType == ReportType.lost 
-            ? 'post_report.lost_pet_title' 
-            : 'post_report.found_pet_title',
+            ? TranslationService.instance.translate('post_report.lost_pet_title')
+            : TranslationService.instance.translate('post_report.found_pet_title'),
         ),
         centerTitle: true,
         elevation: 0,
@@ -310,6 +547,13 @@ class _PostReportScreenState extends State<PostReportScreen> {
                     _buildLocationSection(),
                     SizedBox(height: 24.h),
                     _buildContactSection(),
+                    if (widget.reportType == ReportType.lost) ...[
+                      SizedBox(height: 24.h),
+                      _buildLostPetExtraSection(),
+                    ] else ...[
+                      SizedBox(height: 24.h),
+                      _buildFoundPetExtraSection(),
+                    ],
                     SizedBox(height: 32.h),
                     SizedBox(
                       width: double.infinity,
@@ -331,16 +575,16 @@ class _PostReportScreenState extends State<PostReportScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Photos',
+          TranslationService.instance.translate('post_report.photos'),
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w600,
           ),
         ),
         SizedBox(height: 12.h),
         Text(
-          'Add clear photos of the pet (${_photos.length}/5)',
+          TranslationService.instance.translate('post_report.photos_description').replaceAll('{count}', '${_photos.length}/5'),
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
           ),
         ),
         SizedBox(height: 16.h),
@@ -357,10 +601,10 @@ class _PostReportScreenState extends State<PostReportScreen> {
       width: double.infinity,
       height: 200.h,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: Theme.of(context).colorScheme.background,
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
-          color: Theme.of(context).colorScheme.onBackground.withOpacity(0.2),
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
           style: BorderStyle.solid,
         ),
       ),
@@ -370,13 +614,13 @@ class _PostReportScreenState extends State<PostReportScreen> {
           Icon(
             Icons.add_a_photo,
             size: 48.sp,
-            color: Theme.of(context).colorScheme.onBackground.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           ),
           SizedBox(height: 12.h),
           Text(
-            'Add Photos',
+            TranslationService.instance.translate('post_report.add_photos'),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           SizedBox(height: 16.h),
@@ -384,13 +628,13 @@ class _PostReportScreenState extends State<PostReportScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               CustomButton(
-                text: 'Gallery',
+                text: TranslationService.instance.translate('post_report.gallery'),
                 type: ButtonType.secondary,
                 onPressed: _photos.length < 5 ? _pickImage : null,
               ),
               SizedBox(width: 12.w),
               CustomButton(
-                text: 'Camera',
+                text: TranslationService.instance.translate('post_report.camera'),
                 type: ButtonType.secondary,
                 onPressed: _photos.length < 5 ? _takePhoto : null,
               ),
@@ -430,10 +674,10 @@ class _PostReportScreenState extends State<PostReportScreen> {
       onTap: _photos.length < 5 ? _pickImage : null,
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: Theme.of(context).colorScheme.background,
           borderRadius: BorderRadius.circular(8.r),
           border: Border.all(
-            color: Theme.of(context).colorScheme.onBackground.withOpacity(0.2),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
             style: BorderStyle.solid,
           ),
         ),
@@ -486,7 +730,7 @@ class _PostReportScreenState extends State<PostReportScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Pet Details',
+          TranslationService.instance.translate('post_report.pet_details'),
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -495,48 +739,48 @@ class _PostReportScreenState extends State<PostReportScreen> {
         TextFormField(
           controller: _petNameController,
           decoration: InputDecoration(
-            labelText: 'post_report.pet_name',
+            labelText: TranslationService.instance.translate('post_report.pet_name'),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.r),
             ),
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return 'post_report.required_field';
+              return TranslationService.instance.translate('post_report.required_field');
             }
             return null;
           },
         ),
         SizedBox(height: 16.h),
-        DropdownButtonFormField<String>(
-          value: _selectedPetType,
-          decoration: InputDecoration(
-            labelText: 'post_report.pet_type',
-            border: OutlineInputBorder(
+        // Pet Type Selection with Bottom Sheet
+        GestureDetector(
+          onTap: _showPetTypeBottomSheet,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 16.h),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[400]!),
               borderRadius: BorderRadius.circular(8.r),
             ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _selectedPetType,
+                    style: TextStyle(
+                      color: _selectedPetType.isNotEmpty ? Colors.black : Colors.grey[600],
+                    ),
+                  ),
+                ),
+                Icon(Icons.arrow_drop_down),
+              ],
+            ),
           ),
-          items: ['Dog', 'Cat', 'Bird', 'Fish', 'Rabbit', 'Hamster', 'Other'].map((type) => DropdownMenuItem(
-            value: type,
-            child: Text(type),
-          )).toList(),
-          onChanged: (value) {
-            setState(() {
-              _selectedPetType = value??'';
-            });
-          },
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'post_report.required_field';
-            }
-            return null;
-          },
         ),
         SizedBox(height: 16.h),
         TextFormField(
           controller: _breedController,
           decoration: InputDecoration(
-            labelText: 'post_report.breed',
+            labelText: TranslationService.instance.translate('post_report.breed'),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.r),
             ),
@@ -546,7 +790,7 @@ class _PostReportScreenState extends State<PostReportScreen> {
         TextFormField(
           controller: _colorController,
           decoration: InputDecoration(
-            labelText: 'post_report.color',
+            labelText: TranslationService.instance.translate('post_report.color'),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.r),
             ),
@@ -556,36 +800,36 @@ class _PostReportScreenState extends State<PostReportScreen> {
         TextFormField(
           controller: _ageController,
           decoration: InputDecoration(
-            labelText: 'post_report.age',
+            labelText: TranslationService.instance.translate('post_report.age'),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.r),
             ),
           ),
         ),
         SizedBox(height: 16.h),
-        DropdownButtonFormField<String>(
-          value: _selectedGender,
-          decoration: InputDecoration(
-            labelText: 'post_report.gender',
-            border: OutlineInputBorder(
+        // Gender Selection with Bottom Sheet
+        GestureDetector(
+          onTap: _showGenderBottomSheet,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 16.h),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[400]!),
               borderRadius: BorderRadius.circular(8.r),
             ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _selectedGender,
+                    style: TextStyle(
+                      color: _selectedGender.isNotEmpty ? Colors.black : Colors.grey[600],
+                    ),
+                  ),
+                ),
+                Icon(Icons.arrow_drop_down),
+              ],
+            ),
           ),
-          items: [
-            DropdownMenuItem(
-              value: 'Male',
-              child: TranslatedText('post_report.male'),
-            ),
-            DropdownMenuItem(
-              value: 'Female',
-              child: TranslatedText('post_report.female'),
-            ),
-          ],
-          onChanged: (value) {
-            setState(() {
-              _selectedGender = value??'';
-            });
-          },
         ),
       ],
     );
@@ -596,7 +840,7 @@ class _PostReportScreenState extends State<PostReportScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Location',
+          TranslationService.instance.translate('post_report.location'),
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -605,14 +849,14 @@ class _PostReportScreenState extends State<PostReportScreen> {
         TextFormField(
           controller: _locationController,
           decoration: InputDecoration(
-            labelText: 'post_report.location',
+            labelText: TranslationService.instance.translate('post_report.location'),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.r),
             ),
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return 'post_report.required_field';
+              return TranslationService.instance.translate('post_report.required_field');
             }
             return null;
           },
@@ -626,7 +870,7 @@ class _PostReportScreenState extends State<PostReportScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Contact Information',
+          TranslationService.instance.translate('post_report.contact_information'),
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -635,14 +879,14 @@ class _PostReportScreenState extends State<PostReportScreen> {
         TextFormField(
           controller: _contactNameController,
           decoration: InputDecoration(
-            labelText: 'post_report.contact_name',
+            labelText: TranslationService.instance.translate('post_report.contact_name'),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.r),
             ),
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return 'post_report.required_field';
+              return TranslationService.instance.translate('post_report.required_field');
             }
             return null;
           },
@@ -651,18 +895,285 @@ class _PostReportScreenState extends State<PostReportScreen> {
         TextFormField(
           controller: _contactPhoneController,
           decoration: InputDecoration(
-            labelText: 'post_report.contact_phone',
+            labelText: TranslationService.instance.translate('post_report.contact_phone'),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.r),
             ),
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return 'post_report.required_field';
+              return TranslationService.instance.translate('post_report.required_field');
             }
             return null;
           },
         ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _contactEmail),
+          onChanged: (value) => _contactEmail = value,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.contact_email'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        // Contact Method Selection with Bottom Sheet
+        GestureDetector(
+          onTap: _showContactMethodBottomSheet,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 16.h),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[400]!),
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _preferredContact,
+                    style: TextStyle(
+                      color: _preferredContact.isNotEmpty ? Colors.black : Colors.grey[600],
+                    ),
+                  ),
+                ),
+                Icon(Icons.arrow_drop_down),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLostPetExtraSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          TranslationService.instance.translate('post_report.additional_info'),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: _descriptionController,
+          maxLines: 3,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.description'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _distinguishingMarks),
+          onChanged: (value) => _distinguishingMarks = value,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.distinguishing_marks'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _personality),
+          onChanged: (value) => _personality = value,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.personality'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _medicalConditions),
+          onChanged: (value) => _medicalConditions = value,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.medical_conditions'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        Row(
+          children: [
+            Checkbox(
+              value: _isUrgent,
+              onChanged: (value) {
+                setState(() {
+                  _isUrgent = value ?? false;
+                });
+              },
+            ),
+            Expanded(
+              child: Text(
+                TranslationService.instance.translate('post_report.is_urgent'),
+                style: TextStyle(fontSize: 16.sp),
+              ),
+            ),
+          ],
+        ),
+        if (_isUrgent) ...[
+          SizedBox(height: 16.h),
+          TextFormField(
+            controller: TextEditingController(text: _reward.toString()),
+            onChanged: (value) => _reward = double.tryParse(value) ?? 0,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: TranslationService.instance.translate('post_report.reward'),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFoundPetExtraSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          TranslationService.instance.translate('post_report.additional_info'),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: _descriptionController,
+          maxLines: 3,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.description'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        // Health Status Selection with Bottom Sheet
+        GestureDetector(
+          onTap: _showHealthStatusBottomSheet,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 16.h),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[400]!),
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _healthStatus,
+                    style: TextStyle(
+                      color: _healthStatus.isNotEmpty ? Colors.black : Colors.grey[600],
+                    ),
+                  ),
+                ),
+                Icon(Icons.arrow_drop_down),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        // Temperament Selection with Bottom Sheet
+        GestureDetector(
+          onTap: _showTemperamentBottomSheet,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 16.h),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[400]!),
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _temperament,
+                    style: TextStyle(
+                      color: _temperament.isNotEmpty ? Colors.black : Colors.grey[600],
+                    ),
+                  ),
+                ),
+                Icon(Icons.arrow_drop_down),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        Row(
+          children: [
+            Checkbox(
+              value: _hasCollar,
+              onChanged: (value) {
+                setState(() {
+                  _hasCollar = value ?? false;
+                });
+              },
+            ),
+            Expanded(
+              child: Text(
+                TranslationService.instance.translate('post_report.has_collar'),
+                style: TextStyle(fontSize: 16.sp),
+              ),
+            ),
+          ],
+        ),
+        if (_hasCollar) ...[
+          SizedBox(height: 16.h),
+          TextFormField(
+            controller: TextEditingController(text: _collarDescription),
+            onChanged: (value) => _collarDescription = value,
+            decoration: InputDecoration(
+              labelText: TranslationService.instance.translate('post_report.collar_description'),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+          ),
+        ],
+        SizedBox(height: 16.h),
+        Row(
+          children: [
+            Checkbox(
+              value: _isInShelter,
+              onChanged: (value) {
+                setState(() {
+                  _isInShelter = value ?? false;
+                });
+              },
+            ),
+            Expanded(
+              child: Text(
+                TranslationService.instance.translate('post_report.is_in_shelter'),
+                style: TextStyle(fontSize: 16.sp),
+              ),
+            ),
+          ],
+        ),
+        if (_isInShelter) ...[
+          SizedBox(height: 16.h),
+          TextFormField(
+            controller: TextEditingController(text: _shelterInfo),
+            onChanged: (value) => _shelterInfo = value,
+            maxLines: 2,
+            decoration: InputDecoration(
+              labelText: TranslationService.instance.translate('post_report.shelter_info'),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

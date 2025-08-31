@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/Theme/app_theme.dart';
-import '../../../Widgets/custom_card.dart';
-import '../../../Widgets/custom_button.dart';
 import '../../../core/services/pet_reports_service.dart';
-import 'pet_report_details_screen.dart';
+import 'unified_pet_card.dart';
 
 class LostPetsTab extends StatefulWidget {
   const LostPetsTab({super.key});
@@ -183,13 +181,16 @@ class _LostPetsTabState extends State<LostPetsTab> {
               : _filteredPets.isEmpty
                   ? _buildEmptyState()
                   : ListView.builder(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
+                      padding: EdgeInsets.symmetric(horizontal: 8.w),
                       itemCount: _filteredPets.length,
                       itemBuilder: (context, index) {
                         final pet = _filteredPets[index];
                         return Padding(
-                          padding: EdgeInsets.only(bottom: 12.h),
-                          child: _buildPetCard(pet),
+                          padding: EdgeInsets.only(bottom: 4.h),
+                          child: UnifiedPetCard(
+                            pet: pet,
+                            reportType: 'lost',
+                          ),
                         );
                       },
                     ),
@@ -223,176 +224,6 @@ class _LostPetsTabState extends State<LostPetsTab> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildPetCard(Map<String, dynamic> pet) {
-    final petName = pet['petDetails']?['name'] ?? pet['petName'] ?? 'حيوان مفقود';
-    final petType = pet['petDetails']?['type'] ?? pet['petType'] ?? 'غير محدد';
-    final breed = pet['petDetails']?['breed'] ?? pet['breed'] ?? '';
-    final color = pet['petDetails']?['color'] ?? pet['color'] ?? '';
-    final lastSeenLocation = pet['lastSeenLocation'] ?? pet['address'] ?? 'موقع غير محدد';
-    final lastSeenDate = pet['lastSeenDate'] ?? pet['createdAt'];
-    final reward = pet['reward'] ?? 0;
-    final isUrgent = pet['isUrgent'] ?? false;
-    final imageUrls = pet['imageUrls'] as List<dynamic>? ?? [];
-
-    return CustomCard(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PetReportDetailsScreen(report: pet),
-          ),
-        );
-      },
-      child: Padding(
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                // Pet image
-                Container(
-                  width: 80.w,
-                  height: 80.h,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8.r),
-                    color: Colors.grey[300],
-                  ),
-                  child: imageUrls.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8.r),
-                          child: Image.network(
-                            imageUrls.first.toString(),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => 
-                                Icon(Icons.pets, size: 40.sp, color: AppTheme.primaryGreen),
-                          ),
-                        )
-                      : Icon(Icons.pets, size: 40.sp, color: AppTheme.primaryGreen),
-                ),
-                
-                SizedBox(width: 12.w),
-                
-                // Pet info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              petName,
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          if (isUrgent)
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                              decoration: BoxDecoration(
-                                color: AppTheme.error,
-                                borderRadius: BorderRadius.circular(12.r),
-                              ),
-                              child: Text(
-                                'عاجل',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      SizedBox(height: 4.h),
-                      Text(
-                        '$petType${breed.isNotEmpty ? ' - $breed' : ''}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.primaryGreen,
-                        ),
-                      ),
-                      if (color.isNotEmpty) ...[
-                        SizedBox(height: 2.h),
-                        Text(
-                          'اللون: $color',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                      SizedBox(height: 4.h),
-                      Row(
-                        children: [
-                          Icon(Icons.location_on, size: 14.sp, color: Colors.grey[600]),
-                          SizedBox(width: 4.w),
-                          Expanded(
-                            child: Text(
-                              lastSeenLocation.isNotEmpty ? lastSeenLocation : 'موقع غير محدد',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.grey[600],
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (reward > 0) ...[
-                        SizedBox(height: 4.h),
-                        Row(
-                          children: [
-                            Icon(Icons.monetization_on, size: 14.sp, color: AppTheme.primaryOrange),
-                            SizedBox(width: 4.w),
-                            Text(
-                              'مكافأة: $reward جنيه',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppTheme.primaryOrange,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            
-            SizedBox(height: 12.h),
-            
-            // Action buttons
-            Row(
-              children: [
-                Expanded(
-                  child: CustomButton(
-                    text: 'اتصال',
-                    onPressed: () {
-                      // TODO: Implement call functionality
-                    },
-                    backgroundColor: AppTheme.primaryGreen,
-                    textColor: Colors.white,
-                  ),
-                ),
-                SizedBox(width: 8.w),
-                Expanded(
-                  child: CustomButton(
-                    text: 'رسالة',
-                    onPressed: () {
-                      // TODO: Implement message functionality
-                    },
-                    backgroundColor: AppTheme.primaryOrange,
-                    textColor: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -118,8 +118,8 @@ class CustomButton extends StatelessWidget {
           Text(
             text,
             style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w400,
             ),
           ),
         ],
@@ -129,8 +129,8 @@ class CustomButton extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        fontSize: 16.sp,
-        fontWeight: FontWeight.w600,
+        fontSize: 14.sp,
+        fontWeight: FontWeight.w400,
       ),
     );
   }
@@ -141,4 +141,4 @@ enum ButtonType {
   secondary,
   text,
   icon,
-} 
+}

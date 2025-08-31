@@ -1,3 +1,4 @@
+import 'package:alifi/Modules/Auth/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -106,9 +107,6 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 1000));
     _textController.forward();
 
-    // Initialize test data including demo veterinarian
-    await _initializeTestData();
-
     // Wait for all animations to complete then navigate
     await Future.delayed(const Duration(milliseconds: 2000));
     if (mounted) {
@@ -121,77 +119,11 @@ class _SplashScreenState extends State<SplashScreen>
         context.go('/main');
       } else {
         // User is not logged in, go to test register screen for debugging
-        context.go('/test-register');
+        context.go(LoginScreen.routeName);
       }
     }
   }
 
-  // Initialize test data including demo veterinarian
-  Future<void> _initializeTestData() async {
-    try {
-      print('🔵 Initializing test data for demo...');
-      
-      if (FirebaseConfig.isDemoMode) {
-        print('⚠️ Demo mode - skipping Firebase data initialization');
-        return;
-      }
-      
-      // Add demo veterinarian if not exists
-      final vetsQuery = await FirebaseConfig.firestore
-          .collection('veterinarians')
-          .where('email', isEqualTo: 'dr.ahmed@vetclinic.com')
-          .get();
-
-      if (vetsQuery.docs.isEmpty) {
-        print('🩺 Adding demo veterinarian...');
-        
-        await FirebaseConfig.firestore
-            .collection('veterinarians')
-            .add({
-          'name': 'د. أحمد محمد الطبيب',
-          'email': 'dr.ahmed@vetclinic.com',
-          'specialization': 'طب بيطري عام',
-          'yearsOfExperience': 8,
-          'rating': 4.8,
-          'totalReviews': 156,
-          'profilePhoto': 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400',
-          'bio': 'طبيب بيطري متخصص في علاج الحيوانات الأليفة مع خبرة 8 سنوات في العلاج والجراحة',
-          'isActive': true,
-          'isOnline': true,
-          'isAvailable': true,
-          'consultationFee': 150,
-          'availableFrom': '09:00',
-          'availableTo': '18:00',
-          'phoneNumber': '+201234567890',
-          'address': 'عيادة الرحمة البيطرية، التجمع الخامس، القاهرة الجديدة',
-          'clinicName': 'عيادة الرحمة البيطرية',
-          'languages': ['العربية', 'الإنجليزية'],
-          'services': [
-            'فحص شامل',
-            'التطعيمات', 
-            'علاج الأمراض',
-            'الجراحة البسيطة',
-            'استشارات التغذية'
-          ],
-          'workingDays': ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء'],
-          'emergencyAvailable': true,
-          'videoCallAvailable': true,
-          'homeVisitAvailable': false,
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-          'lastSeen': FieldValue.serverTimestamp(),
-        });
-        
-        print('✅ Demo veterinarian added successfully');
-      } else {
-        print('✅ Demo veterinarian already exists');
-      }
-      
-    } catch (e) {
-      print('⚠️ Error initializing test data: $e');
-      // Continue anyway - this is not critical for app startup
-    }
-  }
 
   @override
   void dispose() {

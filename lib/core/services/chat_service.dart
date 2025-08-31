@@ -23,10 +23,62 @@ class ChatService {
     _vetStreamsCache.clear();
   }
 
+  // Clear veterinarians cache specifically
+  static void clearVeterinariansCache() {
+    _vetStreamsCache.clear();
+  }
+
+  // Clear all caches
+  static void clearAllCaches() {
+    _chatStreamsCache.clear();
+    _messageStreamsCache.clear();
+    _vetStreamsCache.clear();
+  }
+
   // Get user's chats stream with caching
   static Stream<List<ChatModel>> getUserChatsStream(String userId) {
     if (_chatStreamsCache.containsKey(userId)) {
       return _chatStreamsCache[userId]!;
+    }
+    
+    // If in demo mode, return mock chats
+    if (FirebaseConfig.isDemoMode) {
+      final mockChats = [
+        ChatModel(
+          id: 'demo_chat_1',
+          participants: [userId, 'demo_vet_1'],
+          participantNames: {
+            userId: 'المستخدم',
+            'demo_vet_1': 'د. أحمد محمد',
+          },
+          lastMessage: 'مرحباً، كيف يمكنني مساعدتك؟',
+          lastMessageAt: DateTime.now().subtract(const Duration(minutes: 5)),
+          lastMessageSender: 'demo_vet_1',
+          isActive: true,
+          createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+          updatedAt: DateTime.now().subtract(const Duration(minutes: 5)),
+          unreadCount: {userId: 0, 'demo_vet_1': 0},
+        ),
+        ChatModel(
+          id: 'demo_chat_2',
+          participants: [userId, 'demo_vet_2'],
+          participantNames: {
+            userId: 'المستخدم',
+            'demo_vet_2': 'د. فاطمة علي',
+          },
+          lastMessage: 'سأقوم بفحص حالة حيوانك الأليف',
+          lastMessageAt: DateTime.now().subtract(const Duration(hours: 1)),
+          lastMessageSender: 'demo_vet_2',
+          isActive: true,
+          createdAt: DateTime.now().subtract(const Duration(days: 1)),
+          updatedAt: DateTime.now().subtract(const Duration(hours: 1)),
+          unreadCount: {userId: 1, 'demo_vet_2': 0},
+        ),
+      ];
+      
+      final stream = Stream.value(mockChats);
+      _chatStreamsCache[userId] = stream;
+      return stream;
     }
     
     final stream = _firestore
@@ -76,22 +128,38 @@ class ChatService {
       return _vetStreamsCache[cacheKey]!;
     }
     
-    final stream = _firestore
-        .collection('veterinarians')
-        .where('isActive', isEqualTo: true)
-        .where('isAvailable', isEqualTo: true)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs
-              .map((doc) => {
-                'id': doc.id,
-                ...doc.data() as Map<String, dynamic>,
-              })
-              .toList();
-        });
-    
-    _vetStreamsCache[cacheKey] = stream;
-    return stream;
+    try {
+      final stream = _firestore
+          .collection('veterinarians')
+          .snapshots()
+          .map((snapshot) {
+            return snapshot.docs
+                .map((doc) {
+                  final data = doc.data();
+                  // Filter veterinarians who are verified or don't have isVerified field (backward compatibility)
+                  if (data['isVerified'] == true || data['isVerified'] == null) {
+                    return {
+                      'id': doc.id,
+                      ...data,
+                    };
+                  }
+                  return null;
+                })
+                .where((vet) => vet != null)
+                .cast<Map<String, dynamic>>()
+                .toList();
+          })
+          .handleError((error) {
+            print('Error in getVeterinariansStream: $error');
+            return <Map<String, dynamic>>[];
+          });
+      
+      _vetStreamsCache[cacheKey] = stream;
+      return stream;
+    } catch (e) {
+      print('Error creating veterinarians stream: $e');
+      return Stream.value(<Map<String, dynamic>>[]);
+    }
   }
 
   // Create or get existing chat with veterinarian
@@ -115,12 +183,30 @@ class ChatService {
         }
       }
 
+      // Get user and veterinarian names
+      String userName = 'المستخدم';
+      String vetName = 'الدكتور';
+      
+      try {
+        final userDoc = await _firestore.collection('users').doc(userId).get();
+        if (userDoc.exists) {
+          userName = userDoc.data()?['name'] ?? 'المستخدم';
+        }
+        
+        final vetDoc = await _firestore.collection('veterinarians').doc(veterinarianId).get();
+        if (vetDoc.exists) {
+          vetName = vetDoc.data()?['name'] ?? 'الدكتور';
+        }
+      } catch (e) {
+        print('Warning: Could not fetch user/vet names: $e');
+      }
+
       // Create new chat
       final chatData = {
         'participants': [userId, veterinarianId],
         'participantNames': {
-          userId: 'المستخدم',
-          veterinarianId: 'الدكتور',
+          userId: userName,
+          veterinarianId: vetName,
         },
         'lastMessage': initialMessage ?? 'محادثة جديدة',
         'lastMessageAt': FieldValue.serverTimestamp(),

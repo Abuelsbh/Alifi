@@ -326,23 +326,7 @@ class _RealTimeChatScreenState extends State<RealTimeChatScreen>
         ],
       ),
       actions: [
-        // Video call button
-        IconButton(
-          icon: Icon(Icons.videocam, color: AppTheme.primaryGreen),
-          onPressed: () {
-            _showComingSoonDialog('مكالمة فيديو');
-          },
-        ),
-        
-        // Phone call button
-        IconButton(
-          icon: Icon(Icons.phone, color: AppTheme.primaryGreen),
-          onPressed: () {
-            _showComingSoonDialog('مكالمة صوتية');
-          },
-        ),
-        
-        // More options
+
         PopupMenuButton(
           icon: Icon(Icons.more_vert, color: AppTheme.primaryGreen),
           itemBuilder: (context) => [

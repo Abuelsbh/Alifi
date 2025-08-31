@@ -3,10 +3,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/Theme/app_theme.dart';
+import '../../../core/Language/translation_service.dart';
 import '../../../Widgets/custom_card.dart';
 import '../../../Widgets/custom_button.dart';
 
-class PetReportDetailsScreen extends StatefulWidget {
+class PetReportDetailsScreen extends StatelessWidget {
   final Map<String, dynamic> report;
 
   const PetReportDetailsScreen({
@@ -15,105 +16,41 @@ class PetReportDetailsScreen extends StatefulWidget {
   });
 
   @override
-  State<PetReportDetailsScreen> createState() => _PetReportDetailsScreenState();
-}
-
-class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-  
-  bool _isLoading = false;
-  bool _hasHelped = false;
-  int _helpCount = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeAnimations();
-    _loadHelpStatus();
-    _helpCount = widget.report['helpCount'] ?? 0;
-  }
-
-  void _initializeAnimations() {
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-    
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
-    
-    _animationController.forward();
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadHelpStatus() async {
-    // TODO: Check if current user has helped with this report
-    // This would check against a Firestore collection
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final isLost = widget.report['type'] == 'lost';
-    final petDetails = widget.report['petDetails'] as Map<String, dynamic>? ?? {};
-    final contactInfo = widget.report['contactInfo'] as Map<String, dynamic>? ?? {};
-    final location = widget.report['location'] as Map<String, dynamic>? ?? {};
+    final isLost = report['type'] == 'lost';
+    final petDetails = report['petDetails'] as Map<String, dynamic>? ?? {};
+    final contactInfo = report['contactInfo'] as Map<String, dynamic>? ?? {};
+    final location = report['location'] as Map<String, dynamic>? ?? {};
     
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: CustomScrollView(
-          slivers: [
-            _buildSliverAppBar(isLost, petDetails),
-            SliverToBoxAdapter(
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Column(
-                  children: [
-                    _buildHeaderCard(isLost, petDetails),
-                    _buildLocationCard(location),
-                    _buildContactCard(contactInfo),
-                    _buildDetailsCard(petDetails, isLost),
-                    if (isLost && widget.report['reward'] != null)
-                      _buildRewardCard(),
-                    if (!isLost && widget.report['shelterInfo'] != null)
-                      _buildShelterCard(),
-                    _buildActionButtons(isLost),
-                    SizedBox(height: 100.h), // Bottom padding for FAB
-                  ],
-                ),
-              ),
+      body: CustomScrollView(
+        slivers: [
+          _buildSliverAppBar(context, isLost, petDetails),
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                _buildHeaderCard(context, isLost, petDetails),
+                _buildLocationCard(context, location),
+                _buildContactCard(context, contactInfo),
+                _buildDetailsCard(context, petDetails, isLost),
+                if (isLost && report['reward'] != null)
+                  _buildRewardCard(context),
+                if (!isLost && report['shelterInfo'] != null)
+                  _buildShelterCard(context),
+                _buildActionButtons(context, isLost),
+                SizedBox(height: 100.h),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-      floatingActionButton: _buildFloatingActionButton(isLost),
+      floatingActionButton: _buildFloatingActionButton(context, isLost, contactInfo),
     );
   }
 
-  Widget _buildSliverAppBar(bool isLost, Map<String, dynamic> petDetails) {
-    final imageUrls = widget.report['imageUrls'] as List<dynamic>? ?? [];
+  Widget _buildSliverAppBar(BuildContext context, bool isLost, Map<String, dynamic> petDetails) {
+    final imageUrls = report['imageUrls'] as List<dynamic>? ?? [];
     
     return SliverAppBar(
       expandedHeight: 250.h,
@@ -122,7 +59,7 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
       backgroundColor: isLost ? AppTheme.error : AppTheme.success,
       flexibleSpace: FlexibleSpaceBar(
         title: Text(
-          petDetails['name'] ?? (isLost ? 'حيوان مفقود' : 'حيوان موجود'),
+          petDetails['name'] ?? (isLost ? TranslationService.instance.translate('lost_pet') : TranslationService.instance.translate('found_pet')),
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w600,
@@ -139,18 +76,7 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
           fit: StackFit.expand,
           children: [
             if (imageUrls.isNotEmpty)
-              PageView.builder(
-                itemCount: imageUrls.length,
-                itemBuilder: (context, index) {
-                  return Image.network(
-                    imageUrls[index],
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return _buildDefaultBackground(isLost);
-                    },
-                  );
-                },
-              )
+              _buildImageCarousel(context, imageUrls, isLost)
             else
               _buildDefaultBackground(isLost),
             
@@ -162,77 +88,75 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    Colors.black.withOpacity(0.7),
+                    Colors.black.withValues(alpha: 0.7),
                   ],
                 ),
               ),
             ),
-            
-            // Image counter
-            if (imageUrls.length > 1)
-              Positioned(
-                top: 50.h,
-                right: 16.w,
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Text(
-                    '${imageUrls.length} صور',
-                    style: TextStyle(
-                      color: Colors.white,
-                      
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
       actions: [
         IconButton(
           icon: const Icon(Icons.share, color: Colors.white),
-          onPressed: _shareReport,
+          onPressed: () => _shareReport(context),
         ),
         PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert, color: Colors.white),
           onSelected: (value) {
             switch (value) {
               case 'report':
-                _reportPost();
+                _reportPost(context);
                 break;
               case 'save':
-                _saveReport();
+                _saveReport(context);
                 break;
             }
           },
           itemBuilder: (context) => [
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'save',
               child: Row(
                 children: [
-                  Icon(Icons.bookmark_border),
-                  SizedBox(width: 8),
-                  Text('حفظ'),
+                  const Icon(Icons.bookmark_border),
+                  const SizedBox(width: 8),
+                  Text(TranslationService.instance.translate('save')),
                 ],
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'report',
               child: Row(
                 children: [
-                  Icon(Icons.flag, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('إبلاغ', style: TextStyle(color: Colors.red)),
+                  const Icon(Icons.flag, color: Colors.red),
+                  const SizedBox(width: 8),
+                  Text(TranslationService.instance.translate('report'), style: const TextStyle(color: Colors.red)),
                 ],
               ),
             ),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildImageCarousel(BuildContext context, List<dynamic> imageUrls, bool isLost) {
+    return _ImageCarousel(
+      imageUrls: imageUrls,
+      isLost: isLost,
+      onImageTap: (index) => _showFullScreenImage(context, imageUrls, index),
+    );
+  }
+
+  void _showFullScreenImage(BuildContext context, List<dynamic> imageUrls, int initialIndex) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => _FullScreenImageView(
+          imageUrls: imageUrls,
+          initialIndex: initialIndex,
+        ),
+      ),
     );
   }
 
@@ -244,7 +168,7 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
           end: Alignment.bottomRight,
           colors: [
             isLost ? AppTheme.error : AppTheme.success,
-            isLost ? AppTheme.error.withOpacity(0.8) : AppTheme.success.withOpacity(0.8),
+            isLost ? AppTheme.error.withValues(alpha: 0.8) : AppTheme.success.withValues(alpha: 0.8),
           ],
         ),
       ),
@@ -252,16 +176,17 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
         child: Icon(
           Icons.pets,
           size: 80.sp,
-          color: Colors.white.withOpacity(0.3),
+          color: Colors.white.withValues(alpha: 0.3),
         ),
       ),
     );
   }
 
-  Widget _buildHeaderCard(bool isLost, Map<String, dynamic> petDetails) {
-    final createdAt = widget.report['createdAt'];
+  Widget _buildHeaderCard(BuildContext context, bool isLost, Map<String, dynamic> petDetails) {
+    final createdAt = report['createdAt'];
     final timeAgo = _getTimeAgo(createdAt);
-    final isUrgent = widget.report['isUrgent'] == true;
+    final isUrgent = report['isUrgent'] == true;
+    final helpCount = report['helpCount'] ?? 0;
     
     return Container(
       margin: EdgeInsets.all(16.w),
@@ -277,16 +202,16 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
                     padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                     decoration: BoxDecoration(
                       color: isLost 
-                          ? AppTheme.error.withOpacity(0.1)
-                          : AppTheme.success.withOpacity(0.1),
+                          ? AppTheme.error.withValues(alpha: 0.1)
+                          : AppTheme.success.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20.r),
                     ),
                     child: Text(
-                      isLost ? 'مفقود' : 'موجود',
+                      isLost ? TranslationService.instance.translate('lost') : TranslationService.instance.translate('found'),
                       style: TextStyle(
                         color: isLost ? AppTheme.error : AppTheme.success,
                         fontWeight: FontWeight.w600,
-                        
+                        fontSize: 12.sp,
                       ),
                     ),
                   ),
@@ -296,7 +221,7 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                       decoration: BoxDecoration(
-                        color: AppTheme.warning.withOpacity(0.1),
+                        color: AppTheme.warning.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: Row(
@@ -309,10 +234,10 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
                           ),
                           SizedBox(width: 2.w),
                           Text(
-                            'عاجل',
+                            TranslationService.instance.translate('urgent'),
                             style: TextStyle(
                               color: AppTheme.warning,
-                              
+                              fontSize: 10.sp,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -326,7 +251,7 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
                   Text(
                     timeAgo,
                     style: TextStyle(
-                      
+                      fontSize: 12.sp,
                       color: Colors.grey[600],
                     ),
                   ),
@@ -336,9 +261,9 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
               SizedBox(height: 12.h),
               
               Text(
-                widget.report['description'] ?? 'لا يوجد وصف',
+                report['description'] ?? TranslationService.instance.translate('no_description'),
                 style: TextStyle(
-                  
+                  fontSize: 14.sp,
                   height: 1.5,
                 ),
               ),
@@ -347,23 +272,11 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
               
               Row(
                 children: [
-                  _buildStatItem(
-                    icon: Icons.remove_red_eye,
-                    count: widget.report['viewCount'] ?? 0,
-                    label: 'مشاهدة',
-                  ),
+                  _buildStatItem(TranslationService.instance.translate('views'), report['viewCount'] ?? 0),
                   SizedBox(width: 16.w),
-                  _buildStatItem(
-                    icon: Icons.share,
-                    count: widget.report['shareCount'] ?? 0,
-                    label: 'مشاركة',
-                  ),
+                  _buildStatItem(TranslationService.instance.translate('shares'), report['shareCount'] ?? 0),
                   SizedBox(width: 16.w),
-                  _buildStatItem(
-                    icon: Icons.favorite,
-                    count: _helpCount,
-                    label: 'مساعدة',
-                  ),
+                  _buildStatItem(TranslationService.instance.translate('help'), helpCount),
                 ],
               ),
             ],
@@ -373,24 +286,28 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
     );
   }
 
-  Widget _buildStatItem({
-    required IconData icon,
-    required int count,
-    required String label,
-  }) {
+  Widget _buildStatItem(String label, int count) {
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
-          icon,
+          Icons.remove_red_eye,
           size: 16.sp,
           color: Colors.grey[600],
         ),
         SizedBox(width: 4.w),
         Text(
-          '$count $label',
+          '$count',
           style: TextStyle(
-            
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[800],
+          ),
+        ),
+        SizedBox(width: 2.w),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.sp,
             color: Colors.grey[600],
           ),
         ),
@@ -398,9 +315,13 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
     );
   }
 
-  Widget _buildLocationCard(Map<String, dynamic> location) {
-    final area = location['area'] ?? 'غير محدد';
-    final landmark = location['landmark'];
+  Widget _buildLocationCard(BuildContext context, Map<String, dynamic> location) {
+    final address = location['address'] ?? '';
+    final coordinates = location['coordinates'];
+    
+    if (address.isEmpty && coordinates == null) {
+      return const SizedBox.shrink();
+    }
     
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
@@ -419,9 +340,9 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
                   ),
                   SizedBox(width: 8.w),
                   Text(
-                    'الموقع',
+                    TranslationService.instance.translate('location'),
                     style: TextStyle(
-                      
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.primaryGreen,
                     ),
@@ -431,39 +352,22 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
               
               SizedBox(height: 12.h),
               
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'المنطقة: $area',
-                          style: TextStyle(fontSize: 14.sp),
-                        ),
-                        if (landmark != null) ...[
-                          SizedBox(height: 4.h),
-                          Text(
-                            'علامة مميزة: $landmark',
-                            style: TextStyle(
-                              
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  CustomButton(
-                    text: 'عرض الخريطة',
-                    onPressed: _openMap,
-                    backgroundColor: AppTheme.primaryGreen,
-                    textColor: Colors.white,
-                    
-                    height: 36.h,
-                  ),
-                ],
-              ),
+              if (address.isNotEmpty)
+                Text(
+                  address,
+                  style: TextStyle(fontSize: 14.sp),
+                ),
+              
+              if (coordinates != null) ...[
+                SizedBox(height: 8.h),
+                CustomButton(
+                  text: TranslationService.instance.translate('view_on_map'),
+                  onPressed: () => _openMap(context),
+                  backgroundColor: AppTheme.info,
+                  textColor: Colors.white,
+                  height: 42.h,
+                ),
+              ],
             ],
           ),
         ),
@@ -471,10 +375,10 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
     );
   }
 
-  Widget _buildContactCard(Map<String, dynamic> contactInfo) {
+  Widget _buildContactCard(BuildContext context, Map<String, dynamic> contactInfo) {
     final phone = contactInfo['phone'];
     final email = contactInfo['email'];
-    final preferredContact = contactInfo['preferredContact'] ?? 'الهاتف';
+    final preferredContact = contactInfo['preferredContact'] ?? TranslationService.instance.translate('phone');
     
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
@@ -493,9 +397,9 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
                   ),
                   SizedBox(width: 8.w),
                   Text(
-                    'معلومات الاتصال',
+                    TranslationService.instance.translate('contact_information'),
                     style: TextStyle(
-                      
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.primaryGreen,
                     ),
@@ -521,12 +425,11 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
                       ),
                     ),
                     CustomButton(
-                      text: 'اتصال',
-                      onPressed: () => _makePhoneCall(phone),
+                      text: TranslationService.instance.translate('call'),
+                      onPressed: () => _makePhoneCall(context, phone),
                       backgroundColor: AppTheme.success,
                       textColor: Colors.white,
-                      
-                      height: 32.h,
+                      height: 42.h,
                     ),
                   ],
                 ),
@@ -549,12 +452,11 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
                       ),
                     ),
                     CustomButton(
-                      text: 'إيميل',
-                      onPressed: () => _sendEmail(email),
+                      text: TranslationService.instance.translate('email'),
+                      onPressed: () => _sendEmail(context, email),
                       backgroundColor: AppTheme.info,
                       textColor: Colors.white,
-                      
-                      height: 32.h,
+                      height: 42.h,
                     ),
                   ],
                 ),
@@ -564,13 +466,13 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.1),
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Text(
-                  'الطريقة المفضلة: $preferredContact',
+                  '${TranslationService.instance.translate('preferred_method')}: $preferredContact',
                   style: TextStyle(
-                    
+                    fontSize: 12.sp,
                     color: AppTheme.primaryGreen,
                     fontWeight: FontWeight.w500,
                   ),
@@ -583,7 +485,7 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
     );
   }
 
-  Widget _buildDetailsCard(Map<String, dynamic> petDetails, bool isLost) {
+  Widget _buildDetailsCard(BuildContext context, Map<String, dynamic> petDetails, bool isLost) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       child: CustomCard(
@@ -601,9 +503,9 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
                   ),
                   SizedBox(width: 8.w),
                   Text(
-                    'تفاصيل الحيوان',
+                    TranslationService.instance.translate('pet_details'),
                     style: TextStyle(
-                      
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.primaryGreen,
                     ),
@@ -613,19 +515,19 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
               
               SizedBox(height: 16.h),
               
-              _buildDetailRow('النوع', petDetails['type']),
-              _buildDetailRow('السلالة', petDetails['breed']),
-              _buildDetailRow('العمر', petDetails['age']),
-              _buildDetailRow('الجنس', petDetails['gender']),
-              _buildDetailRow('اللون', petDetails['color']),
-              _buildDetailRow('الحجم', petDetails['size']),
+              _buildDetailRow(TranslationService.instance.translate('type'), petDetails['type']),
+              _buildDetailRow(TranslationService.instance.translate('breed'), petDetails['breed']),
+              _buildDetailRow(TranslationService.instance.translate('age'), petDetails['age']),
+              _buildDetailRow(TranslationService.instance.translate('gender'), petDetails['gender']),
+              _buildDetailRow(TranslationService.instance.translate('color'), petDetails['color']),
+              _buildDetailRow(TranslationService.instance.translate('size'), petDetails['size']),
               
               if (petDetails['distinguishingMarks'] != null) ...[
                 SizedBox(height: 8.h),
                 Text(
-                  'علامات مميزة:',
+                  '${TranslationService.instance.translate('distinguishing_marks')}:',
                   style: TextStyle(
-                    
+                    fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -639,9 +541,9 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
               if (petDetails['personality'] != null) ...[
                 SizedBox(height: 8.h),
                 Text(
-                  'الشخصية:',
+                  '${TranslationService.instance.translate('personality')}:',
                   style: TextStyle(
-                    
+                    fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -657,10 +559,10 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
                 Container(
                   padding: EdgeInsets.all(12.w),
                   decoration: BoxDecoration(
-                    color: AppTheme.warning.withOpacity(0.1),
+                    color: AppTheme.warning.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8.r),
                     border: Border.all(
-                      color: AppTheme.warning.withOpacity(0.3),
+                      color: AppTheme.warning.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Column(
@@ -675,9 +577,9 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
                           ),
                           SizedBox(width: 8.w),
                           Text(
-                            'حالة طبية خاصة:',
+                            '${TranslationService.instance.translate('medical_conditions')}:',
                             style: TextStyle(
-                              
+                              fontSize: 12.sp,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.warning,
                             ),
@@ -712,7 +614,7 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
             child: Text(
               '$label:',
               style: TextStyle(
-                
+                fontSize: 14.sp,
                 color: Colors.grey[600],
               ),
             ),
@@ -721,7 +623,7 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
             child: Text(
               value.toString(),
               style: TextStyle(
-                
+                fontSize: 14.sp,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -731,13 +633,13 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
     );
   }
 
-  Widget _buildRewardCard() {
-    final reward = widget.report['reward'];
+  Widget _buildRewardCard(BuildContext context) {
+    final reward = report['reward'];
     
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       child: CustomCard(
-        backgroundColor: AppTheme.warning.withOpacity(0.1),
+        backgroundColor: AppTheme.warning.withValues(alpha: 0.1),
         child: Padding(
           padding: EdgeInsets.all(16.w),
           child: Row(
@@ -745,7 +647,7 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
               Container(
                 padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
-                  color: AppTheme.warning.withOpacity(0.2),
+                  color: AppTheme.warning.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -760,18 +662,18 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'مكافأة للعثور عليه',
+                      TranslationService.instance.translate('reward_for_finding'),
                       style: TextStyle(
-                        
+                        fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.warning,
                       ),
                     ),
                     SizedBox(height: 4.h),
                     Text(
-                      '$reward جنيه',
+                      '$reward ${TranslationService.instance.translate('currency')}',
                       style: TextStyle(
-                        
+                        fontSize: 16.sp,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.warning,
                       ),
@@ -786,10 +688,9 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
     );
   }
 
-  Widget _buildShelterCard() {
-    final shelterInfoString = widget.report['shelterInfo'] as String? ?? '';
+  Widget _buildShelterCard(BuildContext context) {
+    final shelterInfoString = report['shelterInfo'] as String? ?? '';
     
-    // If shelterInfo is empty, don't show the card
     if (shelterInfoString.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -797,7 +698,7 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       child: CustomCard(
-        backgroundColor: AppTheme.success.withOpacity(0.1),
+        backgroundColor: AppTheme.success.withValues(alpha: 0.1),
         child: Padding(
           padding: EdgeInsets.all(16.w),
           child: Column(
@@ -812,8 +713,9 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
                   ),
                   SizedBox(width: 8.w),
                   Text(
-                    'معلومات المأوى',
+                    TranslationService.instance.translate('shelter_information'),
                     style: TextStyle(
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.success,
                     ),
@@ -834,25 +736,24 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
     );
   }
 
-  Widget _buildActionButtons(bool isLost) {
+  Widget _buildActionButtons(BuildContext context, bool isLost) {
     return Container(
       margin: EdgeInsets.all(16.w),
       child: Row(
         children: [
           Expanded(
             child: CustomButton(
-              text: _hasHelped ? 'تم المساعدة' : 'ساعد في البحث',
-              onPressed: _hasHelped ? null : _helpWithSearch,
-              backgroundColor: _hasHelped ? Colors.grey : AppTheme.primaryGreen,
+              text: TranslationService.instance.translate('help_with_search'),
+              onPressed: () => _helpWithSearch(context),
+              backgroundColor: AppTheme.primaryGreen,
               textColor: Colors.white,
-              icon: _hasHelped ? Icons.check : Icons.favorite,
-              isLoading: _isLoading,
+              icon: Icons.favorite,
             ),
           ),
           SizedBox(width: 12.w),
           CustomButton(
-            text: 'مشاركة',
-            onPressed: _shareReport,
+            text: TranslationService.instance.translate('share'),
+            onPressed: () => _shareReport(context),
             backgroundColor: AppTheme.info,
             textColor: Colors.white,
             icon: Icons.share,
@@ -863,20 +764,20 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
     );
   }
 
-  Widget _buildFloatingActionButton(bool isLost) {
+  Widget _buildFloatingActionButton(BuildContext context, bool isLost, Map<String, dynamic> contactInfo) {
     return FloatingActionButton.extended(
-      onPressed: _contactOwner,
+      onPressed: () => _contactOwner(context, contactInfo),
       backgroundColor: isLost ? AppTheme.error : AppTheme.success,
-      label: const Text(
-        'تواصل مع المالك',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+      label: Text(
+        TranslationService.instance.translate('contact_owner'),
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
       ),
       icon: const Icon(Icons.message, color: Colors.white),
     );
   }
 
   String _getTimeAgo(dynamic createdAt) {
-    if (createdAt == null) return 'غير محدد';
+    if (createdAt == null) return TranslationService.instance.translate('unknown');
     
     DateTime dateTime;
     if (createdAt is Timestamp) {
@@ -884,151 +785,535 @@ class _PetReportDetailsScreenState extends State<PetReportDetailsScreen>
     } else if (createdAt is DateTime) {
       dateTime = createdAt;
     } else {
-      return 'غير محدد';
+      return TranslationService.instance.translate('unknown');
     }
     
     final now = DateTime.now();
     final difference = now.difference(dateTime);
     
     if (difference.inDays > 0) {
-      return 'منذ ${difference.inDays} يوم';
+      return '${TranslationService.instance.translate('ago')} ${difference.inDays} ${TranslationService.instance.translate('days')}';
     } else if (difference.inHours > 0) {
-      return 'منذ ${difference.inHours} ساعة';
+      return '${TranslationService.instance.translate('ago')} ${difference.inHours} ${TranslationService.instance.translate('hours')}';
     } else if (difference.inMinutes > 0) {
-      return 'منذ ${difference.inMinutes} دقيقة';
+      return '${TranslationService.instance.translate('ago')} ${difference.inMinutes} ${TranslationService.instance.translate('minutes')}';
     } else {
-      return 'الآن';
+      return TranslationService.instance.translate('now');
     }
   }
 
-  Future<void> _helpWithSearch() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // TODO: Update help count in Firestore
-      // TODO: Add user to helpers list
-      
-      await Future.delayed(const Duration(seconds: 1));
-      
-      setState(() {
-        _hasHelped = true;
-        _helpCount++;
-        _isLoading = false;
-      });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.favorite, color: Colors.white),
-              SizedBox(width: 8.w),
-              const Text('شكراً لمساعدتك في البحث!'),
-            ],
-          ),
-          backgroundColor: AppTheme.success,
-        ),
-      );
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('خطأ: $e'),
-          backgroundColor: AppTheme.error,
-        ),
-      );
-    }
-  }
-
-  void _shareReport() {
-    // TODO: Implement sharing functionality
+  void _helpWithSearch(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('ميزة المشاركة ستكون متاحة قريباً')),
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.favorite, color: Colors.white, size: 20.sp),
+            SizedBox(width: 8.w),
+            Text(TranslationService.instance.translate('thanks_for_helping')),
+          ],
+        ),
+        backgroundColor: AppTheme.success,
+      ),
     );
   }
 
-  void _contactOwner() {
-    final contactInfo = widget.report['contactInfo'] as Map<String, dynamic>? ?? {};
+  void _shareReport(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(TranslationService.instance.translate('share_feature_coming_soon'))),
+    );
+  }
+
+  void _contactOwner(BuildContext context, Map<String, dynamic> contactInfo) {
     final phone = contactInfo['phone'];
     
     if (phone != null) {
-      _makePhoneCall(phone);
+      _makePhoneCall(context, phone);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('معلومات الاتصال غير متوفرة')),
+        SnackBar(content: Text(TranslationService.instance.translate('contact_info_unavailable'))),
       );
     }
   }
 
-  Future<void> _makePhoneCall(String phone) async {
+  Future<void> _makePhoneCall(BuildContext context, String phone) async {
     final url = 'tel:$phone';
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('لا يمكن إجراء المكالمة')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(TranslationService.instance.translate('cannot_make_call'))),
+        );
+      }
     }
   }
 
-  Future<void> _sendEmail(String email) async {
+  Future<void> _sendEmail(BuildContext context, String email) async {
     final url = 'mailto:$email';
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('لا يمكن فتح تطبيق البريد الإلكتروني')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(TranslationService.instance.translate('cannot_open_email'))),
+        );
+      }
     }
   }
 
-  void _openMap() {
-    // TODO: Implement map functionality
+  void _openMap(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('ميزة الخريطة ستكون متاحة قريباً')),
+      SnackBar(content: Text(TranslationService.instance.translate('map_feature_coming_soon'))),
     );
   }
 
-  void _reportPost() {
+  void _reportPost(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('إبلاغ عن المنشور'),
-        content: const Text('هل تريد الإبلاغ عن هذا المنشور؟'),
+        title: Text(TranslationService.instance.translate('report_post')),
+        content: Text(TranslationService.instance.translate('do_you_want_to_report_this_post')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء'),
+            child: Text(TranslationService.instance.translate('cancel')),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text('تم إرسال البلاغ'),
+                  content: Text(TranslationService.instance.translate('report_sent')),
                   backgroundColor: AppTheme.success,
                 ),
               );
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.error),
-            child: const Text('إبلاغ'),
+            child: Text(TranslationService.instance.translate('report')),
           ),
         ],
       ),
     );
   }
 
-  void _saveReport() {
-    // TODO: Implement save functionality
+  void _saveReport(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('تم حفظ المنشور'),
+        content: Text(TranslationService.instance.translate('post_saved')),
         backgroundColor: AppTheme.success,
       ),
     );
   }
-} 
+}
+
+// ===== الحل النهائي للتنقل بين الصور =====
+class _ImageCarousel extends StatefulWidget {
+  final List<dynamic> imageUrls;
+  final bool isLost;
+  final Function(int) onImageTap;
+
+  const _ImageCarousel({
+    required this.imageUrls,
+    required this.isLost,
+    required this.onImageTap,
+  });
+
+  @override
+  State<_ImageCarousel> createState() => _ImageCarouselState();
+}
+
+class _ImageCarouselState extends State<_ImageCarousel> {
+  late PageController _pageController;
+  int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      child: Stack(
+        children: [
+          // الصور الرئيسية
+          PageView.builder(
+            controller: _pageController,
+            itemCount: widget.imageUrls.length,
+            onPageChanged: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            itemBuilder: (context, index) {
+              return GestureDetector(
+                onTap: () => widget.onImageTap(index),
+                child: Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  child: Image.network(
+                    widget.imageUrls[index],
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return _buildDefaultBackground(widget.isLost);
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+          
+          // مؤشرات الصفحات
+          if (widget.imageUrls.length > 1)
+            Positioned(
+              bottom: 20.h,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  widget.imageUrls.length,
+                  (index) => Container(
+                    width: _currentIndex == index ? 24.w : 8.w,
+                    height: 8.h,
+                    margin: EdgeInsets.symmetric(horizontal: 4.w),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(4.r),
+                      color: _currentIndex == index 
+                        ? Colors.white 
+                        : Colors.white.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          
+          // عداد الصور
+          Positioned(
+            top: 50.h,
+            right: 16.w,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: Text(
+                '${_currentIndex + 1} / ${widget.imageUrls.length}',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+          
+          // أزرار التنقل
+          if (widget.imageUrls.length > 1) ...[
+            // زر السابق
+            Positioned(
+              left: 16.w,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      if (_currentIndex > 0) {
+                        _pageController.previousPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(25.r),
+                    child: Container(
+                      width: 50.w,
+                      height: 50.h,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.chevron_left,
+                        color: Colors.white,
+                        size: 30.sp,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            
+            // زر التالي
+            Positioned(
+              right: 16.w,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      if (_currentIndex < widget.imageUrls.length - 1) {
+                        _pageController.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(25.r),
+                    child: Container(
+                      width: 50.w,
+                      height: 50.h,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.chevron_right,
+                        color: Colors.white,
+                        size: 30.sp,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDefaultBackground(bool isLost) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            isLost ? AppTheme.error : AppTheme.success,
+            isLost ? AppTheme.error.withValues(alpha: 0.8) : AppTheme.success.withValues(alpha: 0.8),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.pets,
+          size: 80.sp,
+          color: Colors.white.withValues(alpha: 0.3),
+        ),
+      ),
+    );
+  }
+}
+
+// ===== شاشة كامل الشاشة =====
+class _FullScreenImageView extends StatefulWidget {
+  final List<dynamic> imageUrls;
+  final int initialIndex;
+
+  const _FullScreenImageView({
+    required this.imageUrls,
+    required this.initialIndex,
+  });
+
+  @override
+  State<_FullScreenImageView> createState() => _FullScreenImageViewState();
+}
+
+class _FullScreenImageViewState extends State<_FullScreenImageView> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          '${_currentIndex + 1} / ${widget.imageUrls.length}',
+          style: const TextStyle(color: Colors.white),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share, color: Colors.white),
+            onPressed: () {
+              // Share image functionality
+            },
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          // الصور
+          PageView.builder(
+            controller: _pageController,
+            itemCount: widget.imageUrls.length,
+            onPageChanged: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            itemBuilder: (context, index) {
+              return InteractiveViewer(
+                child: Center(
+                  child: Image.network(
+                    widget.imageUrls[index],
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error, color: Colors.white, size: 64),
+                            const SizedBox(height: 16),
+                            Text(
+                              TranslationService.instance.translate('error_loading_image'),
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+          
+          // أزرار التنقل لكامل الشاشة
+          if (widget.imageUrls.length > 1) ...[
+            // زر السابق
+            Positioned(
+              left: 20.w,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      if (_currentIndex > 0) {
+                        _pageController.previousPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(30.r),
+                    child: Container(
+                      width: 60.w,
+                      height: 60.h,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.chevron_left,
+                        color: Colors.white,
+                        size: 40.sp,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            
+            // زر التالي
+            Positioned(
+              right: 20.w,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      if (_currentIndex < widget.imageUrls.length - 1) {
+                        _pageController.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(30.r),
+                    child: Container(
+                      width: 60.w,
+                      height: 60.h,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.chevron_right,
+                        color: Colors.white,
+                        size: 40.sp,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          
+          // مؤشرات الصفحات لكامل الشاشة
+          if (widget.imageUrls.length > 1)
+            Positioned(
+              bottom: 50.h,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  widget.imageUrls.length,
+                  (index) => Container(
+                    width: 12.w,
+                    height: 12.h,
+                    margin: EdgeInsets.symmetric(horizontal: 6.w),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _currentIndex == index 
+                        ? Colors.white 
+                        : Colors.white.withValues(alpha: 0.3),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
