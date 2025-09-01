@@ -79,6 +79,15 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
     });
 
     try {
+      // Mark messages as read when entering chat
+      final userId = AuthService.userId;
+      if (userId != null) {
+        await ChatService.markMessagesAsRead(
+          chatId: widget.chatId,
+          userId: userId,
+        );
+      }
+      
       // Listen to real-time messages
       _messagesSubscription = ChatService.getChatMessagesStream(widget.chatId).listen((messages) {
         if (mounted) {
@@ -86,6 +95,15 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
             _messages = messages;
             _isLoading = false;
           });
+          
+          // Mark messages as read when new messages arrive
+          final userId = AuthService.userId;
+          if (userId != null) {
+            ChatService.markMessagesAsRead(
+              chatId: widget.chatId,
+              userId: userId,
+            );
+          }
           
           // Auto-scroll to bottom when new messages arrive
           WidgetsBinding.instance.addPostFrameCallback((_) {

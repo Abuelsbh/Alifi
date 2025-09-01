@@ -85,6 +85,15 @@ class _RealTimeChatScreenState extends State<RealTimeChatScreen>
   void _loadMessages() {
     if (!mounted) return;
 
+    // Mark messages as read when entering chat
+    final userId = AuthService.userId;
+    if (userId != null) {
+      ChatService.markMessagesAsRead(
+        chatId: widget.chatId,
+        userId: userId,
+      );
+    }
+
     // Listen to real-time messages
     _messagesSubscription = ChatService.getChatMessagesStream(widget.chatId).listen((messages) {
       if (mounted) {
@@ -92,6 +101,15 @@ class _RealTimeChatScreenState extends State<RealTimeChatScreen>
           _messages = messages;
           _isLoading = false;
         });
+        
+        // Mark messages as read when new messages arrive
+        final userId = AuthService.userId;
+        if (userId != null) {
+          ChatService.markMessagesAsRead(
+            chatId: widget.chatId,
+            userId: userId,
+          );
+        }
         
         // Auto-scroll to bottom when new message arrives
         WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -246,6 +246,25 @@ class ChatService {
     required String message,
   }) async {
     try {
+      // First, get the chat document to know the participants
+      final chatDoc = await _firestore.collection('veterinary_chats').doc(chatId).get();
+      if (!chatDoc.exists) {
+        throw Exception('المحادثة غير موجودة');
+      }
+      
+      final chatData = chatDoc.data()!;
+      final participants = List<String>.from(chatData['participants'] ?? []);
+      final currentUnreadCount = Map<String, dynamic>.from(chatData['unreadCount'] ?? {});
+      
+      // Find the other participant (receiver)
+      String? receiverId;
+      for (String participant in participants) {
+        if (participant != senderId) {
+          receiverId = participant;
+          break;
+        }
+      }
+      
       final messageData = {
         'chatId': chatId,
         'senderId': senderId,
@@ -269,6 +288,17 @@ class ChatService {
 
       batch.set(messageRef, messageData);
 
+      // Prepare updated unread counts
+      Map<String, dynamic> updatedUnreadCounts = Map<String, dynamic>.from(currentUnreadCount);
+      
+      // Reset sender's unread count to 0
+      updatedUnreadCounts[senderId] = 0;
+      
+      // Increment receiver's unread count
+      if (receiverId != null) {
+        updatedUnreadCounts[receiverId] = (updatedUnreadCounts[receiverId] ?? 0) + 1;
+      }
+
       // Update chat metadata
       final chatRef = _firestore.collection('veterinary_chats').doc(chatId);
       batch.update(chatRef, {
@@ -276,7 +306,7 @@ class ChatService {
         'lastMessageAt': FieldValue.serverTimestamp(),
         'lastMessageSender': senderId,
         'updatedAt': FieldValue.serverTimestamp(),
-        'unreadCount.$senderId': 0,
+        'unreadCount': updatedUnreadCounts,
       });
 
       await batch.commit();
@@ -293,6 +323,25 @@ class ChatService {
     String? caption,
   }) async {
     try {
+      // First, get the chat document to know the participants
+      final chatDoc = await _firestore.collection('veterinary_chats').doc(chatId).get();
+      if (!chatDoc.exists) {
+        throw Exception('المحادثة غير موجودة');
+      }
+      
+      final chatData = chatDoc.data()!;
+      final participants = List<String>.from(chatData['participants'] ?? []);
+      final currentUnreadCount = Map<String, dynamic>.from(chatData['unreadCount'] ?? {});
+      
+      // Find the other participant (receiver)
+      String? receiverId;
+      for (String participant in participants) {
+        if (participant != senderId) {
+          receiverId = participant;
+          break;
+        }
+      }
+      
       // Upload image with compression
       final imageUrl = await _uploadImage(imageFile, 'chat_images/$chatId');
 
@@ -319,13 +368,24 @@ class ChatService {
       
       batch.set(messageRef, messageData);
 
+      // Prepare updated unread counts
+      Map<String, dynamic> updatedUnreadCounts = Map<String, dynamic>.from(currentUnreadCount);
+      
+      // Reset sender's unread count to 0
+      updatedUnreadCounts[senderId] = 0;
+      
+      // Increment receiver's unread count
+      if (receiverId != null) {
+        updatedUnreadCounts[receiverId] = (updatedUnreadCounts[receiverId] ?? 0) + 1;
+      }
+
       final chatRef = _firestore.collection('veterinary_chats').doc(chatId);
       batch.update(chatRef, {
         'lastMessage': caption ?? '📷 صورة',
         'lastMessageAt': FieldValue.serverTimestamp(),
         'lastMessageSender': senderId,
         'updatedAt': FieldValue.serverTimestamp(),
-        'unreadCount.$senderId': 0,
+        'unreadCount': updatedUnreadCounts,
       });
 
       await batch.commit();
