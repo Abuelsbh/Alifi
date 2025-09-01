@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/Theme/app_theme.dart';
-
+import '../../../Models/pet_report_model.dart';
 import '../../../Widgets/translated_custom_button.dart';
 import '../../../Widgets/translated_text.dart';
 import 'lost_pets_tab.dart';
@@ -175,9 +175,4 @@ class _LostFoundScreenState extends State<LostFoundScreen>
       ),
     );
   }
-}
-
-enum ReportType {
-  lost,
-  found,
 } 

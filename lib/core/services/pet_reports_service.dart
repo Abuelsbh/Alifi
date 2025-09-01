@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import '../firebase/firebase_config.dart';
+import '../../Models/pet_report_model.dart';
 
 
 class PetReportsService {
@@ -485,6 +486,144 @@ class PetReportsService {
     }
   }
 
+  // Create adoption pet report - New
+  static Future<String> createAdoptionPetReport({
+    required Map<String, dynamic> report,
+    required List<File> images,
+  }) async {
+    try {
+      print('📤 Creating adoption pet report for user: ${report['userId']}');
+      
+      // Upload images with progress
+      final imageUrls = await _uploadImages(images, 'adoption_pets');
+      print('📷 Uploaded ${imageUrls.length} images for adoption pet report');
+
+      // Create comprehensive report data
+      final reportData = Map<String, dynamic>.from(report);
+      reportData.addAll({
+        'id': DateTime.now().millisecondsSinceEpoch.toString(),
+        'imageUrls': imageUrls,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'isActive': true,
+        'status': 'adoption',
+        'type': 'adoption_pet',
+        'viewCount': 0,
+        'shareCount': 0,
+        'interestCount': 0,
+        'adoptionFee': report['adoptionFee'] ?? 0.0,
+        'reason': report['reason'] ?? '',
+        'specialNeeds': report['specialNeeds'] ?? '',
+        'contactInfo': {
+          'name': report['contactName'] ?? '',
+          'phone': report['contactPhone'] ?? '',
+          'email': report['contactEmail'] ?? '',
+          'preferredContact': report['preferredContact'] ?? 'phone',
+        },
+        'location': {
+          'address': report['address'] ?? '',
+          'coordinates': report['coordinates'] ?? null,
+          'area': report['area'] ?? '',
+          'landmark': report['landmark'] ?? '',
+        },
+        'petDetails': {
+          'name': report['petName'] ?? '',
+          'type': report['petType'] ?? '',
+          'breed': report['breed'] ?? '',
+          'age': report['age'] ?? 0,
+          'gender': report['gender'] ?? '',
+          'color': report['color'] ?? '',
+          'weight': report['weight'] ?? 0.0,
+          'description': report['description'] ?? '',
+          'temperament': report['temperament'] ?? '',
+          'healthStatus': report['healthStatus'] ?? '',
+          'isVaccinated': report['isVaccinated'] ?? false,
+          'isNeutered': report['isNeutered'] ?? false,
+          'microchipId': report['microchipId'] ?? '',
+          'medicalHistory': report['medicalHistory'] ?? [],
+        },
+        'adoptionRequirements': {
+          'goodWithKids': report['goodWithKids'] ?? true,
+          'goodWithPets': report['goodWithPets'] ?? true,
+          'isHouseTrained': report['isHouseTrained'] ?? false,
+          'preferredHomeType': report['preferredHomeType'] ?? '',
+        },
+      });
+
+      // Add to Firestore
+      final docRef = await _firestore
+          .collection('adoption_pets')
+          .add(reportData);
+
+      print('✅ Adoption pet report created successfully: ${docRef.id}');
+
+      // Update user's reports count
+      await _updateUserReports(report['userId'], docRef.id, 'adoption');
+
+      return docRef.id;
+    } catch (e) {
+      print('❌ Error creating adoption pet report: $e');
+      throw Exception('Failed to create adoption pet report: $e');
+    }
+  }
+
+  // Get adoption pets stream - New
+  static Stream<List<Map<String, dynamic>>> getAdoptionPetsStream() {
+    print('📱 Starting real-time adoption pets stream');
+    
+    // Use simple query without any compound index requirement
+    return _firestore
+        .collection('adoption_pets')
+        .limit(50) // Simple limit only
+        .snapshots()
+        .map((snapshot) {
+          print('📱 Real-time update: ${snapshot.docs.length} adoption pets received');
+          
+          // Filter and sort manually in app
+          final docs = snapshot.docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return data['isActive'] == true;
+          }).toList();
+          
+          // Sort by createdAt manually
+          docs.sort((a, b) {
+            final aData = a.data() as Map<String, dynamic>;
+            final bData = b.data() as Map<String, dynamic>;
+            final aTime = (aData['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+            final bTime = (bData['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+            return bTime.compareTo(aTime); // Descending order (newest first)
+          });
+          
+          return docs
+              .map((doc) => {
+                'id': doc.id,
+                ...doc.data() as Map<String, dynamic>,
+              })
+              .toList();
+        });
+  }
+
+  // Get adoption pets count only
+  static Future<int> getAdoptionPetsCount() async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('adoption_pets')
+          .limit(100) // Get more to count active ones
+          .get();
+      
+      // Count only active pets
+      final activePets = querySnapshot.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return data['isActive'] == true;
+      }).toList();
+      
+      return activePets.length;
+    } catch (e) {
+      print('❌ Error getting adoption pets count: $e');
+      return 0;
+    }
+  }
+
   // Update report
   static Future<void> updateReport({
     required String reportId,
@@ -924,4 +1063,166 @@ class PetReportsService {
   //     return combined;
   //   });
   // }
+
+  // ========================= BREEDING PETS =========================
+
+  /// Creates a new breeding pet report
+  static Future<String> createBreedingPetReport({
+    required Map<String, dynamic> report,
+    required List<File> images,
+  }) async {
+    try {
+      print('📤 Creating breeding pet report for user: ${report['userId']}');
+      
+      // Upload images with progress
+      final imageUrls = await _uploadImages(images, 'breeding_pets');
+      print('📷 Uploaded ${imageUrls.length} images for breeding pet report');
+
+      // Create comprehensive report data
+      final reportData = Map<String, dynamic>.from(report);
+      reportData.addAll({
+        'id': DateTime.now().millisecondsSinceEpoch.toString(),
+        'imageUrls': imageUrls,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'isActive': true,
+        'status': 'breeding',
+        'type': 'breeding_pet',
+        'viewCount': 0,
+        'shareCount': 0,
+        'interestCount': 0,
+        'breedingFee': report['breedingFee'] ?? 0.0,
+        'specialRequirements': report['specialRequirements'] ?? '',
+        'hasBreedingExperience': report['hasBreedingExperience'] ?? false,
+        'breedingHistory': report['breedingHistory'] ?? '',
+        'isRegistered': report['isRegistered'] ?? false,
+        'registrationNumber': report['registrationNumber'] ?? '',
+        'certifications': report['certifications'] ?? [],
+        'breedingGoals': report['breedingGoals'] ?? '',
+        'availabilityPeriod': report['availabilityPeriod'] ?? '',
+        'willTravel': report['willTravel'] ?? false,
+        'maxTravelDistance': report['maxTravelDistance'] ?? 0,
+        'offspring': report['offspring'] ?? '',
+        'previousOffspring': report['previousOffspring'] ?? [],
+        'veterinarianContact': report['veterinarianContact'] ?? '',
+        'contactInfo': {
+          'name': report['contactName'] ?? '',
+          'phone': report['contactPhone'] ?? '',
+          'email': report['contactEmail'] ?? '',
+          'preferredContact': report['preferredContact'] ?? 'phone',
+        },
+        'petInfo': {
+          'name': report['petName'] ?? '',
+          'type': report['petType'] ?? '',
+          'breed': report['breed'] ?? '',
+          'age': report['age'] ?? 0,
+          'gender': report['gender'] ?? '',
+          'color': report['color'] ?? '',
+          'weight': report['weight'] ?? 0.0,
+          'description': report['description'] ?? '',
+          'healthStatus': report['healthStatus'] ?? 'جيد',
+          'temperament': report['temperament'] ?? 'ودود',
+          'isVaccinated': report['isVaccinated'] ?? false,
+          'isNeutered': report['isNeutered'] ?? false,
+        },
+        'locationInfo': {
+          'coordinates': report['location'] ?? const GeoPoint(0, 0),
+          'address': report['address'] ?? '',
+          'area': report['area'] ?? '',
+          'landmark': report['landmark'] ?? '',
+        },
+      });
+
+      final docRef = await _firestore.collection('breeding_pets').add(reportData);
+      print('✅ Breeding pet report created with ID: ${docRef.id}');
+      return docRef.id;
+    } catch (e) {
+      print('❌ Error creating breeding pet report: $e');
+      throw Exception('فشل في إنشاء تقرير التزاوج: $e');
+    }
+  }
+
+  /// Gets a stream of breeding pets
+  static Stream<List<BreedingPetModel>> getBreedingPetsStream() {
+    try {
+      print('🔄 Setting up breeding pets stream...');
+      return _firestore
+          .collection('breeding_pets')
+          .limit(50)
+          .snapshots()
+          .map((snapshot) {
+        print('📊 Received ${snapshot.docs.length} breeding pets documents');
+        
+        // Filter and sort manually to avoid Firebase index issues
+        final activeDocs = snapshot.docs.where((doc) {
+          try {
+            final data = doc.data();
+            return data['isActive'] == true;
+          } catch (e) {
+            print('Error filtering breeding pet doc ${doc.id}: $e');
+            return false;
+          }
+        }).toList();
+
+        // Sort by createdAt manually
+        activeDocs.sort((a, b) {
+          try {
+            final aData = a.data();
+            final bData = b.data();
+            final aTime = (aData['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+            final bTime = (bData['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+            return bTime.compareTo(aTime);
+          } catch (e) {
+            print('Error sorting breeding pets: $e');
+            return 0;
+          }
+        });
+
+        // Convert to models with error handling
+        final pets = <BreedingPetModel>[];
+        for (final doc in activeDocs) {
+          try {
+            final pet = BreedingPetModel.fromFirestore(doc);
+            pets.add(pet);
+          } catch (e) {
+            print('Error converting breeding pet doc ${doc.id}: $e');
+          }
+        }
+
+        print('✅ Successfully converted ${pets.length} breeding pets');
+        return pets;
+      });
+    } catch (e) {
+      print('❌ Error setting up breeding pets stream: $e');
+      return Stream.value([]);
+    }
+  }
+
+  /// Gets count of active breeding pets
+  static Future<int> getBreedingPetsCount() async {
+    try {
+      print('📊 Getting breeding pets count...');
+      final querySnapshot = await _firestore
+          .collection('breeding_pets')
+          .limit(50)
+          .get();
+
+      // Filter active pets manually
+      final activePets = querySnapshot.docs.where((doc) {
+        try {
+          final data = doc.data();
+          return data['isActive'] == true;
+        } catch (e) {
+          print('Error filtering breeding pet for count: $e');
+          return false;
+        }
+      }).length;
+
+      print('✅ Found $activePets active breeding pets');
+      return activePets;
+    } catch (e) {
+      print('❌ Error getting breeding pets count: $e');
+      return 0;
+    }
+  }
 } 

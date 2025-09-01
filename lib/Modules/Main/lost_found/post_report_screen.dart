@@ -6,9 +6,9 @@ import 'dart:io';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/pet_reports_service.dart';
-import '../../../Widgets/custom_button.dart';
+import '../../../Models/pet_report_model.dart';
+import '../../../Widgets/custom_button.dart' show ButtonType, CustomButton;
 import '../../../Widgets/translated_custom_button.dart' hide ButtonType;
-
 import '../../../core/services/location_service.dart';
 import '../../../core/Language/translation_service.dart';
 import 'lost_found_screen.dart';
@@ -68,6 +68,36 @@ class _PostReportScreenState extends State<PostReportScreen> {
   String _temperament = 'ودود';
   String _area = '';
   String _landmark = '';
+
+  // Adoption-specific fields
+  bool _isVaccinated = false;
+  bool _isNeutered = false;
+  double _weight = 0.0;
+  String _specialNeeds = '';
+  String _reason = '';
+  double _adoptionFee = 0.0;
+  bool _goodWithKids = true;
+  bool _goodWithPets = true;
+  bool _isHouseTrained = false;
+  String _preferredHomeType = '';
+  List<String> _medicalHistory = [];
+  String _microchipId = '';
+
+  // Breeding-specific fields
+  String _specialRequirements = '';
+  double _breedingFee = 0.0;
+  bool _hasBreedingExperience = false;
+  String _breedingHistory = '';
+  bool _isRegistered = false;
+  String _registrationNumber = '';
+  List<String> _certifications = [];
+  String _breedingGoals = '';
+  String _availabilityPeriod = '';
+  bool _willTravel = false;
+  int _maxTravelDistance = 0;
+  String _offspring = '';
+  List<String> _previousOffspring = [];
+  String _veterinarianContact = '';
 
   // Options for dropdowns
   final List<String> _petTypes = ['كلب', 'قط', 'طائر', 'أرنب', 'هامستر', 'أخرى'];
@@ -454,6 +484,67 @@ class _PostReportScreenState extends State<PostReportScreen> {
           report: reportData,
           images: _photos,
         );
+      } else if (widget.reportType == ReportType.adoption) {
+        // Enhanced adoption pet report
+        final adoptionReportData = Map<String, dynamic>.from(reportData);
+        adoptionReportData.addAll({
+          'petName': _petNameController.text,
+          'age': _age,
+          'gender': _selectedGender,
+          'weight': _weight,
+          'reason': _reason,
+          'specialNeeds': _specialNeeds,
+          'adoptionFee': _adoptionFee,
+          'isVaccinated': _isVaccinated,
+          'isNeutered': _isNeutered,
+          'goodWithKids': _goodWithKids,
+          'goodWithPets': _goodWithPets,
+          'isHouseTrained': _isHouseTrained,
+          'preferredHomeType': _preferredHomeType,
+          'microchipId': _microchipId,
+          'medicalHistory': _medicalHistory,
+          'temperament': _temperament,
+          'healthStatus': _healthStatus,
+        });
+        
+        print('📤 Submitting adoption pet report...');
+        await PetReportsService.createAdoptionPetReport(
+          report: adoptionReportData,
+          images: _photos,
+        );
+      } else if (widget.reportType == ReportType.breeding) {
+        // Enhanced breeding pet report
+        final breedingReportData = Map<String, dynamic>.from(reportData);
+        breedingReportData.addAll({
+          'petName': _petNameController.text,
+          'age': _age,
+          'gender': _selectedGender,
+          'weight': _weight,
+          'specialRequirements': _specialRequirements,
+          'breedingFee': _breedingFee,
+          'hasBreedingExperience': _hasBreedingExperience,
+          'breedingHistory': _breedingHistory,
+          'isRegistered': _isRegistered,
+          'registrationNumber': _registrationNumber,
+          'certifications': _certifications,
+          'breedingGoals': _breedingGoals,
+          'availabilityPeriod': _availabilityPeriod,
+          'willTravel': _willTravel,
+          'maxTravelDistance': _maxTravelDistance,
+          'offspring': _offspring,
+          'previousOffspring': _previousOffspring,
+          'veterinarianContact': _veterinarianContact,
+          'isVaccinated': _isVaccinated,
+          'isNeutered': _isNeutered,
+          'temperament': _temperament,
+          'healthStatus': _healthStatus,
+        });
+        
+        print('📤 Submitting breeding pet report...');
+        await PetReportsService.createBreedingPetReport(
+          report: breedingReportData,
+          images: _photos,
+        );
       } else {
         // Enhanced found pet report
         reportData.addAll({
@@ -488,7 +579,11 @@ class _PostReportScreenState extends State<PostReportScreen> {
                   child: Text(
                     widget.reportType == ReportType.lost 
                       ? TranslationService.instance.translate('post_report.lost_success')
-                      : TranslationService.instance.translate('post_report.found_success'),
+                      : widget.reportType == ReportType.adoption
+                        ? TranslationService.instance.translate('post_report.adoption_success')
+                        : widget.reportType == ReportType.breeding
+                          ? TranslationService.instance.translate('post_report.breeding_success')
+                          : TranslationService.instance.translate('post_report.found_success'),
                     style: TextStyle(color: Colors.white, fontSize: 14.sp),
                   ),
                 ),
@@ -525,7 +620,11 @@ class _PostReportScreenState extends State<PostReportScreen> {
         title: Text(
           widget.reportType == ReportType.lost 
             ? TranslationService.instance.translate('post_report.lost_pet_title')
-            : TranslationService.instance.translate('post_report.found_pet_title'),
+            : widget.reportType == ReportType.adoption
+              ? TranslationService.instance.translate('post_report.adoption_pet_title')
+              : widget.reportType == ReportType.breeding
+                ? TranslationService.instance.translate('post_report.breeding_pet_title')
+                : TranslationService.instance.translate('post_report.found_pet_title'),
         ),
         centerTitle: true,
         elevation: 0,
@@ -550,6 +649,12 @@ class _PostReportScreenState extends State<PostReportScreen> {
                     if (widget.reportType == ReportType.lost) ...[
                       SizedBox(height: 24.h),
                       _buildLostPetExtraSection(),
+                    ] else if (widget.reportType == ReportType.adoption) ...[
+                      SizedBox(height: 24.h),
+                      _buildAdoptionPetExtraSection(),
+                    ] else if (widget.reportType == ReportType.breeding) ...[
+                      SizedBox(height: 24.h),
+                      _buildBreedingPetExtraSection(),
                     ] else ...[
                       SizedBox(height: 24.h),
                       _buildFoundPetExtraSection(),
@@ -1174,6 +1279,381 @@ class _PostReportScreenState extends State<PostReportScreen> {
             ),
           ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildAdoptionPetExtraSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          TranslationService.instance.translate('post_report.adoption_details'),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _weight.toString()),
+          onChanged: (value) => _weight = double.tryParse(value) ?? 0.0,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.weight'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _reason),
+          onChanged: (value) => _reason = value,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.reason'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _specialNeeds),
+          onChanged: (value) => _specialNeeds = value,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.special_needs'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _adoptionFee.toString()),
+          onChanged: (value) => _adoptionFee = double.tryParse(value) ?? 0.0,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.adoption_fee'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        Row(
+          children: [
+            Checkbox(
+              value: _isVaccinated,
+              onChanged: (value) {
+                setState(() {
+                  _isVaccinated = value ?? false;
+                });
+              },
+            ),
+            Expanded(
+              child: Text(
+                TranslationService.instance.translate('post_report.is_vaccinated'),
+                style: TextStyle(fontSize: 16.sp),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16.h),
+        Row(
+          children: [
+            Checkbox(
+              value: _isNeutered,
+              onChanged: (value) {
+                setState(() {
+                  _isNeutered = value ?? false;
+                });
+              },
+            ),
+            Expanded(
+              child: Text(
+                TranslationService.instance.translate('post_report.is_neutered'),
+                style: TextStyle(fontSize: 16.sp),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16.h),
+        Row(
+          children: [
+            Checkbox(
+              value: _goodWithKids,
+              onChanged: (value) {
+                setState(() {
+                  _goodWithKids = value ?? false;
+                });
+              },
+            ),
+            Expanded(
+              child: Text(
+                TranslationService.instance.translate('post_report.good_with_kids'),
+                style: TextStyle(fontSize: 16.sp),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16.h),
+        Row(
+          children: [
+            Checkbox(
+              value: _goodWithPets,
+              onChanged: (value) {
+                setState(() {
+                  _goodWithPets = value ?? false;
+                });
+              },
+            ),
+            Expanded(
+              child: Text(
+                TranslationService.instance.translate('post_report.good_with_pets'),
+                style: TextStyle(fontSize: 16.sp),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16.h),
+        Row(
+          children: [
+            Checkbox(
+              value: _isHouseTrained,
+              onChanged: (value) {
+                setState(() {
+                  _isHouseTrained = value ?? false;
+                });
+              },
+            ),
+            Expanded(
+              child: Text(
+                TranslationService.instance.translate('post_report.is_house_trained'),
+                style: TextStyle(fontSize: 16.sp),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _preferredHomeType),
+          onChanged: (value) => _preferredHomeType = value,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.preferred_home_type'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _microchipId),
+          onChanged: (value) => _microchipId = value,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.microchip_id'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _medicalHistory.join(', ')),
+          onChanged: (value) => _medicalHistory = value.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.medical_history'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBreedingPetExtraSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          TranslationService.instance.translate('post_report.breeding_details'),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _breedingFee.toString()),
+          onChanged: (value) => _breedingFee = double.tryParse(value) ?? 0.0,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.breeding_fee'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _specialRequirements),
+          onChanged: (value) => _specialRequirements = value,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.special_requirements'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        Row(
+          children: [
+            Checkbox(
+              value: _hasBreedingExperience,
+              onChanged: (value) {
+                setState(() {
+                  _hasBreedingExperience = value ?? false;
+                });
+              },
+            ),
+            Expanded(
+              child: Text(
+                TranslationService.instance.translate('post_report.has_breeding_experience'),
+                style: TextStyle(fontSize: 16.sp),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _breedingHistory),
+          onChanged: (value) => _breedingHistory = value,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.breeding_history'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        Row(
+          children: [
+            Checkbox(
+              value: _isRegistered,
+              onChanged: (value) {
+                setState(() {
+                  _isRegistered = value ?? false;
+                });
+              },
+            ),
+            Expanded(
+              child: Text(
+                TranslationService.instance.translate('post_report.is_registered'),
+                style: TextStyle(fontSize: 16.sp),
+              ),
+            ),
+          ],
+        ),
+        if (_isRegistered) ...[
+          SizedBox(height: 16.h),
+          TextFormField(
+            controller: TextEditingController(text: _registrationNumber),
+            onChanged: (value) => _registrationNumber = value,
+            decoration: InputDecoration(
+              labelText: TranslationService.instance.translate('post_report.registration_number'),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+          ),
+        ],
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _certifications.join(', ')),
+          onChanged: (value) => _certifications = value.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.certifications'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _breedingGoals),
+          onChanged: (value) => _breedingGoals = value,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.breeding_goals'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        Row(
+          children: [
+            Checkbox(
+              value: _willTravel,
+              onChanged: (value) {
+                setState(() {
+                  _willTravel = value ?? false;
+                });
+              },
+            ),
+            Expanded(
+              child: Text(
+                TranslationService.instance.translate('post_report.will_travel'),
+                style: TextStyle(fontSize: 16.sp),
+              ),
+            ),
+          ],
+        ),
+        if (_willTravel) ...[
+          SizedBox(height: 16.h),
+          TextFormField(
+            controller: TextEditingController(text: _maxTravelDistance.toString()),
+            onChanged: (value) => _maxTravelDistance = int.tryParse(value) ?? 0,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: TranslationService.instance.translate('post_report.max_travel_distance'),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+          ),
+        ],
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _offspring),
+          onChanged: (value) => _offspring = value,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.offspring'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _previousOffspring.join(', ')),
+          onChanged: (value) => _previousOffspring = value.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.previous_offspring'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        TextFormField(
+          controller: TextEditingController(text: _veterinarianContact),
+          onChanged: (value) => _veterinarianContact = value,
+          decoration: InputDecoration(
+            labelText: TranslationService.instance.translate('post_report.veterinarian_contact'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        ),
       ],
     );
   }

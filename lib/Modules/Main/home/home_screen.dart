@@ -7,8 +7,11 @@ import '../../../core/services/chat_service.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/Language/translation_service.dart';
 import '../lost_found/lost_found_screen.dart';
+import '../lost_found/adoption_pets_screen.dart';
 import '../veterinary/enhanced_veterinary_screen.dart';
 import '../profile/simple_profile_screen.dart';
+import 'dart:async'; // Added for Timer
+import '../lost_found/breeding_pets_screen.dart'; // Added for BreedingPetsScreen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,6 +35,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // Real data from Firebase
   int _totalLostPets = 0;
   int _totalFoundPets = 0;
+  int _totalAdoptionPets = 0;
+  int _totalBreedingPets = 0;
+  String _userName = '';
   int _totalVeterinarians = 0;
   int _unreadMessages = 0;
   bool _isLoading = true;
@@ -133,6 +139,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           }
         });
 
+        // Load adoption pets directly from Firebase
+        _loadAdoptionPetsCount();
+        
+        // Load breeding pets directly from Firebase
+        _loadBreedingPetsCount();
+        
+        // Refresh adoption and breeding count every 30 seconds
+        Timer.periodic(const Duration(seconds: 30), (timer) {
+          if (mounted) {
+            _loadAdoptionPetsCount();
+            _loadBreedingPetsCount();
+          } else {
+            timer.cancel();
+          }
+        });
+
         if (userId != null) {
           // Get unread messages count
           final unreadStream = ChatService.getUnreadMessageCountStream(userId);
@@ -163,6 +185,40 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           _isLoading = false;
         });
         _shimmerController.stop();
+      }
+    }
+  }
+
+  Future<void> _loadAdoptionPetsCount() async {
+    try {
+      final adoptionPets = await PetReportsService.getAdoptionPetsCount();
+      if (mounted) {
+        setState(() {
+          _totalAdoptionPets = adoptionPets;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _totalAdoptionPets = 0; // Fallback to 0 on error
+        });
+      }
+    }
+  }
+
+  Future<void> _loadBreedingPetsCount() async {
+    try {
+      final breedingPets = await PetReportsService.getBreedingPetsCount();
+      if (mounted) {
+        setState(() {
+          _totalBreedingPets = breedingPets;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _totalBreedingPets = 0; // Fallback to 0 on error
+        });
       }
     }
   }
@@ -477,108 +533,108 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildStatisticsCards() {
-    return AnimatedBuilder(
-      animation: _fadeAnimation,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, _slideAnimation.value * 0.7),
-          child: Opacity(
-            opacity: _fadeAnimation.value,
-            child: Container(
-              height: 135.h,
-              margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
-              child: Row(
-                children: [
-                  _buildStatCard(
-                    title: TranslationService.instance.translate('home.lost_pets'),
-                    count: _totalLostPets,
-                    color: AppTheme.error,
-                    icon: Icons.search,
-                  ),
-                  SizedBox(width: 12.w),
-                  _buildStatCard(
-                    title: TranslationService.instance.translate('home.adoption_pets'),
-                    count: _totalFoundPets,
-                    color: _primaryColor,
-                    icon: Icons.favorite,
-                  ),
-                  SizedBox(width: 12.w),
-                  _buildStatCard(
-                    title: TranslationService.instance.translate('home.veterinarians'),
-                    count: _totalVeterinarians,
-                    color: _secondaryColor,
-                    icon: Icons.medical_services,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildStatCard({
-    required String title,
-    required int count,
-    required Color color,
-    required IconData icon,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-          color: _surfaceColor,
-          borderRadius: BorderRadius.circular(16.r),
-          boxShadow: [
-            BoxShadow(
-              color: _shadowColor,
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 35.w,
-              height: 35.h,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 18.sp,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              _isLoading ? '--' : count.toString(),
-              style: TextStyle(
-                color: _onSurfaceColor,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              title,
-              style: TextStyle(
-                color: _onBackgroundColor,
-                fontSize: 10.sp,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Widget _buildStatisticsCards() {
+  //   return AnimatedBuilder(
+  //     animation: _fadeAnimation,
+  //     builder: (context, child) {
+  //       return Transform.translate(
+  //         offset: Offset(0, _slideAnimation.value * 0.7),
+  //         child: Opacity(
+  //           opacity: _fadeAnimation.value,
+  //           child: Container(
+  //             height: 135.h,
+  //             margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
+  //             child: Row(
+  //               children: [
+  //                 _buildStatCard(
+  //                   title: TranslationService.instance.translate('home.lost_pets'),
+  //                   count: _totalLostPets + _totalFoundPets,
+  //                   color: AppTheme.error,
+  //                   icon: Icons.search,
+  //                 ),
+  //                 SizedBox(width: 12.w),
+  //                 _buildStatCard(
+  //                   title: TranslationService.instance.translate('home.adoption_pets'),
+  //                   count: _totalAdoptionPets,
+  //                   color: _primaryColor,
+  //                   icon: Icons.favorite,
+  //                 ),
+  //                 SizedBox(width: 12.w),
+  //                 _buildStatCard(
+  //                   title: TranslationService.instance.translate('home.veterinarians'),
+  //                   count: _totalVeterinarians,
+  //                   color: _secondaryColor,
+  //                   icon: Icons.medical_services,
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
+  //
+  // Widget _buildStatCard({
+  //   required String title,
+  //   required int count,
+  //   required Color color,
+  //   required IconData icon,
+  // }) {
+  //   return Expanded(
+  //     child: Container(
+  //       padding: EdgeInsets.all(16.w),
+  //       decoration: BoxDecoration(
+  //         color: _surfaceColor,
+  //         borderRadius: BorderRadius.circular(16.r),
+  //         boxShadow: [
+  //           BoxShadow(
+  //             color: _shadowColor,
+  //             blurRadius: 12,
+  //             offset: const Offset(0, 4),
+  //           ),
+  //         ],
+  //       ),
+  //       child: Column(
+  //         mainAxisAlignment: MainAxisAlignment.center,
+  //         children: [
+  //           Container(
+  //             width: 35.w,
+  //             height: 35.h,
+  //             decoration: BoxDecoration(
+  //               color: color.withOpacity(0.15),
+  //               shape: BoxShape.circle,
+  //             ),
+  //             child: Icon(
+  //               icon,
+  //               color: color,
+  //               size: 18.sp,
+  //             ),
+  //           ),
+  //           SizedBox(height: 8.h),
+  //           Text(
+  //             _isLoading ? '--' : count.toString(),
+  //             style: TextStyle(
+  //               color: _onSurfaceColor,
+  //               fontSize: 18.sp,
+  //               fontWeight: FontWeight.bold,
+  //             ),
+  //           ),
+  //           Text(
+  //             title,
+  //             style: TextStyle(
+  //               color: _onBackgroundColor,
+  //               fontSize: 10.sp,
+  //             ),
+  //             textAlign: TextAlign.center,
+  //             maxLines: 2,
+  //             overflow: TextOverflow.ellipsis,
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildEnhancedMenuItems() {
     final menuItems = [
@@ -586,7 +642,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         'title': TranslationService.instance.translate('home.lost_animals'),
         'subtitle': TranslationService.instance.translate('home.lost_animals_subtitle'),
         'icon': Icons.search,
-        'count': _totalLostPets,
+        'count': _totalLostPets+_totalFoundPets,
         'color': AppTheme.error,
         'onTap': () => _navigateToLostPets(),
       },
@@ -594,7 +650,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         'title': TranslationService.instance.translate('home.adoption_animals'),
         'subtitle': TranslationService.instance.translate('home.adoption_animals_subtitle'),
         'icon': Icons.favorite,
-        'count': _totalFoundPets,
+        'count': _totalAdoptionPets,
         'color': _primaryColor,
         'onTap': () => _navigateToAdoption(),
       },
@@ -602,7 +658,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         'title': TranslationService.instance.translate('home.mating_animals'),
         'subtitle': TranslationService.instance.translate('home.mating_animals_subtitle'),
         'icon': Icons.favorite_border,
-        'count': 0,
+        'count': _totalBreedingPets,
         'color': _secondaryColor,
         'onTap': () => _navigateToMating(),
       },
@@ -795,24 +851,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const LostFoundScreen(),
+        builder: (context) => const AdoptionPetsScreen(),
       ),
     );
   }
 
   void _navigateToMating() {
-    // For now, show a placeholder dialog
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(TranslationService.instance.translate('home.mating_animals')),
-        content: Text(TranslationService.instance.translate('common.feature_development')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(TranslationService.instance.translate('common.ok')),
-          ),
-        ],
+    // Navigate to breeding pets screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BreedingPetsScreen(),
       ),
     );
   }

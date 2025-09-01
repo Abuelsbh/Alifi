@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../Models/pet_report_model.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/pet_reports_service.dart';
@@ -125,7 +126,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const PostReportScreen(
+                  builder: (context) =>  PostReportScreen(
                     reportType: ReportType.lost,
                   ),
                 ),
