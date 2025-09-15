@@ -2,8 +2,19 @@
 class Assets {
   Assets._();
 
+  static const String assetsI18nAr = 'assets/i18n/ar.json';
+  static const String assetsI18nEn = 'assets/i18n/en.json';
   static const String i18nAr = 'i18n/ar.json';
   static const String i18nEn = 'i18n/en.json';
+  static const String iconsAppIcon = 'assets/icons/app_icon.png';
   static const String iconsBrush = 'assets/icons/brush.svg';
+  static const String iconsChat = 'assets/icons/chat.svg';
+  static const String iconsHome = 'assets/icons/home.svg';
+  static const String iconsProfile = 'assets/icons/profile.svg';
+  static const String iconsSettings = 'assets/icons/settings.svg';
+  static const String iconsSplashIcon = 'assets/icons/splash_icon.png';
+  static const String imagesDottedPattern = 'assets/images/dotted_pattern.svg';
+  static const String imagesLostAnimal = 'assets/images/lostAnimal.png';
+  static const String imagesStore = 'assets/images/store.png';
 
 }
