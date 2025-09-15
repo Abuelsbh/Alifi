@@ -110,17 +110,18 @@ class _SplashScreenState extends State<SplashScreen>
     // Wait for all animations to complete then navigate
     await Future.delayed(const Duration(milliseconds: 2000));
     if (mounted) {
-      // Check if Firebase is in demo mode
-      if (FirebaseConfig.isDemoMode) {
-        // Firebase not configured, show demo mode screen
-        context.go('/demo');
-      } else if (AuthService.isAuthenticated) {
-        // User is logged in, go to main screen
-        context.go('/main');
-      } else {
-        // User is not logged in, go to test register screen for debugging
-        context.go(LoginScreen.routeName);
-      }
+      context.go('/main');
+      // // Check if Firebase is in demo mode
+      // if (FirebaseConfig.isDemoMode) {
+      //   // Firebase not configured, show demo mode screen
+      //   context.go('/demo');
+      // } else if (AuthService.isAuthenticated) {
+      //   // User is logged in, go to main screen
+      //   context.go('/main');
+      // } else {
+      //   // User is not logged in, go to test register screen for debugging
+      //   context.go(LoginScreen.routeName);
+      // }
     }
   }
 

@@ -1,9 +1,11 @@
+import 'package:alifi/Modules/Auth/login_screen.dart';
 import 'package:alifi/core/Language/locales.dart';
 import 'package:alifi/generated/assets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../Utilities/strings.dart';
+import '../../../core/firebase/firebase_config.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/pet_reports_service.dart';
 import '../../../core/services/chat_service.dart';
@@ -792,12 +794,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _navigateToVeterinary() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const EnhancedVeterinaryScreen(),
-      ),
-    );
+    if (FirebaseConfig.isDemoMode) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const LoginScreen(),
+        ),
+      );
+    } else if (AuthService.isAuthenticated) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const EnhancedVeterinaryScreen(),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const LoginScreen(),
+        ),
+      );
+    }
+
   }
 
   void _navigateToProfile() {
