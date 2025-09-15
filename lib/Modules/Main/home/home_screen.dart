@@ -252,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 // Chat Button
                 _buildChatButton(),
 
-                SizedBox(height: 100.h), // Extra space for bottom navigation
+                SizedBox(height: 20.h),
               ],
             ),
           ),
@@ -304,7 +304,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     'Welcome',
                     style: TextStyle(
                       color: Color(0xFFFF914C), // Orange
-                      fontSize: 16.sp,
+                      fontSize: 22.sp,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -312,7 +312,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     'Fares Walid',
                     style: TextStyle(
                       color: Color(0xFF386641), // Green
-                      fontSize: 18.sp,
+                      fontSize: 14.sp,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
