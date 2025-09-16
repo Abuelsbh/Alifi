@@ -1,9 +1,12 @@
 import 'package:alifi/Modules/Auth/login_screen.dart';
+import 'package:alifi/Widgets/login_widget.dart';
 import 'package:alifi/core/Language/locales.dart';
 import 'package:alifi/generated/assets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../../Utilities/bottom_sheet_helper.dart';
+import '../../../Utilities/dialog_helper.dart';
 import '../../../Utilities/strings.dart';
 import '../../../core/firebase/firebase_config.dart';
 import '../../../core/services/auth_service.dart';
@@ -239,17 +242,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 // Header Section
                 _buildHeader(),
 
-                SizedBox(height: 20.h),
+                SizedBox(height: 10.h),
 
                 // Cat Image Card
                 _buildCatCard(),
 
-                SizedBox(height: 20.h),
+                SizedBox(height: 10.h),
 
                 // Available Services Section
                 _buildServicesSection(),
 
-                SizedBox(height: 20.h),
+                SizedBox(height: 10.h),
 
                 // Chat Button
                 _buildChatButton(),
@@ -428,8 +431,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   Container(
-                    width: 50.w,
-                    height: 3.h,
+                    width: 100.w,
+                    height: 1.5.h,
                     decoration: BoxDecoration(
                       color: Color(0xFFFF914C), // Orange underline
                       borderRadius: BorderRadius.circular(2.r),
@@ -458,41 +461,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 );
               },
             ),
-          ),
-
-          SizedBox(height: 20.h),
-
-          // Pagination Dots
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 8.w,
-                height: 8.h,
-                decoration: BoxDecoration(
-                  color: Color(0xFFFF914C), // Orange
-                  shape: BoxShape.circle,
-                ),
-              ),
-              SizedBox(width: 8.w),
-              Container(
-                width: 8.w,
-                height: 8.h,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  shape: BoxShape.circle,
-                ),
-              ),
-              SizedBox(width: 8.w),
-              Container(
-                width: 8.w,
-                height: 8.h,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -809,11 +777,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       );
     } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const LoginScreen(),
-        ),
+      DialogHelper.custom(context: context).customDialog(
+        dialogWidget: const LoginWidget(),
       );
     }
 

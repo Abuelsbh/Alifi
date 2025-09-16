@@ -51,26 +51,38 @@ class TranslatedCustomButton extends StatelessWidget {
   Widget _buildButton(BuildContext context, String text) {
     switch (type) {
       case ButtonType.primary:
-        return ElevatedButton(
-          onPressed: isLoading ? null : onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: backgroundColor ?? AppTheme.primaryGreen,
-            foregroundColor: textColor ?? Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.r),
-            ),
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.25), // shadow color
+                blurRadius: 8, // spread of the shadow
+                offset: const Offset(0, 4), // shadow position (x,y)
+              ),
+            ],
           ),
-          child: _buildButtonContent(text),
+          child: ElevatedButton(
+            onPressed: isLoading ? null : onPressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: backgroundColor ?? AppTheme.primaryOrange,
+              foregroundColor: textColor ?? Colors.white,
+              elevation: 0, // remove default elevation
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24.r),
+              ),
+            ),
+            child: _buildButtonContent(text),
+          ),
         );
 
       case ButtonType.secondary:
         return OutlinedButton(
           onPressed: isLoading ? null : onPressed,
           style: OutlinedButton.styleFrom(
-            foregroundColor: textColor ?? AppTheme.primaryGreen,
+            foregroundColor: textColor ?? AppTheme.primaryOrange,
             side: BorderSide(
-              color: backgroundColor ?? AppTheme.primaryGreen,
+              color: backgroundColor ?? AppTheme.primaryOrange,
             ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8.r),
@@ -83,7 +95,7 @@ class TranslatedCustomButton extends StatelessWidget {
         return TextButton(
           onPressed: isLoading ? null : onPressed,
           style: TextButton.styleFrom(
-            foregroundColor: textColor ?? AppTheme.primaryGreen,
+            foregroundColor: textColor ?? AppTheme.primaryOrange,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8.r),
             ),
@@ -97,7 +109,7 @@ class TranslatedCustomButton extends StatelessWidget {
           icon: icon != null ? Icon(icon, size: 20.sp) : const SizedBox.shrink(),
           label: _buildButtonContent(text),
           style: ElevatedButton.styleFrom(
-            backgroundColor: backgroundColor ?? AppTheme.primaryGreen,
+            backgroundColor: backgroundColor ?? AppTheme.primaryOrange,
             foregroundColor: textColor ?? Colors.white,
             elevation: 0,
             shape: RoundedRectangleBorder(
