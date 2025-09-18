@@ -5,17 +5,17 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../Widgets/custom_textfield_widget.dart';
 import '../add_animal_controller.dart';
 
-class AddAnimalSecondStep extends StatefulWidget {
+class AddAnimalThirdStep extends StatefulWidget {
   final VoidCallback? onNext;
   final VoidCallback? onBack;
   
-  const AddAnimalSecondStep({Key? key, this.onNext, this.onBack}) : super(key: key);
+  const AddAnimalThirdStep({Key? key, this.onNext, this.onBack}) : super(key: key);
 
   @override
-  State<AddAnimalSecondStep> createState() => _AddAnimalSecondStepState();
+  State<AddAnimalThirdStep> createState() => _AddAnimalThirdStepState();
 }
 
-class _AddAnimalSecondStepState extends State<AddAnimalSecondStep> {
+class _AddAnimalThirdStepState extends State<AddAnimalThirdStep> {
   AddAnimalController con = AddAnimalController();
 
   @override
@@ -32,7 +32,7 @@ class _AddAnimalSecondStepState extends State<AddAnimalSecondStep> {
         children: [
           const SizedBox(height: 20),
           const Text(
-            "Contact Info.",
+            "More Info.",
             style: TextStyle(
               fontSize: 26,
               fontWeight: FontWeight.bold,
@@ -41,23 +41,41 @@ class _AddAnimalSecondStepState extends State<AddAnimalSecondStep> {
           ),
           const SizedBox(height: 30),
 
-          // Address
-          _buildTextField(con.addressController, "Address"),
+          // Distinctive Marks
+          _buildTextField(con.distinctiveMarksController, "Distinctive Marks"),
           const SizedBox(height: 15),
 
-          // Contact Name
-          _buildTextField(con.contactNameController, "Contact Name"),
+          // Medical Status Buttons
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildMedicalStatusButton("Healthy"),
+              const SizedBox(width: 10),
+              _buildMedicalStatusButton("Sick"),
+            ],
+          ),
           const SizedBox(height: 15),
 
-          // Phone Number
-          _buildPhoneField(),
+          // Medical Status Buttons (Second Row)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildMedicalStatusButton("Injured"),
+              const SizedBox(width: 10),
+              _buildMedicalStatusButton("Pregnant"),
+            ],
+          ),
           const SizedBox(height: 15),
 
-          // Email
-          _buildTextField(con.emailController, "Email"),
-          const SizedBox(height: 15),
-
-          _buildTextField(con.locationLinkController, "Location Link"),
+          // Comments (Optional)
+          CustomTextFieldWidget(
+            width: 280.w,
+            height: 80.h,
+            controller: con.commentsController,
+            borderStyleFlag: 1,
+            hint: "Comments",
+            textInputType: TextInputType.multiline,
+          ),
 
           const Spacer(),
 
@@ -106,7 +124,7 @@ class _AddAnimalSecondStepState extends State<AddAnimalSecondStep> {
                 },
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text("Next"),
@@ -130,44 +148,36 @@ class _AddAnimalSecondStepState extends State<AddAnimalSecondStep> {
       controller: controller,
       borderStyleFlag: 1,
       hint: hint,
-      textInputType: TextInputType.emailAddress,
+      textInputType: TextInputType.text,
     );
   }
 
-  Widget _buildPhoneField() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // Country Code
-        Container(
-          width: 80.w,
-          height: 42.h,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15.r),
-          ),
-          child: Center(
-            child: Text(
-              "+966",
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+  Widget _buildMedicalStatusButton(String status) {
+    final bool isSelected = con.medicalStatus == status;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          con.medicalStatus = status;
+        });
+      },
+      child: Container(
+        width: 120.w,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.orange.shade200 : Colors.white,
+          borderRadius: BorderRadius.circular(25),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          status,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.orange.shade900 : Colors.grey,
           ),
         ),
-        SizedBox(width: 10.w),
-        // Phone Number
-        CustomTextFieldWidget(
-          width: 190.w,
-          height: 42.h,
-          controller: con.phoneController,
-          borderStyleFlag: 1,
-          hint: "Phone No.",
-          textInputType: TextInputType.phone,
-        ),
-      ],
+      ),
     );
   }
-}
+
+
+} 

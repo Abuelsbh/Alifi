@@ -1,4 +1,6 @@
 import 'package:alifi/Modules/add_animal/Widgets/add_animal_second_step.dart';
+import 'package:alifi/Modules/add_animal/Widgets/add_animal_third_step.dart';
+import 'package:alifi/Modules/add_animal/Widgets/add_animal_fourth_step.dart';
 import 'package:alifi/Modules/add_animal/add_animal_controller.dart';
 import 'package:alifi/Utilities/theme_helper.dart';
 import 'package:alifi/Widgets/bottom_navbar_widget.dart';
@@ -56,19 +58,25 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
                   customStep: con.activeStep > 0
                     ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
                     : Icon(Icons.pets, color: ThemeClass.of(context).primaryColor, size: 20),
-                  title: 'Basic Info',
+                  title: 'Pet details',
                 ),
                 EasyStep(
                   customStep: con.activeStep > 1
                     ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
                     : Icon(Icons.info, color: ThemeClass.of(context).primaryColor, size: 20),
-                  title: 'Details',
+                  title: 'Contact Info',
                 ),
                 EasyStep(
                   customStep: con.activeStep > 2
+                      ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
+                      : Icon(Icons.info, color: ThemeClass.of(context).primaryColor, size: 20),
+                  title: 'More Info',
+                ),
+                EasyStep(
+                  customStep: con.activeStep > 3
                     ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
                     : Icon(Icons.photo_camera, color: ThemeClass.of(context).primaryColor, size: 20),
-                  title: 'Photos',
+                  title: 'Pictures',
                 ),
               ],
               onStepReached: (step) {
@@ -79,7 +87,43 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
             ),
             SliverToBoxAdapter(child: Gap(16.h),),
             SliverToBoxAdapter(
-              child: con.activeStep == 0? AddAnimalFirstStep() :AddAnimalSecondStep(),
+              child: con.activeStep == 0? AddAnimalFirstStep(onNext: () {
+                setState(() {
+                  con.activeStep++;
+                });
+              },) : con.activeStep == 1? AddAnimalSecondStep(
+                onNext: () {
+                  setState(() {
+                    con.activeStep++;
+                  });
+                },
+                onBack: () {
+                  setState(() {
+                    con.activeStep--;
+                  });
+                },
+              ) : con.activeStep == 2? AddAnimalThirdStep(
+                onNext: () {
+                  setState(() {
+                    con.activeStep++;
+                  });
+                },
+                onBack: () {
+                  setState(() {
+                    con.activeStep--;
+                  });
+                },
+              ) : AddAnimalFourthStep(
+                onDone: () {
+                  // Handle form submission here
+                  print("Form completed!");
+                },
+                onBack: () {
+                  setState(() {
+                    con.activeStep--;
+                  });
+                },
+              ),
             ),
 
             SliverToBoxAdapter(

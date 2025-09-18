@@ -6,7 +6,8 @@ import '../../../Widgets/custom_textfield_widget.dart';
 import '../add_animal_controller.dart';
 
 class AddAnimalFirstStep extends StatefulWidget {
-  const AddAnimalFirstStep({Key? key}) : super(key: key);
+  final VoidCallback? onNext;
+  const AddAnimalFirstStep({Key? key, required this.onNext}) : super(key: key);
 
   @override
   State<AddAnimalFirstStep> createState() => _AddAnimalFirstStepState();
@@ -91,15 +92,12 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
                   side: const BorderSide(color: Colors.white),
                 ),
               ),
-              onPressed: () {
-                print("dsadss");
-                setState(() {
-                  con.activeStep++;
-                });
+              onPressed:() {
+                widget.onNext?.call();
               },
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Row(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
+                child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text("Next"),
