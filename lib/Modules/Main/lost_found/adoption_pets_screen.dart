@@ -8,7 +8,7 @@ import '../../../Widgets/translated_text.dart';
 import '../../../Widgets/custom_card.dart';
 import '../../../Widgets/translated_custom_button.dart';
 import 'adoption_pet_details_screen.dart';
-import 'post_report_screen.dart';
+import '../../add_animal/add_animal_screen.dart';
 import 'lost_found_screen.dart';
 
 class AdoptionPetsScreen extends StatefulWidget {
@@ -222,8 +222,9 @@ class _AdoptionPetsScreenState extends State<AdoptionPetsScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const PostReportScreen(
+              builder: (context) => const AddAnimalScreen(
                 reportType: ReportType.adoption,
+                title: 'إضافة حيوان للتبني',
               ),
             ),
           );

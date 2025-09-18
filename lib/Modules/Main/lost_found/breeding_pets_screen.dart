@@ -5,7 +5,7 @@ import '../../../Models/pet_report_model.dart';
 import '../../../Widgets/translated_text.dart';
 import '../../../Widgets/custom_card.dart';
 import '../../../core/services/pet_reports_service.dart';
-import 'post_report_screen.dart';
+import '../../add_animal/add_animal_screen.dart';
 import 'breeding_pet_details_screen.dart';
 
 class BreedingPetsScreen extends StatefulWidget {
@@ -121,8 +121,9 @@ class _BreedingPetsScreenState extends State<BreedingPetsScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const PostReportScreen(
+              builder: (context) => const AddAnimalScreen(
                 reportType: ReportType.breeding,
+                title: 'إضافة حيوان للتزاوج',
               ),
             ),
           );

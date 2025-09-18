@@ -21,6 +21,7 @@ import '../veterinary/enhanced_veterinary_screen.dart';
 import '../profile/simple_profile_screen.dart';
 import 'dart:async'; // Added for Timer
 import '../lost_found/breeding_pets_screen.dart'; // Added for BreedingPetsScreen
+import '../../../Models/pet_report_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -729,7 +730,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const AddAnimalScreen(),
+        builder: (context) => const AddAnimalScreen(
+          reportType: ReportType.lost,
+          title: 'إضافة حيوان مفقود',
+        ),
       ),
     );
   }

@@ -6,7 +6,7 @@ import '../../../Widgets/translated_custom_button.dart';
 import '../../../Widgets/translated_text.dart';
 import 'lost_pets_tab.dart';
 import 'found_pets_tab.dart';
-import 'post_report_screen.dart';
+import '../../add_animal/add_animal_screen.dart';
 
 class LostFoundScreen extends StatefulWidget {
   const LostFoundScreen({super.key});
@@ -137,8 +137,9 @@ class _LostFoundScreenState extends State<LostFoundScreen>
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const PostReportScreen(
+                                builder: (context) => const AddAnimalScreen(
                                   reportType: ReportType.lost,
+                                  title: 'إضافة حيوان مفقود',
                                 ),
                               ),
                             );
@@ -156,8 +157,9 @@ class _LostFoundScreenState extends State<LostFoundScreen>
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const PostReportScreen(
+                                builder: (context) => const AddAnimalScreen(
                                   reportType: ReportType.found,
+                                  title: 'إضافة حيوان موجود',
                                 ),
                               ),
                             );
