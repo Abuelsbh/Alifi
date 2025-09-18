@@ -1,4 +1,5 @@
 import 'package:alifi/Modules/Auth/login_screen.dart';
+import 'package:alifi/Modules/add_animal/add_animal_screen.dart';
 import 'package:alifi/Widgets/login_widget.dart';
 import 'package:alifi/core/Language/locales.dart';
 import 'package:alifi/generated/assets.dart';
@@ -719,10 +720,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
 
   void _navigateToLostPets() {
+    // Navigator.push(
+    //   context,
+    //   MaterialPageRoute(
+    //     builder: (context) => const LostFoundScreen(),
+    //   ),
+    // );
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const LostFoundScreen(),
+        builder: (context) => const AddAnimalScreen(),
       ),
     );
   }

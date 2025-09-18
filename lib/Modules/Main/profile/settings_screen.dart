@@ -133,22 +133,22 @@ class SettingsScreen extends StatelessWidget {
         // Create light and dark theme instances
         final lightTheme = ThemeModel(
           isDark: false,
-          primaryColor: Colors.green,
+          primaryColor: const Color(0xFFFF914C),
           accentColor: Colors.orange,
           backGroundColor: Colors.white,
           darkGreyColor: const Color(0xff555555),
           lightGreyColor: const Color(0xffaaaaaa),
-          warningColor: Colors.red,
+          warningColor: Colors.red, secondaryColor:  const Color(0xFF386641),
         );
         
         final darkTheme = ThemeModel(
           isDark: true,
-          primaryColor: Colors.green,
+          primaryColor:  const Color(0xFFFF914C),
           accentColor: Colors.orange,
           backGroundColor: const Color(0xff121212),
           darkGreyColor: const Color(0xff555555),
           lightGreyColor: const Color(0xffaaaaaa),
-          warningColor: Colors.red,
+          warningColor: Colors.red, secondaryColor:  const Color(0xFF386641),
         );
         
         return Column(

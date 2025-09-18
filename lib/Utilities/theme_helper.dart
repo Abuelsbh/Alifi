@@ -10,11 +10,12 @@ class ThemeClass extends ThemeModel{
 
   ThemeClass.defaultTheme({
     super.isDark= false,
-    super.primaryColor= Colors.blue,
-    super.accentColor= Colors.blueGrey,
-    super.backGroundColor= Colors.white,
-    super.darkGreyColor= const Color(0xff555555),
-    super.lightGreyColor= const Color(0xffaaaaaa),
-    super.warningColor= Colors.red,
+    super.primaryColor = const Color(0xFFFF914C),
+    super.secondaryColor = const Color(0xFF386641),
+    super.accentColor = Colors.blueGrey,
+    super.backGroundColor = Colors.white,
+    super.darkGreyColor = const Color(0xff555555),
+    super.lightGreyColor = const Color(0xffaaaaaa),
+    super.warningColor = Colors.red,
   });
 }

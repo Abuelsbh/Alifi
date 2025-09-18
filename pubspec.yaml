@@ -56,7 +56,8 @@ dependencies:
   state_extended: ^5.5.0
   equatable: ^2.0.5
   dartz: ^0.10.1
-
+  easy_stepper: ^0.8.3
+  gap: ^3.0.1
   # HTTP & Network
   fast_http: ^1.0.6
   http: ^1.0.0

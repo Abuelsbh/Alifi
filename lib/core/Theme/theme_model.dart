@@ -9,6 +9,7 @@ class ThemeModel extends ThemeExtension<ThemeModel>{
 
   final bool isDark;
   final Color primaryColor;
+  final Color secondaryColor;
   final Color accentColor;
   final Color backGroundColor;
   final Color darkGreyColor;
@@ -19,6 +20,7 @@ class ThemeModel extends ThemeExtension<ThemeModel>{
   ThemeModel({
     this.isDark = false,
     required this.primaryColor,
+    required this.secondaryColor,
     required this.accentColor,
     required this.backGroundColor,
     required this.darkGreyColor,
@@ -30,6 +32,7 @@ class ThemeModel extends ThemeExtension<ThemeModel>{
   ThemeModel copyWith({
     bool? isDark,
     Color? primaryColor,
+    Color? secondaryColor,
     Color? accentColor,
     Color? backGroundColor,
     Color? darkGreyColor,
@@ -39,6 +42,7 @@ class ThemeModel extends ThemeExtension<ThemeModel>{
     return ThemeModel(
       isDark: isDark??this.isDark,
       primaryColor: primaryColor??this.primaryColor,
+      secondaryColor: secondaryColor??this.secondaryColor,
       accentColor: accentColor??this.accentColor,
       backGroundColor: backGroundColor??this.backGroundColor,
       darkGreyColor: darkGreyColor??this.darkGreyColor,
@@ -50,6 +54,7 @@ class ThemeModel extends ThemeExtension<ThemeModel>{
   factory ThemeModel.fromJson(Map<String, dynamic> json) => ThemeModel(
     isDark: json["isDark"],
     primaryColor: Color(json["primaryColor"]),
+    secondaryColor: Color(json["secondaryColor"]),
     accentColor: Color(json["accentColor"]),
     backGroundColor: Color(json["backGroundColor"]),
     darkGreyColor: Color(json["darkGreyColor"]),
@@ -60,6 +65,7 @@ class ThemeModel extends ThemeExtension<ThemeModel>{
   Map<String, dynamic> toJson() => {
     "isDark": isDark,
     "primaryColor": primaryColor.value,
+    "secondaryColor": secondaryColor.value,
     "accentColor": accentColor.value,
     "backGroundColor": backGroundColor.value,
     "darkGreyColor": darkGreyColor.value,
