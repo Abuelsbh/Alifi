@@ -7,10 +7,10 @@ import 'package:image_picker/image_picker.dart';
 import '../add_animal_controller.dart';
 
 class AddAnimalFourthStep extends StatefulWidget {
-  final VoidCallback? onDone;
+  final VoidCallback? onNext;
   final VoidCallback? onBack;
   
-  const AddAnimalFourthStep({Key? key, this.onDone, this.onBack}) : super(key: key);
+  const AddAnimalFourthStep({Key? key, this.onNext, this.onBack}) : super(key: key);
 
   @override
   State<AddAnimalFourthStep> createState() => _AddAnimalFourthStepState();
@@ -53,8 +53,8 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
 
           const Spacer(),
 
-          // Navigation Buttons
-          Row(
+          // Navigation Button
+          widget.onBack != null ? Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Back Button
@@ -83,7 +83,7 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
                 ),
               ),
               
-              // Done Button
+              // Next Button
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
@@ -94,21 +94,47 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
                   ),
                 ),
                 onPressed: () {
-                  widget.onDone?.call();
+                  widget.onNext?.call();
                 },
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text("Done"),
+                      Text("Next"),
                       SizedBox(width: 5),
-                      Icon(Icons.check, size: 18),
+                      Icon(Icons.arrow_forward, size: 18),
                     ],
                   ),
                 ),
               ),
             ],
+          ) : Align(
+            alignment: Alignment.bottomRight,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFFFF914C),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  side: const BorderSide(color: Colors.white),
+                ),
+              ),
+              onPressed: () {
+                widget.onNext?.call();
+              },
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text("Next"),
+                    SizedBox(width: 5),
+                    Icon(Icons.arrow_forward, size: 18),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -260,6 +286,27 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
             ),
           ),
         ),
+        
+        // Delete Button
+        Positioned(
+          top: 10,
+          left: 10,
+          child: GestureDetector(
+            onTap: _deleteCurrentImage,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.delete,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -332,5 +379,20 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
         con.currentImageIndex = 0;
       }
     });
+  }
+
+  void _deleteCurrentImage() {
+    if (con.selectedImages.isNotEmpty) {
+      setState(() {
+        con.selectedImages.removeAt(con.currentImageIndex);
+        
+        // Adjust current index after deletion
+        if (con.selectedImages.isEmpty) {
+          con.currentImageIndex = 0;
+        } else if (con.currentImageIndex >= con.selectedImages.length) {
+          con.currentImageIndex = con.selectedImages.length - 1;
+        }
+      });
+    }
   }
 } 

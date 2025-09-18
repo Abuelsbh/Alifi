@@ -7,7 +7,8 @@ import '../add_animal_controller.dart';
 
 class AddAnimalFirstStep extends StatefulWidget {
   final VoidCallback? onNext;
-  const AddAnimalFirstStep({Key? key, required this.onNext}) : super(key: key);
+  final VoidCallback? onBack;
+  const AddAnimalFirstStep({Key? key, required this.onNext, this.onBack}) : super(key: key);
 
   @override
   State<AddAnimalFirstStep> createState() => _AddAnimalFirstStepState();
@@ -80,8 +81,63 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
 
           const Spacer(),
 
-          // Next Button
-          Align(
+          // Navigation Buttons
+          widget.onBack != null ? Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Back Button
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFFFF914C),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    side: const BorderSide(color: Colors.white),
+                  ),
+                ),
+                onPressed: () {
+                  widget.onBack?.call();
+                },
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.arrow_back, size: 18),
+                      SizedBox(width: 5),
+                      Text("Back"),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // Next Button
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFFFF914C),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    side: const BorderSide(color: Colors.white),
+                  ),
+                ),
+                onPressed: () {
+                  widget.onNext?.call();
+                },
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text("Next"),
+                      SizedBox(width: 5),
+                      Icon(Icons.arrow_forward, size: 18),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ) : Align(
             alignment: Alignment.bottomRight,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(

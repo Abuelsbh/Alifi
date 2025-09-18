@@ -7,9 +7,10 @@ import '../add_animal_controller.dart';
 
 class AddAnimalThirdStep extends StatefulWidget {
   final VoidCallback? onNext;
+  final VoidCallback? onDone;
   final VoidCallback? onBack;
   
-  const AddAnimalThirdStep({Key? key, this.onNext, this.onBack}) : super(key: key);
+  const AddAnimalThirdStep({Key? key, this.onNext, this.onDone, this.onBack}) : super(key: key);
 
   @override
   State<AddAnimalThirdStep> createState() => _AddAnimalThirdStepState();
@@ -120,16 +121,16 @@ class _AddAnimalThirdStepState extends State<AddAnimalThirdStep> {
                   ),
                 ),
                 onPressed: () {
-                  widget.onNext?.call();
+                  widget.onDone?.call();
                 },
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text("Next"),
+                      Text("Done"),
                       SizedBox(width: 5),
-                      Icon(Icons.arrow_forward, size: 18),
+                      Icon(Icons.check, size: 18),
                     ],
                   ),
                 ),

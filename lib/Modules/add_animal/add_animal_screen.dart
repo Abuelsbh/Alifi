@@ -57,26 +57,26 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
                 EasyStep(
                   customStep: con.activeStep > 0
                     ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
+                    : Icon(Icons.photo_camera, color: ThemeClass.of(context).primaryColor, size: 20),
+                  title: 'Pictures',
+                ),
+                EasyStep(
+                  customStep: con.activeStep > 1
+                    ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
                     : Icon(Icons.pets, color: ThemeClass.of(context).primaryColor, size: 20),
                   title: 'Pet details',
                 ),
                 EasyStep(
-                  customStep: con.activeStep > 1
+                  customStep: con.activeStep > 2
                     ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
                     : Icon(Icons.info, color: ThemeClass.of(context).primaryColor, size: 20),
                   title: 'Contact Info',
                 ),
                 EasyStep(
-                  customStep: con.activeStep > 2
+                  customStep: con.activeStep > 3
                       ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
                       : Icon(Icons.info, color: ThemeClass.of(context).primaryColor, size: 20),
                   title: 'More Info',
-                ),
-                EasyStep(
-                  customStep: con.activeStep > 3
-                    ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
-                    : Icon(Icons.photo_camera, color: ThemeClass.of(context).primaryColor, size: 20),
-                  title: 'Pictures',
                 ),
               ],
               onStepReached: (step) {
@@ -87,11 +87,14 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
             ),
             SliverToBoxAdapter(child: Gap(16.h),),
             SliverToBoxAdapter(
-              child: con.activeStep == 0? AddAnimalFirstStep(onNext: () {
-                setState(() {
-                  con.activeStep++;
-                });
-              },) : con.activeStep == 1? AddAnimalSecondStep(
+              child: con.activeStep == 0? AddAnimalFourthStep(
+                onNext: () {
+                  setState(() {
+                    con.activeStep++;
+                  });
+                },
+                onBack: null, // First step, no back button
+              ) : con.activeStep == 1? AddAnimalFirstStep(
                 onNext: () {
                   setState(() {
                     con.activeStep++;
@@ -102,7 +105,7 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
                     con.activeStep--;
                   });
                 },
-              ) : con.activeStep == 2? AddAnimalThirdStep(
+              ) : con.activeStep == 2? AddAnimalSecondStep(
                 onNext: () {
                   setState(() {
                     con.activeStep++;
@@ -113,7 +116,7 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
                     con.activeStep--;
                   });
                 },
-              ) : AddAnimalFourthStep(
+              ) : AddAnimalThirdStep(
                 onDone: () {
                   // Handle form submission here
                   print("Form completed!");
