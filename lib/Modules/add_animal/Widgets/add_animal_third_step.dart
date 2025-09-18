@@ -6,18 +6,17 @@ import '../../../Widgets/custom_textfield_widget.dart';
 import '../add_animal_controller.dart';
 
 class AddAnimalThirdStep extends StatefulWidget {
-  final VoidCallback? onNext;
   final VoidCallback? onDone;
   final VoidCallback? onBack;
-  
-  const AddAnimalThirdStep({Key? key, this.onNext, this.onDone, this.onBack}) : super(key: key);
+  final AddAnimalController con;
+  const AddAnimalThirdStep({Key? key, this.onDone, this.onBack, required this.con}) : super(key: key);
 
   @override
   State<AddAnimalThirdStep> createState() => _AddAnimalThirdStepState();
 }
 
 class _AddAnimalThirdStepState extends State<AddAnimalThirdStep> {
-  AddAnimalController con = AddAnimalController();
+
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +42,7 @@ class _AddAnimalThirdStepState extends State<AddAnimalThirdStep> {
           const SizedBox(height: 30),
 
           // Distinctive Marks
-          _buildTextField(con.distinctiveMarksController, "Distinctive Marks"),
+          _buildTextField(widget.con.distinctiveMarksController, "Distinctive Marks"),
           const SizedBox(height: 15),
 
           // Medical Status Buttons
@@ -72,7 +71,7 @@ class _AddAnimalThirdStepState extends State<AddAnimalThirdStep> {
           CustomTextFieldWidget(
             width: 280.w,
             height: 80.h,
-            controller: con.commentsController,
+            controller: widget.con.commentsController,
             borderStyleFlag: 1,
             hint: "Comments",
             textInputType: TextInputType.multiline,
@@ -154,11 +153,11 @@ class _AddAnimalThirdStepState extends State<AddAnimalThirdStep> {
   }
 
   Widget _buildMedicalStatusButton(String status) {
-    final bool isSelected = con.medicalStatus == status;
+    final bool isSelected = widget.con.medicalStatus == status;
     return GestureDetector(
       onTap: () {
         setState(() {
-          con.medicalStatus = status;
+          widget.con.medicalStatus = status;
         });
       },
       child: Container(

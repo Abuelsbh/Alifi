@@ -1,14 +1,19 @@
 import 'dart:io';
 import 'dart:async';
+import 'package:alifi/Utilities/theme_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:gap/gap.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../../Widgets/custom_textfield_widget.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../Models/chat_model.dart';
 import '../../../Widgets/message_bubble.dart';
+import '../../../generated/assets.dart';
 
 class EnhancedChatScreen extends StatefulWidget {
   final String chatId;
@@ -79,7 +84,7 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
     });
 
     try {
-      // Mark messages as read when entering chat
+      // Mark messages as read when entering chat (only once)
       final userId = AuthService.userId;
       if (userId != null) {
         await ChatService.markMessagesAsRead(
@@ -96,14 +101,8 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
             _isLoading = false;
           });
           
-          // Mark messages as read when new messages arrive
-          final userId = AuthService.userId;
-          if (userId != null) {
-            ChatService.markMessagesAsRead(
-              chatId: widget.chatId,
-              userId: userId,
-            );
-          }
+          // Only mark messages as read if we're in the foreground
+          // Don't call markMessagesAsRead on every message update to avoid performance issues
           
           // Auto-scroll to bottom when new messages arrive
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -414,65 +413,99 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: _buildAppBar(),
       body: GestureDetector(
         onTap: _hideAttachmentMenu,
-        child: Column(
-          children: [
-            Expanded(
-              child: _isLoading
-                  ? _buildLoadingIndicator()
-                  : _buildMessagesList(),
+        child: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage(Assets.imagesBackground3), // replace with your image
+              fit: BoxFit.contain, // makes it cover the whole area
             ),
-            _buildAttachmentMenu(),
-            _buildMessageInput(),
-          ],
+          ),
+          child: Column(
+
+            children: [
+              Gap(45.h),
+              Row(
+                children: [_buildAppBar(),],
+              ),
+              Expanded(
+                child: _isLoading
+                    ? _buildLoadingIndicator()
+                    : _buildMessagesList(),
+              ),
+              _buildAttachmentMenu(),
+              _buildMessageInput(),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      title: Row(
+  Widget _buildAppBar() {
+    return
+      Stack(
+        clipBehavior: Clip.none,
         children: [
-          CircleAvatar(
-            radius: 20.r,
-            backgroundColor: AppTheme.primaryGreen,
-            child: Icon(
-              Icons.person,
-              color: Colors.white,
-              size: 20.sp,
+          Container(
+            width: 200.w,
+            height: 73.h,
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+            decoration: BoxDecoration(
+              color: ThemeClass.of(context).secondaryColor,
+              borderRadius: const BorderRadius.only(
+                bottomRight: Radius.circular(24.0),
+                topRight: Radius.circular(24.0),
+              ),
             ),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  widget.veterinarianName,
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  'طبيب بيطري',
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: Colors.grey[600],
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Dr.",
+                      style: TextStyle(
+                        color: ThemeClass.of(context).primaryColor,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Gap(4.w),
+                    Text(
+                      'Mahmoud',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        color: ThemeClass.of(context).backGroundColor,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-        ],
-      ),
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      elevation: 1,
+          Positioned(
+            top: -10.h,
+            left: 0,
+            right: 0,
+            child: Center(
+              child:  CircleAvatar(
+                radius: 25.r,
+                backgroundColor: ThemeClass.of(context).primaryColor,
+                child: Icon(
+                  Icons.person,
+                  color: ThemeClass.of(context).secondaryColor,
+                  size: 35.sp,
+                ),
+              ),
+            ),
+          ),
 
-    );
+        ],
+      );
   }
 
   Widget _buildLoadingIndicator() {
@@ -638,56 +671,44 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
 
   Widget _buildMessageInput() {
     return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: Colors.grey[300]!),
-        ),
-      ),
+      padding: EdgeInsets.all(8.w),
+
       child: Row(
         children: [
-          GestureDetector(
-            onTap: _toggleAttachmentMenu,
-            child: Container(
-              padding: EdgeInsets.all(8.w),
-              decoration: BoxDecoration(
-                color: _showAttachmentMenu 
-                    ? AppTheme.primaryGreen 
-                    : Colors.grey[100],
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                _showAttachmentMenu ? Icons.close : Icons.attach_file,
-                color: _showAttachmentMenu 
-                    ? Colors.white 
-                    : AppTheme.primaryGreen,
-                size: 20.sp,
-              ),
-            ),
-          ),
+
           
           SizedBox(width: 12.w),
-          
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: InputDecoration(
-                hintText: 'اكتب رسالة...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(25.r),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.grey[100],
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16.w,
-                  vertical: 12.h,
-                ),
-              ),
-              maxLines: null,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _sendTextMessage(),
+
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+            decoration: BoxDecoration(
+              color: ThemeClass.of(context).lightGreyColor,
+              borderRadius: BorderRadius.circular(24.r),
+            ),
+            child: Row(
+              children: [
+                CustomTextFieldWidget(
+                    width: 238.w,
+                    height: 42.h,
+                    controller: _messageController,
+                    borderStyleFlag: 4,
+                    hint: 'write message...',
+                    onSave: (_)=> _sendTextMessage(),
+                  ),
+
+                GestureDetector(
+                  onTap: _toggleAttachmentMenu,
+                  child: Padding(
+                    padding: EdgeInsets.all(_showAttachmentMenu ? 6.0 : 4.0),
+                    child: SvgPicture.asset(
+                      _showAttachmentMenu ? Assets.iconsCancel : Assets.iconsAttachment,
+                      color: _showAttachmentMenu
+                          ? ThemeClass.of(context).darkGreyColor
+                          : ThemeClass.of(context).secondaryColor,
+                    ),
+                  ),
+                ) ,
+              ],
             ),
           ),
           
@@ -698,8 +719,8 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
             child: Container(
               padding: EdgeInsets.all(12.w),
               decoration: BoxDecoration(
-                color: _isSending 
-                    ? Colors.grey[400] 
+                color: _isSending
+                    ? Colors.grey[400]
                     : AppTheme.primaryGreen,
                 shape: BoxShape.circle,
               ),
@@ -714,7 +735,7 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
                     )
                   : Icon(
                       Icons.send,
-                      color: Colors.white,
+                      color: ThemeClass.of(context).primaryColor,
                       size: 20.sp,
                     ),
             ),

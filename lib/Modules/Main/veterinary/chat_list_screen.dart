@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'dart:async';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../core/services/auth_service.dart';
@@ -23,6 +24,7 @@ class _ChatListScreenState extends State<ChatListScreen>
   
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  StreamSubscription<List<ChatModel>>? _chatsSubscription;
 
   @override
   void initState() {
@@ -52,6 +54,7 @@ class _ChatListScreenState extends State<ChatListScreen>
   void dispose() {
     _searchController.dispose();
     _animationController.dispose();
+    _chatsSubscription?.cancel();
     super.dispose();
   }
 
@@ -64,10 +67,18 @@ class _ChatListScreenState extends State<ChatListScreen>
     }
 
     final userId = AuthService.userId!;
-    ChatService.getUserChatsStream(userId).listen((chats) {
+    _chatsSubscription?.cancel(); // Cancel existing subscription
+    _chatsSubscription = ChatService.getUserChatsStream(userId).listen((chats) {
       if (mounted) {
         setState(() {
           _chats = chats;
+          _isLoading = false;
+        });
+      }
+    }, onError: (error) {
+      print('Error loading chats: $error');
+      if (mounted) {
+        setState(() {
           _isLoading = false;
         });
       }
@@ -78,7 +89,11 @@ class _ChatListScreenState extends State<ChatListScreen>
     if (_searchQuery.isEmpty) return _chats;
     
     return _chats.where((chat) {
-      return chat.lastMessage.toLowerCase().contains(_searchQuery.toLowerCase());
+      final lastMessage = chat.lastMessage.toLowerCase();
+      final vetName = _getVetNameFromChat(chat).toLowerCase();
+      final searchLower = _searchQuery.toLowerCase();
+      
+      return lastMessage.contains(searchLower) || vetName.contains(searchLower);
     }).toList();
   }
 
@@ -141,11 +156,7 @@ class _ChatListScreenState extends State<ChatListScreen>
       ),
       child: TextField(
         controller: _searchController,
-        onChanged: (value) {
-          setState(() {
-            _searchQuery = value;
-          });
-        },
+        onChanged: _onSearchChanged,
         decoration: InputDecoration(
           hintText: 'البحث في المحادثات...',
           prefixIcon: Icon(Icons.search, color: AppTheme.primaryGreen),
@@ -154,9 +165,7 @@ class _ChatListScreenState extends State<ChatListScreen>
                   icon: const Icon(Icons.clear),
                   onPressed: () {
                     _searchController.clear();
-                    setState(() {
-                      _searchQuery = '';
-                    });
+                    _onSearchChanged('');
                   },
                 )
               : null,
@@ -423,14 +432,20 @@ class _ChatListScreenState extends State<ChatListScreen>
 
   void _toggleSearch() {
     setState(() {
-      if (_searchController.text.isEmpty) {
+      if (_searchController.text.isEmpty && _searchQuery.isEmpty) {
         // Show search bar
         _searchController.text = ' '; // Trigger search bar to show
       } else {
-        // Hide search bar
+        // Hide search bar and clear search
         _searchController.clear();
         _searchQuery = '';
       }
+    });
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query.trim();
     });
   }
 
@@ -443,12 +458,8 @@ class _ChatListScreenState extends State<ChatListScreen>
       MaterialPageRoute(
         builder: (context) => RealTimeChatScreen(
           chatId: chat.id,
-          veterinarian: {
-            'name': vetName,
-            'specialization': 'طب بيطري عام',
-            'isOnline': true,
-            'id': vetId,
-          },
+          vetName: vetName,
+          vetImage: null, // No image available in chat model
         ),
       ),
     );
@@ -730,12 +741,8 @@ class _ChatListScreenState extends State<ChatListScreen>
         MaterialPageRoute(
           builder: (context) => RealTimeChatScreen(
             chatId: chatId,
-            veterinarian: {
-              'name': vet['name'],
-              'specialization': vet['specialization'],
-              'isOnline': vet['isOnline'],
-              'id': vet['id'],
-            },
+            vetName: vet['name'] ?? 'طبيب بيطري',
+            vetImage: vet['profilePhoto'],
           ),
         ),
       );

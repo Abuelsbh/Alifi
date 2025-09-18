@@ -11,28 +11,32 @@ class ChatService {
   static final FirebaseStorage _storage = FirebaseConfig.storage;
   static final ImagePicker _picker = ImagePicker();
   
-  // Cache for performance optimization
+  // Cache for chat and message streams
   static final Map<String, Stream<List<ChatModel>>> _chatStreamsCache = {};
   static final Map<String, Stream<List<ChatMessage>>> _messageStreamsCache = {};
-  static final Map<String, Stream<List<Map<String, dynamic>>>> _vetStreamsCache = {};
+  static final Map<String, Stream<List<Map<String, dynamic>>>> _veterinariansStreamCache = {};
+
+  // Throttling for markMessagesAsRead
+  static final Map<String, DateTime> _lastMarkAsReadCall = {};
+  static const Duration _markAsReadThrottle = Duration(seconds: 3);
 
   // Clear cache when needed
   static void clearCache() {
     _chatStreamsCache.clear();
     _messageStreamsCache.clear();
-    _vetStreamsCache.clear();
+    _veterinariansStreamCache.clear();
   }
 
   // Clear veterinarians cache specifically
   static void clearVeterinariansCache() {
-    _vetStreamsCache.clear();
+    _veterinariansStreamCache.clear();
   }
 
   // Clear all caches
   static void clearAllCaches() {
     _chatStreamsCache.clear();
     _messageStreamsCache.clear();
-    _vetStreamsCache.clear();
+    _veterinariansStreamCache.clear();
   }
 
   // Get user's chats stream with caching
@@ -124,8 +128,8 @@ class ChatService {
   // Get veterinarians stream with caching
   static Stream<List<Map<String, dynamic>>> getVeterinariansStream() {
     const cacheKey = 'veterinarians';
-    if (_vetStreamsCache.containsKey(cacheKey)) {
-      return _vetStreamsCache[cacheKey]!;
+    if (_veterinariansStreamCache.containsKey(cacheKey)) {
+      return _veterinariansStreamCache[cacheKey]!;
     }
     
     try {
@@ -154,7 +158,7 @@ class ChatService {
             return <Map<String, dynamic>>[];
           });
       
-      _vetStreamsCache[cacheKey] = stream;
+      _veterinariansStreamCache[cacheKey] = stream;
       return stream;
     } catch (e) {
       print('Error creating veterinarians stream: $e');
@@ -561,39 +565,62 @@ class ChatService {
     }
   }
 
-  // Mark messages as read with batch operation
+  // Mark messages as read with batch operation - Optimized
   static Future<void> markMessagesAsRead({
     required String chatId,
     required String userId,
   }) async {
+    final now = DateTime.now();
+    final lastCall = _lastMarkAsReadCall[chatId] ?? DateTime.now().subtract(_markAsReadThrottle);
+
+    if (now.difference(lastCall) < _markAsReadThrottle) {
+      print('Throttling markMessagesAsRead for chatId: $chatId');
+      return;
+    }
+
+    _lastMarkAsReadCall[chatId] = now;
+
     try {
-      // Get unread messages
+      // Use a simpler approach to avoid composite index requirement
+      // First get all messages, then filter in memory for better performance
       final messagesQuery = await _firestore
           .collection('veterinary_chats')
           .doc(chatId)
           .collection('messages')
-          .where('senderId', isNotEqualTo: userId)
           .where('isRead', isEqualTo: false)
+          .limit(100) // Limit to avoid excessive reads
           .get();
 
       if (messagesQuery.docs.isNotEmpty) {
-      final batch = _firestore.batch();
+        final batch = _firestore.batch();
+        int updatedCount = 0;
         
-        // Mark messages as read
-      for (var doc in messagesQuery.docs) {
-        batch.update(doc.reference, {'isRead': true});
-      }
+        // Filter messages from other senders in memory to avoid composite index
+        for (var doc in messagesQuery.docs) {
+          final data = doc.data();
+          final senderId = data['senderId'] as String?;
+          
+          // Only mark messages from other users as read
+          if (senderId != null && senderId != userId) {
+            batch.update(doc.reference, {'isRead': true});
+            updatedCount++;
+          }
+        }
 
-      // Reset unread count
-        batch.update(
-          _firestore.collection('veterinary_chats').doc(chatId),
-          {'unreadCount.$userId': 0},
-        );
+        // Only commit if there are messages to update
+        if (updatedCount > 0) {
+          // Reset unread count
+          batch.update(
+            _firestore.collection('veterinary_chats').doc(chatId),
+            {'unreadCount.$userId': 0},
+          );
 
-        await batch.commit();
+          await batch.commit();
+        }
       }
     } catch (e) {
-      throw Exception('فشل في تحديث حالة القراءة: $e');
+      // Don't throw exception to avoid breaking the chat flow
+      print('Warning: Failed to mark messages as read: $e');
     }
   }
 

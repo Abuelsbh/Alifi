@@ -13,9 +13,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:state_extended/state_extended.dart';
 import 'package:alifi/Models/pet_report_model.dart';
-import 'package:alifi/core/services/pet_reports_service.dart';
-import 'package:alifi/core/services/auth_service.dart';
-import 'dart:io';
+
 
 class AddAnimalScreen extends StatefulWidget {
   final ReportType reportType;
@@ -32,29 +30,21 @@ class AddAnimalScreen extends StatefulWidget {
 }
 
 class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
-  _AddAnimalScreenState() : super(controller: AddAnimalController()) {
-    con = AddAnimalController();
-  }
   late AddAnimalController con;
+  
+  _AddAnimalScreenState() : super(controller: AddAnimalController()) {
+    con = controller as AddAnimalController;
+  }
 
   @override
   void initState() {
-    con.nameController = TextEditingController();
-    con.typeController = TextEditingController();
-    con.colorController = TextEditingController();
+    super.initState();
     con.activeStep = 0;
     con.reportType = widget.reportType;
-    super.initState();
   }
 
 
-  @override
-  void dispose() {
-    con.nameController.dispose();
-    con.typeController.dispose();
-    con.colorController.dispose();
-    super.dispose();
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -100,6 +90,7 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
             SliverToBoxAdapter(child: Gap(16.h),),
             SliverToBoxAdapter(
               child: con.activeStep == 0? AddAnimalFourthStep(
+                con: con,
                 onNext: () {
                   setState(() {
                     con.activeStep++;
@@ -107,6 +98,7 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
                 },
                 onBack: null, // First step, no back button
               ) : con.activeStep == 1? AddAnimalFirstStep(
+                con: con,
                 onNext: () {
                   setState(() {
                     con.activeStep++;
@@ -118,6 +110,7 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
                   });
                 },
               ) : con.activeStep == 2? AddAnimalSecondStep(
+                con: con,
                 onNext: () {
                   setState(() {
                     con.activeStep++;
@@ -129,6 +122,7 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
                   });
                 },
               ) : AddAnimalThirdStep(
+                con: con,
                 onDone: () async {
                   await _handleFormSubmission();
                 },

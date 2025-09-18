@@ -721,19 +721,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
 
   void _navigateToLostPets() {
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(
-    //     builder: (context) => const LostFoundScreen(),
-    //   ),
-    // );
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const AddAnimalScreen(
-          reportType: ReportType.lost,
-          title: 'إضافة حيوان مفقود',
-        ),
+        builder: (context) => const LostFoundScreen(),
       ),
     );
   }
@@ -789,7 +780,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     } else {
       DialogHelper.custom(context: context).customDialog(
-        dialogWidget: const LoginWidget(),
+        dialogWidget: LoginWidget(
+          onLoginSuccess: () {
+            // Refresh the home screen after successful login
+            setState(() {
+              _loadData();
+            });
+          },
+        ),
       );
     }
 

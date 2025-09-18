@@ -9,15 +9,14 @@ import '../add_animal_controller.dart';
 class AddAnimalFourthStep extends StatefulWidget {
   final VoidCallback? onNext;
   final VoidCallback? onBack;
-  
-  const AddAnimalFourthStep({Key? key, this.onNext, this.onBack}) : super(key: key);
+  final AddAnimalController con;
+  const AddAnimalFourthStep({Key? key, this.onNext, this.onBack, required this.con}) : super(key: key);
 
   @override
   State<AddAnimalFourthStep> createState() => _AddAnimalFourthStepState();
 }
 
 class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
-  AddAnimalController con = AddAnimalController();
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -149,7 +148,7 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(15.r),
       ),
-      child: con.selectedImages.isEmpty 
+      child: widget.con.selectedImages.isEmpty
         ? _buildEmptyImageContainer()
         : _buildImageGallery(),
     );
@@ -209,14 +208,14 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(15.r),
             image: DecorationImage(
-              image: FileImage(File(con.selectedImages[con.currentImageIndex])),
+              image: FileImage(File(widget.con.selectedImages[widget.con.currentImageIndex])),
               fit: BoxFit.cover,
             ),
           ),
         ),
         
         // Navigation Arrows
-        if (con.selectedImages.length > 1) ...[
+        if (widget.con.selectedImages.length > 1) ...[
           // Left Arrow
           Positioned(
             left: 10,
@@ -350,12 +349,12 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
       setState(() {
         // Add new images to existing ones, but limit to 10 total
         for (var image in images) {
-          if (con.selectedImages.length < 10) {
-            con.selectedImages.add(image.path);
+          if (widget.con.selectedImages.length < 10) {
+            widget.con.selectedImages.add(image.path);
           }
         }
-        if (con.selectedImages.isNotEmpty && con.currentImageIndex >= con.selectedImages.length) {
-          con.currentImageIndex = 0;
+        if (widget.con.selectedImages.isNotEmpty && widget.con.currentImageIndex >= widget.con.selectedImages.length) {
+          widget.con.currentImageIndex = 0;
         }
       });
     }
@@ -363,34 +362,34 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
 
   void _previousImage() {
     setState(() {
-      if (con.currentImageIndex > 0) {
-        con.currentImageIndex--;
+      if (widget.con.currentImageIndex > 0) {
+        widget.con.currentImageIndex--;
       } else {
-        con.currentImageIndex = con.selectedImages.length - 1;
+        widget.con.currentImageIndex = widget.con.selectedImages.length - 1;
       }
     });
   }
 
   void _nextImage() {
     setState(() {
-      if (con.currentImageIndex < con.selectedImages.length - 1) {
-        con.currentImageIndex++;
+      if (widget.con.currentImageIndex < widget.con.selectedImages.length - 1) {
+        widget.con.currentImageIndex++;
       } else {
-        con.currentImageIndex = 0;
+        widget.con.currentImageIndex = 0;
       }
     });
   }
 
   void _deleteCurrentImage() {
-    if (con.selectedImages.isNotEmpty) {
+    if (widget.con.selectedImages.isNotEmpty) {
       setState(() {
-        con.selectedImages.removeAt(con.currentImageIndex);
+        widget.con.selectedImages.removeAt(widget.con.currentImageIndex);
         
         // Adjust current index after deletion
-        if (con.selectedImages.isEmpty) {
-          con.currentImageIndex = 0;
-        } else if (con.currentImageIndex >= con.selectedImages.length) {
-          con.currentImageIndex = con.selectedImages.length - 1;
+        if (widget.con.selectedImages.isEmpty) {
+          widget.con.currentImageIndex = 0;
+        } else if (widget.con.currentImageIndex >= widget.con.selectedImages.length) {
+          widget.con.currentImageIndex = widget.con.selectedImages.length - 1;
         }
       });
     }

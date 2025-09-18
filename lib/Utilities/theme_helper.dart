@@ -15,7 +15,7 @@ class ThemeClass extends ThemeModel{
     super.accentColor = Colors.blueGrey,
     super.backGroundColor = Colors.white,
     super.darkGreyColor = const Color(0xff555555),
-    super.lightGreyColor = const Color(0xffaaaaaa),
+    super.lightGreyColor = const Color(0xFFEAE6E6),
     super.warningColor = Colors.red,
   });
 }

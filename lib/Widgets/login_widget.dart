@@ -14,7 +14,9 @@ import '../Modules/Auth/veterinarian_login_screen.dart';
 import '../Utilities/dialog_helper.dart';
 
 class LoginWidget extends StatefulWidget {
-  const LoginWidget({super.key});
+  final VoidCallback? onLoginSuccess;
+  
+  const LoginWidget({super.key, this.onLoginSuccess});
 
   @override
   State<LoginWidget> createState() => _LoginWidgetState();
@@ -51,6 +53,8 @@ class _LoginWidgetState extends State<LoginWidget> {
 
       if (mounted) {
         context.pop();
+        // Call the callback to refresh the parent screen
+        widget.onLoginSuccess?.call();
       }
     } catch (e) {
       if (mounted) {

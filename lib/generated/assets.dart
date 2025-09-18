@@ -7,7 +7,9 @@ class Assets {
   static const String i18nAr = 'i18n/ar.json';
   static const String i18nEn = 'i18n/en.json';
   static const String iconsAppIcon = 'assets/icons/app_icon.png';
+  static const String iconsAttachment = 'assets/icons/attachment.svg';
   static const String iconsBrush = 'assets/icons/brush.svg';
+  static const String iconsCancel = 'assets/icons/cancel.svg';
   static const String iconsChat = 'assets/icons/chat.svg';
   static const String iconsHome = 'assets/icons/home.svg';
   static const String iconsProfile = 'assets/icons/profile.svg';
@@ -17,6 +19,7 @@ class Assets {
   static const String imagesAlifi2 = 'assets/images/alifi2.png';
   static const String imagesBackground = 'assets/images/background.png';
   static const String imagesBackground2 = 'assets/images/background2.png';
+  static const String imagesBackground3 = 'assets/images/background3.png';
   static const String imagesDottedPattern = 'assets/images/dotted_pattern.svg';
   static const String imagesLogo2 = 'assets/images/logo2.png';
   static const String imagesLostAnimal = 'assets/images/lostAnimal.png';

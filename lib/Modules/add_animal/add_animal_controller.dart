@@ -8,16 +8,7 @@ import 'package:alifi/core/services/pet_reports_service.dart';
 import 'package:alifi/core/services/auth_service.dart';
 
 class AddAnimalController extends StateXController {
-
-  /// singleton
-  factory AddAnimalController() {
-    _this ??= AddAnimalController._();
-    return _this!;
-  }
-
-  static AddAnimalController? _this;
-
-  AddAnimalController._();
+  AddAnimalController();
 
   bool loading = false;
   int activeStep = 0;
@@ -184,12 +175,28 @@ class AddAnimalController extends StateXController {
   // Submit animal report to Firebase
   Future<String?> submitAnimalReport() async {
     try {
+      print('🚀 Starting submitAnimalReport');
       loading = true;
       setState(() {});
 
       final user = AuthService.currentUser;
       if (user == null) {
+        print('❌ User not authenticated');
         throw Exception('User not authenticated');
+      }
+      print('✅ User authenticated: ${user.uid}');
+
+      // Basic validation
+      if (nameController.text.trim().isEmpty) {
+        throw Exception('Pet name is required');
+      }
+      
+      if (typeController.text.trim().isEmpty) {
+        throw Exception('Pet type is required');
+      }
+      
+      if (selectedImages.isEmpty) {
+        throw Exception('At least one image is required');
       }
 
       // Convert image paths to File objects
@@ -220,9 +227,12 @@ class AddAnimalController extends StateXController {
 
       String? reportId;
 
+      print('📝 Report data prepared, type: $reportType');
+      
       // Submit based on report type
       switch (reportType) {
         case ReportType.lost:
+          print('📤 Submitting lost pet report');
           baseReport.addAll({
             'lastSeenDate': lostDate ?? DateTime.now(),
             'isUrgent': isUrgent,
@@ -304,11 +314,13 @@ class AddAnimalController extends StateXController {
           throw Exception('Invalid report type');
       }
 
+      print('✅ Report submitted successfully: $reportId');
       loading = false;
       setState(() {});
       
       return reportId;
     } catch (e) {
+      print('❌ Error submitting report: $e');
       loading = false;
       setState(() {});
       throw Exception('Failed to submit report: $e');

@@ -1,3 +1,4 @@
+import 'package:alifi/Utilities/theme_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -103,7 +104,7 @@ class _MessageBubbleState extends State<MessageBubble>
             children: [
               // Message bubble
               Container(
-                decoration: BoxDecoration(
+                decoration: widget.message.type == MessageType.text ? BoxDecoration(
                   color: _getBubbleColor(),
                   borderRadius: _getBorderRadius(),
                   boxShadow: [
@@ -113,7 +114,7 @@ class _MessageBubbleState extends State<MessageBubble>
                       offset: const Offset(0, 2),
                     ),
                   ],
-                ),
+                ) : null,
                 child: Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: 16.w,
@@ -136,9 +137,9 @@ class _MessageBubbleState extends State<MessageBubble>
 
   Color _getBubbleColor() {
     if (widget.isMe) {
-      return AppTheme.primaryGreen;
+      return ThemeClass.of(context).primaryColor;
     } else {
-      return Theme.of(context).colorScheme.surface;
+      return ThemeClass.of(context).secondaryColor;
     }
   }
 
@@ -175,7 +176,7 @@ class _MessageBubbleState extends State<MessageBubble>
         SelectableText(
           widget.message.message,
           style: TextStyle(
-            color: widget.isMe ? Colors.white : Colors.black87,
+            color: ThemeClass.of(context).backGroundColor,
             fontSize: 15.sp,
             height: 1.4,
           ),
@@ -260,16 +261,16 @@ class _MessageBubbleState extends State<MessageBubble>
             ),
           ),
         ),
-        if (widget.message.message.isNotEmpty) ...[
-          SizedBox(height: 8.h),
-          Text(
-            widget.message.message,
-            style: TextStyle(
-              color: widget.isMe ? Colors.white : Colors.black87,
-              fontSize: 14.sp,
-            ),
-          ),
-        ],
+        // if (widget.message.message.isNotEmpty) ...[
+        //   SizedBox(height: 8.h),
+        //   Text(
+        //     widget.message.message,
+        //     style: TextStyle(
+        //       color: widget.isMe ? Colors.white : Colors.black87,
+        //       fontSize: 14.sp,
+        //     ),
+        //   ),
+        // ],
       ],
     );
   }

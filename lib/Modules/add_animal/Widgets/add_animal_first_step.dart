@@ -8,14 +8,14 @@ import '../add_animal_controller.dart';
 class AddAnimalFirstStep extends StatefulWidget {
   final VoidCallback? onNext;
   final VoidCallback? onBack;
-  const AddAnimalFirstStep({Key? key, required this.onNext, this.onBack}) : super(key: key);
+  final AddAnimalController con;
+  const AddAnimalFirstStep({Key? key, required this.onNext, this.onBack, required this.con}) : super(key: key);
 
   @override
   State<AddAnimalFirstStep> createState() => _AddAnimalFirstStepState();
 }
 
 class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
-  AddAnimalController con = AddAnimalController();
 
   @override
   Widget build(BuildContext context) {
@@ -41,11 +41,11 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
           const SizedBox(height: 30),
 
           // Pet Name
-          _buildTextField(con.nameController, "Pet Name"),
+          _buildTextField(widget.con.nameController, "Pet Name"),
           const SizedBox(height: 15),
 
           // Pet Type
-          _buildTextField(con.typeController, "Pet Type"),
+          _buildTextField(widget.con.typeController, "Pet Type"),
           const SizedBox(height: 15),
 
           // Age Selector
@@ -66,7 +66,7 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
           const SizedBox(height: 15),
 
           // Colour
-          _buildTextField(con.colorController, "Colour"),
+          _buildTextField(widget.con.colorController, "Colour"),
           const SizedBox(height: 15),
 
           // Gender
@@ -197,12 +197,12 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
                 icon: const Icon(Icons.chevron_left, color: Colors.orange),
                 onPressed: () {
                   setState(() {
-                    if (con.age > 0) con.age--;
+                    if (widget.con.age > 0) widget.con.age--;
                   });
                 },
               ),
               Text(
-                "${con.age}",
+                "${widget.con.age}",
                 style: const TextStyle(
                   fontSize: 20,
                   color: Colors.orange,
@@ -213,7 +213,7 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
                 icon: const Icon(Icons.chevron_right, color: Colors.orange),
                 onPressed: () {
                   setState(() {
-                    con.age++;
+                    widget.con.age++;
                   });
                 },
               ),
@@ -225,11 +225,11 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
   }
 
   Widget _buildToggleButton(String type) {
-    final bool isSelected = con.ageType == type;
+    final bool isSelected = widget.con.ageType == type;
     return GestureDetector(
       onTap: () {
         setState(() {
-          con.ageType = type;
+          widget.con.ageType = type;
         });
       },
       child: Container(
@@ -252,11 +252,11 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
   }
 
   Widget _buildGenderButton(String value) {
-    final bool isSelected = con.gender == value;
+    final bool isSelected = widget.con.gender == value;
     return GestureDetector(
       onTap: () {
         setState(() {
-          con.gender = value;
+          widget.con.gender = value;
         });
       },
       child: Container(

@@ -8,15 +8,14 @@ import '../add_animal_controller.dart';
 class AddAnimalSecondStep extends StatefulWidget {
   final VoidCallback? onNext;
   final VoidCallback? onBack;
-  
-  const AddAnimalSecondStep({Key? key, this.onNext, this.onBack}) : super(key: key);
+  final AddAnimalController con;
+  const AddAnimalSecondStep({Key? key, this.onNext, this.onBack, required this.con}) : super(key: key);
 
   @override
   State<AddAnimalSecondStep> createState() => _AddAnimalSecondStepState();
 }
 
 class _AddAnimalSecondStepState extends State<AddAnimalSecondStep> {
-  AddAnimalController con = AddAnimalController();
 
   @override
   Widget build(BuildContext context) {
@@ -42,11 +41,11 @@ class _AddAnimalSecondStepState extends State<AddAnimalSecondStep> {
           const SizedBox(height: 30),
 
           // Address
-          _buildTextField(con.addressController, "Address"),
+          _buildTextField(widget.con.addressController, "Address"),
           const SizedBox(height: 15),
 
           // Contact Name
-          _buildTextField(con.contactNameController, "Contact Name"),
+          _buildTextField(widget.con.contactNameController, "Contact Name"),
           const SizedBox(height: 15),
 
           // Phone Number
@@ -54,10 +53,10 @@ class _AddAnimalSecondStepState extends State<AddAnimalSecondStep> {
           const SizedBox(height: 15),
 
           // Email
-          _buildTextField(con.emailController, "Email"),
+          _buildTextField(widget.con.emailController, "Email"),
           const SizedBox(height: 15),
 
-          _buildTextField(con.locationLinkController, "Location Link"),
+          _buildTextField(widget.con.locationLinkController, "Location Link"),
 
           const Spacer(),
 
@@ -162,7 +161,7 @@ class _AddAnimalSecondStepState extends State<AddAnimalSecondStep> {
         CustomTextFieldWidget(
           width: 190.w,
           height: 42.h,
-          controller: con.phoneController,
+          controller: widget.con.phoneController,
           borderStyleFlag: 1,
           hint: "Phone No.",
           textInputType: TextInputType.phone,

@@ -12,20 +12,22 @@ import '../../../Widgets/message_bubble.dart';
 
 class RealTimeChatScreen extends StatefulWidget {
   final String chatId;
-  final Map<String, dynamic> veterinarian;
+  final String vetName;
+  final String? vetImage;
 
   const RealTimeChatScreen({
-    super.key,
+    Key? key,
     required this.chatId,
-    required this.veterinarian,
-  });
+    required this.vetName,
+    this.vetImage,
+  }) : super(key: key);
 
   @override
   State<RealTimeChatScreen> createState() => _RealTimeChatScreenState();
 }
 
 class _RealTimeChatScreenState extends State<RealTimeChatScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
@@ -34,6 +36,7 @@ class _RealTimeChatScreenState extends State<RealTimeChatScreen>
   bool _isLoading = true;
   bool _isSending = false;
   bool _isTyping = false;
+  bool _isInForeground = true;
   
   late AnimationController _animationController;
   late Animation<double> _slideAnimation;
@@ -42,9 +45,27 @@ class _RealTimeChatScreenState extends State<RealTimeChatScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeAnimations();
     _loadMessages();
     _messageController.addListener(_onTypingChanged);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    _isInForeground = state == AppLifecycleState.resumed;
+    
+    // Mark messages as read when app comes to foreground
+    if (_isInForeground) {
+      final userId = AuthService.userId;
+      if (userId != null) {
+        ChatService.markMessagesAsRead(
+          chatId: widget.chatId,
+          userId: userId,
+        );
+      }
+    }
   }
 
   void _initializeAnimations() {
@@ -75,6 +96,7 @@ class _RealTimeChatScreenState extends State<RealTimeChatScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _messageController.dispose();
     _scrollController.dispose();
     _animationController.dispose();
@@ -85,7 +107,7 @@ class _RealTimeChatScreenState extends State<RealTimeChatScreen>
   void _loadMessages() {
     if (!mounted) return;
 
-    // Mark messages as read when entering chat
+    // Mark messages as read when entering chat (only once)
     final userId = AuthService.userId;
     if (userId != null) {
       ChatService.markMessagesAsRead(
@@ -102,14 +124,8 @@ class _RealTimeChatScreenState extends State<RealTimeChatScreen>
           _isLoading = false;
         });
         
-        // Mark messages as read when new messages arrive
-        final userId = AuthService.userId;
-        if (userId != null) {
-          ChatService.markMessagesAsRead(
-            chatId: widget.chatId,
-            userId: userId,
-          );
-        }
+        // Only mark messages as read if we're in the foreground
+        // Don't call markMessagesAsRead on every message update to avoid performance issues
         
         // Auto-scroll to bottom when new message arrives
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -260,7 +276,7 @@ class _RealTimeChatScreenState extends State<RealTimeChatScreen>
                 ? _buildLoadingIndicator()
                 : _buildMessagesList(),
           ),
-          
+
           // Message Input
           _buildMessageInput(),
         ],
@@ -269,9 +285,9 @@ class _RealTimeChatScreenState extends State<RealTimeChatScreen>
   }
 
   PreferredSizeWidget _buildAppBar() {
-    final vetName = widget.veterinarian['name'] ?? 'طبيب بيطري';
-    final vetSpecialization = widget.veterinarian['specialization'] ?? '';
-    final isOnline = widget.veterinarian['isOnline'] ?? false;
+    final vetName = widget.vetName;
+    final vetSpecialization = ''; // No specialization in this model
+    final isOnline = true; // Assuming online for now
 
     return AppBar(
       elevation: 1,
@@ -288,12 +304,12 @@ class _RealTimeChatScreenState extends State<RealTimeChatScreen>
               CircleAvatar(
                 radius: 20.r,
                 backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
-                backgroundImage: widget.veterinarian['profilePhoto'] != null &&
-                        widget.veterinarian['profilePhoto'].toString().isNotEmpty
-                    ? NetworkImage(widget.veterinarian['profilePhoto'])
+                backgroundImage: widget.vetImage != null &&
+                        widget.vetImage!.isNotEmpty
+                    ? NetworkImage(widget.vetImage!)
                     : null,
-                child: widget.veterinarian['profilePhoto'] == null ||
-                        widget.veterinarian['profilePhoto'].toString().isEmpty
+                child: widget.vetImage == null ||
+                        widget.vetImage!.isEmpty
                     ? Icon(
                         Icons.person,
                         size: 20.sp,
