@@ -14,6 +14,7 @@ import '../Utilities/bottom_sheet_helper.dart';
 import '../core/firebase/firebase_config.dart';
 import '../core/services/auth_service.dart';
 import '../core/Theme/app_theme.dart';
+import '../core/Language/translation_service.dart';
 import 'login_widget.dart';
 import 'translated_text.dart';
 
@@ -153,7 +154,7 @@ class AnimalTypeSelectionBottomSheet extends StatelessWidget {
 
           // Title
           Text(
-            'اختر نوع الإعلان',
+            TranslationService.instance.translate('lost_found.select_report_type'),
             style: TextStyle(
               fontSize: 20.sp,
               fontWeight: FontWeight.bold,
@@ -162,7 +163,7 @@ class AnimalTypeSelectionBottomSheet extends StatelessWidget {
           ),
           SizedBox(height: 8.h),
           Text(
-            'ما نوع الحيوان الذي تريد إضافته؟',
+            TranslationService.instance.translate('lost_found.select_report_type_subtitle'),
             style: TextStyle(
               fontSize: 14.sp,
               color: AppTheme.lightOnBackground,
@@ -175,8 +176,8 @@ class AnimalTypeSelectionBottomSheet extends StatelessWidget {
                      _buildAnimalTypeOption(
              context: context,
              icon: Icons.search,
-             title: 'حيوان مفقود',
-             subtitle: 'أبلغ عن حيوان مفقود',
+             title: TranslationService.instance.translate('lost_found.lost_pet'),
+             subtitle: TranslationService.instance.translate('post_report.lost_pet_subtitle'),
              color: AppTheme.error,
              onTap: () => _navigateToAddAnimal(context, ReportType.lost),
            ),
@@ -185,8 +186,8 @@ class AnimalTypeSelectionBottomSheet extends StatelessWidget {
            _buildAnimalTypeOption(
              context: context,
              icon: Icons.pets,
-             title: 'تم العثور على حيوان',
-             subtitle: 'أبلغ عن حيوان وجدته',
+             title: TranslationService.instance.translate('lost_found.found_pet'),
+             subtitle: TranslationService.instance.translate('post_report.found_pet_subtitle'),
              color: AppTheme.success,
              onTap: () => _navigateToAddAnimal(context, ReportType.found),
            ),
@@ -195,8 +196,8 @@ class AnimalTypeSelectionBottomSheet extends StatelessWidget {
            _buildAnimalTypeOption(
              context: context,
              icon: Icons.favorite,
-             title: 'حيوان للتبني',
-             subtitle: 'اعرض حيوان للتبني',
+             title: TranslationService.instance.translate('adoption.adoption_pet'),
+             subtitle: TranslationService.instance.translate('post_report.adoption_pet_subtitle'),
              color: AppTheme.primaryGreen,
              onTap: () => _navigateToAddAnimal(context, ReportType.adoption),
            ),
@@ -205,8 +206,8 @@ class AnimalTypeSelectionBottomSheet extends StatelessWidget {
            _buildAnimalTypeOption(
              context: context,
              icon: Icons.family_restroom,
-             title: 'حيوان للتزاوج',
-             subtitle: 'اعرض حيوان للتزاوج',
+             title: TranslationService.instance.translate('breeding.breeding_pet'),
+             subtitle: TranslationService.instance.translate('post_report.breeding_pet_subtitle'),
              color: AppTheme.primaryOrange,
              onTap: () => _navigateToAddAnimal(context, ReportType.breeding),
            ),
@@ -295,16 +296,16 @@ class AnimalTypeSelectionBottomSheet extends StatelessWidget {
     String title;
     switch (reportType) {
       case ReportType.lost:
-        title = 'إبلاغ عن حيوان مفقود';
+        title = TranslationService.instance.translate('post_report.lost_pet_title');
         break;
       case ReportType.found:
-        title = 'إبلاغ عن حيوان موجود';
+        title = TranslationService.instance.translate('post_report.found_pet_title');
         break;
       case ReportType.adoption:
-        title = 'عرض حيوان للتبني';
+        title = TranslationService.instance.translate('post_report.adoption_pet_title');
         break;
       case ReportType.breeding:
-        title = 'عرض حيوان للتزاوج';
+        title = TranslationService.instance.translate('post_report.breeding_pet_title');
         break;
     }
     
@@ -334,29 +335,29 @@ class _BottomNavBarItemModel {
     this.routeName,
   });
 
-  static _BottomNavBarItemModel home = _BottomNavBarItemModel(
-    title: "Home",
+  static _BottomNavBarItemModel get home => _BottomNavBarItemModel(
+    title: TranslationService.instance.translate('navigation.home'),
     iconPath: Assets.iconsHome,
     type: SelectedBottomNavBar.home,
     routeName: 'home', // استخدام route name
   );
 
-  static _BottomNavBarItemModel lostFound = _BottomNavBarItemModel(
-    title: "Lost & Found",
-    iconPath: Assets.imagesLostAnimal, // استخدام أيقونة أكثر مناسبة
+  static _BottomNavBarItemModel get lostFound => _BottomNavBarItemModel(
+    title: TranslationService.instance.translate('navigation.lost_found'),
+    iconPath: Assets.iconsSettings, // استخدام أيقونة أكثر مناسبة
     type: SelectedBottomNavBar.lostFound,
     // لا routeName لأنه سيعرض bottom sheet
   );
 
-  static _BottomNavBarItemModel veterinary = _BottomNavBarItemModel(
-    title: "Veterinary",
+  static _BottomNavBarItemModel get veterinary => _BottomNavBarItemModel(
+    title: TranslationService.instance.translate('navigation.veterinary'),
     iconPath: Assets.iconsChat,
     type: SelectedBottomNavBar.veterinary,
     routeName: 'veterinary', // استخدام route name
   );
 
-  static _BottomNavBarItemModel profile = _BottomNavBarItemModel(
-    title: "Profile",
+  static _BottomNavBarItemModel get profile => _BottomNavBarItemModel(
+    title: TranslationService.instance.translate('navigation.profile'),
     iconPath: Assets.iconsProfile,
     type: SelectedBottomNavBar.profile,
     routeName: 'profile', // استخدام route name

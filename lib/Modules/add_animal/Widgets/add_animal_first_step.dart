@@ -6,6 +6,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../Widgets/custom_textfield_widget.dart';
 import '../add_animal_controller.dart';
+import 'package:alifi/core/Language/app_languages.dart';
+import 'package:provider/provider.dart';
 
 class AddAnimalFirstStep extends StatefulWidget {
   final VoidCallback? onNext;
@@ -33,17 +35,17 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
         children: [
           const SizedBox(height: 20),
           Text(
-            "Pet Details",
+            Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.title'),
             style: TextStyleHelper.of(context).s36ItimTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
           ),
           const SizedBox(height: 30),
 
           // Pet Name
-          _buildTextField(widget.con.nameController, "Pet Name"),
+          _buildTextField(widget.con.nameController, Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.pet_name')),
           const SizedBox(height: 15),
 
           // Pet Type
-          _buildTextField(widget.con.typeController, "Pet Type"),
+          _buildTextField(widget.con.typeController, Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.pet_type')),
           const SizedBox(height: 15),
 
           // Age Selector
@@ -54,9 +56,9 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
               const SizedBox(width: 10),
               Column(
                 children: [
-                  _buildToggleButton("Year"),
+                  _buildToggleButton(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.year')),
                   const SizedBox(height: 5),
-                  _buildToggleButton("Month"),
+                  _buildToggleButton(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.month')),
                 ],
               )
             ],
@@ -64,16 +66,16 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
           const SizedBox(height: 15),
 
           // Colour
-          _buildTextField(widget.con.colorController, "Colour"),
+          _buildTextField(widget.con.colorController, Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.color')),
           const SizedBox(height: 15),
 
           // Gender
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildGenderButton("Male"),
+              _buildGenderButton(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.male')),
               const SizedBox(width: 10),
-              _buildGenderButton("Female"),
+              _buildGenderButton(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.female')),
             ],
           ),
 
@@ -98,12 +100,12 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
                 },
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.arrow_back, size: 18),
                       SizedBox(width: 5),
-                      Text("Back"),
+                      Text(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.navigation.back')),
                     ],
                   ),
                 ),
@@ -124,10 +126,10 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
                 },
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text("Next"),
+                      Text(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.navigation.next')),
                       SizedBox(width: 5),
                       Icon(Icons.arrow_forward, size: 18),
                     ],
@@ -151,10 +153,10 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
               },
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text("Next"),
+                    Text(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.navigation.next')),
                     SizedBox(width: 5),
                     Icon(Icons.arrow_forward, size: 18),
                   ],

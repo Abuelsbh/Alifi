@@ -117,8 +117,9 @@ class TranslationService {
   List<Map<String, String>> get availableLanguages => [
     {'code': 'en', 'name': 'English', 'nativeName': 'English'},
     {'code': 'ar', 'name': 'Arabic', 'nativeName': 'العربية'},
+    {'code': 'he', 'name': 'Hebrew', 'nativeName': 'עברית'},
   ];
   
   // التحقق من اتجاه النص
-  bool get isRTL => _currentLanguage == 'ar';
+  bool get isRTL => _currentLanguage == 'ar' || _currentLanguage == 'he';
 } 

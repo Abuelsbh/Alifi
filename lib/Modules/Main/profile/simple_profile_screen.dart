@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../../Widgets/bottom_navbar_widget.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/Language/app_languages.dart';
 import 'my_pets_screen.dart';
 import 'my_reports_screen.dart';
+import 'settings_screen.dart';
 
 
 class SimpleProfileScreen extends StatefulWidget {
@@ -59,7 +62,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text('Profile'),
+        title: Text(Provider.of<AppLanguage>(context).translate('profile.my_profile')),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
@@ -89,14 +92,14 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
             color: Colors.grey,
           ),
           SizedBox(height: 16.h),
-          const Text(
-            'Please login to view your profile',
-            style: TextStyle(fontSize: 18, color: Colors.grey),
+          Text(
+            Provider.of<AppLanguage>(context).translate('profile.login_prompt'),
+            style: const TextStyle(fontSize: 18, color: Colors.grey),
           ),
           SizedBox(height: 24.h),
           ElevatedButton(
             onPressed: () => context.go('/login'),
-            child: const Text('Login'),
+            child: Text(Provider.of<AppLanguage>(context).translate('auth.login')),
           ),
         ],
       ),
@@ -163,8 +166,8 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
               children: [
                 ListTile(
                   leading: Icon(Icons.pets, color: AppTheme.primaryGreen),
-                  title: const Text('My Pets'),
-                  subtitle: const Text('Manage your pets'),
+                  title: Text(Provider.of<AppLanguage>(context).translate('profile.my_pets')),
+                  subtitle: Text(Provider.of<AppLanguage>(context).translate('profile.my_pets_subtitle')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.push(
@@ -177,8 +180,8 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
                 const Divider(height: 1),
                 ListTile(
                   leading: Icon(Icons.report, color: AppTheme.primaryOrange),
-                  title: const Text('My Reports'),
-                  subtitle: const Text('Lost & Found reports'),
+                  title: Text(Provider.of<AppLanguage>(context).translate('profile.my_reports')),
+                  subtitle: Text(Provider.of<AppLanguage>(context).translate('profile.my_reports_subtitle')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.push(
@@ -192,8 +195,8 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
                 const Divider(height: 1),
                 ListTile(
                   leading: Icon(Icons.chat, color: AppTheme.info),
-                  title: const Text('My Chats'),
-                  subtitle: const Text('Veterinary conversations'),
+                  title: Text(Provider.of<AppLanguage>(context).translate('profile.my_chats')),
+                  subtitle: Text(Provider.of<AppLanguage>(context).translate('profile.my_chats_subtitle')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     // TODO: Navigate to chats
@@ -202,11 +205,16 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
                 const Divider(height: 1),
                 ListTile(
                   leading: Icon(Icons.settings, color: Colors.grey[600]),
-                  title: const Text('Settings'),
-                  subtitle: const Text('App preferences'),
+                  title: Text(Provider.of<AppLanguage>(context).translate('profile.settings')),
+                  subtitle: Text(Provider.of<AppLanguage>(context).translate('profile.app_preferences')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    // TODO: Navigate to settings
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsScreen(),
+                      ),
+                    );
                   },
                 ),
               ],
@@ -225,7 +233,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
                 foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(vertical: 12.h),
               ),
-              child: const Text('Sign Out'),
+              child: Text(Provider.of<AppLanguage>(context).translate('profile.sign_out')),
             ),
           ),
         ],
@@ -237,12 +245,12 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
+        title: Text(Provider.of<AppLanguage>(context).translate('profile.sign_out')),
+        content: Text(Provider.of<AppLanguage>(context).translate('profile.sign_out_confirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(Provider.of<AppLanguage>(context).translate('common.cancel')),
           ),
           TextButton(
             onPressed: () async {
@@ -256,14 +264,14 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Error signing out: $e'),
+                      content: Text('${Provider.of<AppLanguage>(context).translate('profile.sign_out_error')}: $e'),
                       backgroundColor: AppTheme.error,
                     ),
                   );
                 }
               }
             },
-            child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+            child: Text(Provider.of<AppLanguage>(context).translate('profile.sign_out'), style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),

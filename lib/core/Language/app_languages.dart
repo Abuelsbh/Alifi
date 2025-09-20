@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../../Utilities/shared_preferences.dart';
 import 'translation_service.dart';
 
-enum Languages {en,ar}
+enum Languages {en,ar,he}
 
 Languages appLanguage(BuildContext context) => Provider.of<AppLanguage>(context, listen: false).appLang;
 
@@ -61,8 +61,22 @@ class AppLanguage extends ChangeNotifier {
         case Languages.ar:
           newLanguage = Languages.ar;
           break;
+        case Languages.he:
+          newLanguage = Languages.he;
+          break;
         case null:
-          newLanguage = _appLanguage == Languages.ar ? Languages.en : Languages.ar;
+          // التنقل بين اللغات بدورة: EN -> AR -> HE -> EN
+          switch(_appLanguage) {
+            case Languages.en:
+              newLanguage = Languages.ar;
+              break;
+            case Languages.ar:
+              newLanguage = Languages.he;
+              break;
+            case Languages.he:
+              newLanguage = Languages.en;
+              break;
+          }
           break;
       }
       
@@ -101,7 +115,7 @@ class AppLanguage extends ChangeNotifier {
       return _translationService.isRTL;
     } catch (e) {
       print('Error checking RTL status: $e');
-      return _appLanguage == Languages.ar; // استخدام القيمة المحلية كـ fallback
+      return _appLanguage == Languages.ar || _appLanguage == Languages.he; // استخدام القيمة المحلية كـ fallback
     }
   }
   
@@ -115,6 +129,7 @@ class AppLanguage extends ChangeNotifier {
       return [
         {'code': 'en', 'name': 'English', 'nativeName': 'English'},
         {'code': 'ar', 'name': 'Arabic', 'nativeName': 'العربية'},
+        {'code': 'he', 'name': 'Hebrew', 'nativeName': 'עברית'},
       ];
     }
   }

@@ -2,10 +2,9 @@
 class Assets {
   Assets._();
 
-  static const String assetsI18nAr = 'assets/i18n/ar.json';
-  static const String assetsI18nEn = 'assets/i18n/en.json';
   static const String i18nAr = 'i18n/ar.json';
   static const String i18nEn = 'i18n/en.json';
+  static const String i18nHe = 'i18n/he.json';
   static const String iconsAppIcon = 'assets/icons/app_icon.png';
   static const String iconsAttachment = 'assets/icons/attachment.svg';
   static const String iconsBrush = 'assets/icons/brush.svg';
@@ -26,5 +25,6 @@ class Assets {
   static const String imagesLogo2 = 'assets/images/logo2.png';
   static const String imagesLostAnimal = 'assets/images/lostAnimal.png';
   static const String imagesStore = 'assets/images/store.png';
-
+  static const String imagesAdoption = 'assets/images/adoption.png';
+  static const String imagesMating = 'assets/images/mating.png';
 }

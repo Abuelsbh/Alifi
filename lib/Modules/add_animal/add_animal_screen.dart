@@ -13,6 +13,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:state_extended/state_extended.dart';
 import 'package:alifi/Models/pet_report_model.dart';
+import 'package:alifi/core/Language/app_languages.dart';
+import 'package:provider/provider.dart';
 
 
 class AddAnimalScreen extends StatefulWidget {
@@ -60,25 +62,25 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
                   customStep: con.activeStep > 0
                     ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
                     : Icon(Icons.photo_camera, color: ThemeClass.of(context).primaryColor, size: 20),
-                  title: 'Pictures',
+                  title: Provider.of<AppLanguage>(context, listen: false).translate('add_animal.step_titles.pictures'),
                 ),
                 EasyStep(
                   customStep: con.activeStep > 1
                     ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
                     : Icon(Icons.pets, color: ThemeClass.of(context).primaryColor, size: 20),
-                  title: 'Pet details',
+                  title: Provider.of<AppLanguage>(context, listen: false).translate('add_animal.step_titles.pet_details'),
                 ),
                 EasyStep(
                   customStep: con.activeStep > 2
                     ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
                     : Icon(Icons.info, color: ThemeClass.of(context).primaryColor, size: 20),
-                  title: 'Contact Info',
+                  title: Provider.of<AppLanguage>(context, listen: false).translate('add_animal.step_titles.contact_info'),
                 ),
                 EasyStep(
                   customStep: con.activeStep > 3
                       ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
                       : Icon(Icons.info, color: ThemeClass.of(context).primaryColor, size: 20),
-                  title: 'More Info',
+                  title: Provider.of<AppLanguage>(context, listen: false).translate('add_animal.step_titles.more_info'),
                 ),
               ],
               onStepReached: (step) {

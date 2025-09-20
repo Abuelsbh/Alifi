@@ -38,8 +38,8 @@ class DemoModeScreen extends StatelessWidget {
               SizedBox(height: 32.h),
               
               // Title
-              Text(
-                'Demo Mode',
+              TranslatedText(
+                'auth.demo_mode',
                 style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: AppTheme.warning,
@@ -50,8 +50,8 @@ class DemoModeScreen extends StatelessWidget {
               SizedBox(height: 16.h),
               
               // Description
-              Text(
-                'Firebase is not configured properly',
+              TranslatedText(
+                'errors.firebase_not_configured',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -74,19 +74,19 @@ class DemoModeScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'To enable full functionality:',
+                    TranslatedText(
+                      'errors.to_enable_full_functionality',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: AppTheme.warning,
                       ),
                     ),
                     SizedBox(height: 12.h),
-                    _buildStep('1.', 'Create a Firebase project'),
-                    _buildStep('2.', 'Add your app to the project'),
-                    _buildStep('3.', 'Download configuration files'),
-                    _buildStep('4.', 'Run: flutter packages pub run flutterfire_cli:main configure'),
-                    _buildStep('5.', 'Restart the app'),
+                    _buildStep('1.', 'errors.create_firebase_project'),
+                    _buildStep('2.', 'errors.add_app_to_project'),
+                    _buildStep('3.', 'errors.download_config_files'),
+                    _buildStep('4.', 'errors.run_flutterfire_command'),
+                    _buildStep('5.', 'errors.restart_app'),
                   ],
                 ),
               ),
@@ -95,7 +95,7 @@ class DemoModeScreen extends StatelessWidget {
               
               // Continue Button
               TranslatedCustomButton(
-                textKey: 'Continue in Demo Mode',
+                textKey: 'auth.continue_demo_mode',
                 onPressed: () {
                   context.go('/main');
                 },
@@ -109,8 +109,8 @@ class DemoModeScreen extends StatelessWidget {
                 onPressed: () {
                   // TODO: Open Firebase documentation
                 },
-                child: Text(
-                  'Learn more about Firebase setup',
+                child: TranslatedText(
+                  'errors.learn_more_firebase',
                   style: TextStyle(
                     color: AppTheme.primaryGreen,
                     decoration: TextDecoration.underline,
@@ -124,7 +124,7 @@ class DemoModeScreen extends StatelessWidget {
     );
   }
   
-  Widget _buildStep(String number, String text) {
+  Widget _buildStep(String number, String textKey) {
     return Padding(
       padding: EdgeInsets.only(bottom: 8.h),
       child: Row(
@@ -150,8 +150,8 @@ class DemoModeScreen extends StatelessWidget {
           ),
           SizedBox(width: 12.w),
           Expanded(
-            child: Text(
-              text,
+            child: TranslatedText(
+              textKey,
               style: TextStyle(
                 fontSize: 14.sp,
                 color: Colors.grey[700],

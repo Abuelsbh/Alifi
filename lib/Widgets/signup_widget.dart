@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/Theme/app_theme.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/Language/translation_service.dart';
 import '../../Widgets/translated_text.dart';
 import '../../Widgets/custom_textfield_widget.dart';
 import '../../Widgets/translated_custom_button.dart';
@@ -53,8 +54,8 @@ class _LoginWidgetState extends State<SignupWidget> {
       if (mounted) {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created successfully!'),
+          SnackBar(
+            content: Text(TranslationService.instance.translate('auth.account_created_successfully')),
             backgroundColor: AppTheme.success,
           ),
         );
@@ -109,7 +110,7 @@ class _LoginWidgetState extends State<SignupWidget> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
-                      'Welcome to',
+                      TranslationService.instance.translate('auth.welcome_to'),
                       style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Color(0xFFFF914C),
@@ -137,7 +138,7 @@ class _LoginWidgetState extends State<SignupWidget> {
               height: 42.h,
               controller: _nameController,
               borderStyleFlag: 1,
-              hint: 'User Name',
+              hint: TranslationService.instance.translate('auth.username'),
               textInputType: TextInputType.emailAddress,
             ),
           ),
@@ -155,14 +156,14 @@ class _LoginWidgetState extends State<SignupWidget> {
               height: 42.h,
               controller: _emailController,
               borderStyleFlag: 1,
-              hint: 'Email',
+              hint: TranslationService.instance.translate('auth.email'),
               textInputType: TextInputType.emailAddress,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Email is required';
+                  return TranslationService.instance.translate('validation.required_field');
                 }
                 if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                  return 'Please enter a valid email';
+                  return TranslationService.instance.translate('validation.invalid_email');
                 }
                 return null;
               },
@@ -182,14 +183,14 @@ class _LoginWidgetState extends State<SignupWidget> {
               height: 42.h,
               controller: _passwordController,
               borderStyleFlag: 2,
-              hint: 'Password',
+              hint: TranslationService.instance.translate('auth.password'),
               obscure: _obscurePassword,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Password is required';
+                  return TranslationService.instance.translate('validation.password_required');
                 }
                 if (value.length < 6) {
-                  return 'Password must be at least 6 characters';
+                  return TranslationService.instance.translate('validation.password_too_short');
                 }
                 return null;
               },
@@ -219,14 +220,14 @@ class _LoginWidgetState extends State<SignupWidget> {
               height: 42.h,
               controller: _confirmPasswordController,
               borderStyleFlag: 2,
-              hint: 'Confirm Password',
+              hint: TranslationService.instance.translate('auth.confirm_password'),
               obscure: _obscureConfirmPassword,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Password is required';
+                  return TranslationService.instance.translate('validation.password_required');
                 }
-                if (value.length < 6) {
-                  return 'Password must be at least 6 characters';
+                if (value != _passwordController.text) {
+                  return TranslationService.instance.translate('validation.passwords_not_match');
                 }
                 return null;
               },

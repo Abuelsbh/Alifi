@@ -5,6 +5,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../Utilities/text_style_helper.dart';
 import '../../../Widgets/custom_textfield_widget.dart';
 import '../add_animal_controller.dart';
+import 'package:alifi/core/Language/app_languages.dart';
+import 'package:provider/provider.dart';
 
 class AddAnimalSecondStep extends StatefulWidget {
   final VoidCallback? onNext;
@@ -32,17 +34,17 @@ class _AddAnimalSecondStepState extends State<AddAnimalSecondStep> {
         children: [
           const SizedBox(height: 20),
           Text(
-            "Contact Info.",
+            Provider.of<AppLanguage>(context, listen: false).translate('add_animal.contact_info.title'),
             style: TextStyleHelper.of(context).s36ItimTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
           ),
           const SizedBox(height: 30),
 
           // Address
-          _buildTextField(widget.con.addressController, "Address"),
+          _buildTextField(widget.con.addressController, Provider.of<AppLanguage>(context, listen: false).translate('add_animal.contact_info.address')),
           const SizedBox(height: 15),
 
           // Contact Name
-          _buildTextField(widget.con.contactNameController, "Contact Name"),
+          _buildTextField(widget.con.contactNameController, Provider.of<AppLanguage>(context, listen: false).translate('add_animal.contact_info.contact_name')),
           const SizedBox(height: 15),
 
           // Phone Number
@@ -50,10 +52,10 @@ class _AddAnimalSecondStepState extends State<AddAnimalSecondStep> {
           const SizedBox(height: 15),
 
           // Email
-          _buildTextField(widget.con.emailController, "Email"),
+          _buildTextField(widget.con.emailController, Provider.of<AppLanguage>(context, listen: false).translate('add_animal.contact_info.email')),
           const SizedBox(height: 15),
 
-          _buildTextField(widget.con.locationLinkController, "Location Link"),
+          _buildTextField(widget.con.locationLinkController, Provider.of<AppLanguage>(context, listen: false).translate('add_animal.contact_info.location_link')),
 
           const Spacer(),
 
@@ -76,12 +78,12 @@ class _AddAnimalSecondStepState extends State<AddAnimalSecondStep> {
                 },
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.arrow_back, size: 18),
                       SizedBox(width: 5),
-                      Text("Back"),
+                      Text(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.navigation.back')),
                     ],
                   ),
                 ),
@@ -105,7 +107,7 @@ class _AddAnimalSecondStepState extends State<AddAnimalSecondStep> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text("Next"),
+                      Text(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.navigation.next')),
                       SizedBox(width: 5),
                       Icon(Icons.arrow_forward, size: 18),
                     ],
@@ -160,7 +162,7 @@ class _AddAnimalSecondStepState extends State<AddAnimalSecondStep> {
           height: 42.h,
           controller: widget.con.phoneController,
           borderStyleFlag: 1,
-          hint: "Phone No.",
+          hint: Provider.of<AppLanguage>(context, listen: false).translate('add_animal.contact_info.phone_number'),
           textInputType: TextInputType.phone,
         ),
       ],

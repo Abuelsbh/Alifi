@@ -246,7 +246,7 @@ class _VeterinarianLoginScreenState extends State<VeterinarianLoginScreen> {
                 
                 // Setup Account Button
                 CustomButton(
-                  text: 'إعداد/إصلاح حساب الطبيب البيطري',
+                  text: TranslationService.instance.translate('veterinary.setup_account'),
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(

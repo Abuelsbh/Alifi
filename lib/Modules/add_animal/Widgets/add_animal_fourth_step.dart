@@ -8,6 +8,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../Utilities/text_style_helper.dart';
 import '../add_animal_controller.dart';
+import 'package:alifi/core/Language/app_languages.dart';
+import 'package:provider/provider.dart';
 
 class AddAnimalFourthStep extends StatefulWidget {
   final VoidCallback? onNext;
@@ -36,7 +38,7 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
         children: [
           const SizedBox(height: 20),
           Text(
-            "Pictures",
+            Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pictures.title'),
             style: TextStyleHelper.of(context).s36ItimTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
           ),
           const SizedBox(height: 30),
@@ -70,12 +72,12 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
                 },
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.arrow_back, size: 18),
                       SizedBox(width: 5),
-                      Text("Back"),
+                      Text(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.navigation.back')),
                     ],
                   ),
                 ),
@@ -96,10 +98,10 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
                 },
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text("Next"),
+                      Text(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.navigation.next')),
                       SizedBox(width: 5),
                       Icon(Icons.arrow_forward, size: 18),
                     ],
@@ -123,10 +125,10 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
               },
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text("Next"),
+                    Text(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.navigation.next')),
                     SizedBox(width: 5),
                     Icon(Icons.arrow_forward, size: 18),
                   ],
@@ -298,17 +300,27 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
     return Column(
       children: [
         Text(
-          "It must be in size 500*500 Pix",
+          Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pictures.requirements'),
           style: TextStyleHelper.of(context).s10RegTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
         ),
         const SizedBox(height: 5),
         Text(
-          "At least 2 pic. & Maximum 10 Pic",
+          Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pictures.requirement_1'),
           style: TextStyleHelper.of(context).s10RegTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
         ),
         const SizedBox(height: 5),
         Text(
-          "the pic must contain the real pet",
+          Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pictures.requirement_2'),
+          style: TextStyleHelper.of(context).s10RegTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pictures.requirement_3'),
+          style: TextStyleHelper.of(context).s10RegTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pictures.requirement_4'),
           style: TextStyleHelper.of(context).s10RegTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
         ),
       ],

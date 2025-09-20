@@ -5,6 +5,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../Utilities/text_style_helper.dart';
 import '../../../Widgets/custom_textfield_widget.dart';
 import '../add_animal_controller.dart';
+import 'package:alifi/core/Language/app_languages.dart';
+import 'package:provider/provider.dart';
 
 class AddAnimalThirdStep extends StatefulWidget {
   final VoidCallback? onDone;
@@ -33,22 +35,22 @@ class _AddAnimalThirdStepState extends State<AddAnimalThirdStep> {
         children: [
           const SizedBox(height: 20),
           Text(
-            "More Info.",
+            Provider.of<AppLanguage>(context, listen: false).translate('add_animal.more_info.title'),
             style: TextStyleHelper.of(context).s36ItimTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
           ),
           const SizedBox(height: 30),
 
           // Distinctive Marks
-          _buildTextField(widget.con.distinctiveMarksController, "Distinctive Marks"),
+          _buildTextField(widget.con.distinctiveMarksController, Provider.of<AppLanguage>(context, listen: false).translate('add_animal.more_info.distinctive_marks')),
           const SizedBox(height: 15),
 
           // Medical Status Buttons
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildMedicalStatusButton("Healthy"),
+              _buildMedicalStatusButton(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.more_info.medical_status.healthy')),
               const SizedBox(width: 10),
-              _buildMedicalStatusButton("Sick"),
+              _buildMedicalStatusButton(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.more_info.medical_status.sick')),
             ],
           ),
           const SizedBox(height: 15),
@@ -57,9 +59,9 @@ class _AddAnimalThirdStepState extends State<AddAnimalThirdStep> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildMedicalStatusButton("Injured"),
+              _buildMedicalStatusButton(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.more_info.medical_status.injured')),
               const SizedBox(width: 10),
-              _buildMedicalStatusButton("Pregnant"),
+              _buildMedicalStatusButton(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.more_info.medical_status.pregnant')),
             ],
           ),
           const SizedBox(height: 15),
@@ -70,7 +72,7 @@ class _AddAnimalThirdStepState extends State<AddAnimalThirdStep> {
             height: 80.h,
             controller: widget.con.commentsController,
             borderStyleFlag: 1,
-            hint: "Comments",
+            hint: Provider.of<AppLanguage>(context, listen: false).translate('add_animal.more_info.comments'),
             textInputType: TextInputType.multiline,
           ),
 
@@ -95,12 +97,12 @@ class _AddAnimalThirdStepState extends State<AddAnimalThirdStep> {
                 },
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.arrow_back, size: 18),
                       SizedBox(width: 5),
-                      Text("Back"),
+                      Text(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.navigation.back')),
                     ],
                   ),
                 ),
@@ -121,10 +123,10 @@ class _AddAnimalThirdStepState extends State<AddAnimalThirdStep> {
                 },
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text("Done"),
+                      Text(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.navigation.done')),
                       SizedBox(width: 5),
                       Icon(Icons.check, size: 18),
                     ],

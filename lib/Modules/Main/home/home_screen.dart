@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:alifi/Modules/Auth/login_screen.dart';
 import 'package:alifi/Modules/add_animal/add_animal_screen.dart';
+import 'package:alifi/Utilities/text_style_helper.dart';
+import 'package:alifi/Utilities/theme_helper.dart';
 import 'package:alifi/Widgets/login_widget.dart';
 import 'package:alifi/core/Language/locales.dart';
 import 'package:alifi/generated/assets.dart';
@@ -345,20 +347,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Welcome',
-                    style: TextStyle(
-                      color: Color(0xFFFF914C), // Orange
-                      fontSize: 22.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    TranslationService.instance.translate('auth.welcome'),
+                    style: TextStyleHelper.of(context).s28InterTextStyle().copyWith(color: ThemeClass.of(context).primaryColor),
                   ),
                   Text(
                     'Fares Walid',
-                    style: TextStyle(
-                      color: Color(0xFF386641), // Green
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyleHelper.of(context).s16RegTextStyle.copyWith(color: ThemeClass.of(context).secondaryColor),
                   ),
                 ],
               ),
@@ -462,12 +456,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Available Services',
-                    style: TextStyle(
-                      color: Color(0xFF386641), // Green
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    TranslationService.instance.translate('home.available_services'),
+                    style: TextStyleHelper.of(context).s18RegTextStyle.copyWith(color: ThemeClass.of(context).secondaryColor),
+
                   ),
                   Container(
                     width: 100.w,
@@ -510,48 +501,49 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     switch (index) {
       case 0:
         return {
-          'title': 'Lost Animals',
-          'subtitle': 'Missing animals',
-          'footerColor': Color(0xFFFF914C), // Orange
+          'title': TranslationService.instance.translate('home.lost_animals'),
+          'subtitle': TranslationService.instance.translate('home.lost_animals_subtitle'),
+          'footerColor': ThemeClass.of(context).primaryColor, // Orange
           'icon': Assets.imagesLostAnimal,
           'badgeNumber': (_totalLostPets+_totalFoundPets).toString(),
-          'badgeColor': Color(0xFF386641), // Green
+          'badgeColor': ThemeClass.of(context).secondaryColor, // Green
           'onTap': _navigateToLostPets,
         };
       case 1:
         return {
-          'title': 'Store',
-          'subtitle': 'Pet supplies',
-          'footerColor': Color(0xFF386641), // Blue
+          'title': TranslationService.instance.translate('home.pet_stores'),
+          'subtitle': TranslationService.instance.translate('home.pet_stores_subtitle'),
+          'footerColor': ThemeClass.of(context).secondaryColor, // Greeue
           'icon': Assets.imagesStore,
           'badgeNumber': "0",
-          'badgeColor': Color(0xFFFF914C), // Orange
+          'badgeColor': ThemeClass.of(context).primaryColor, // Orange
           'onTap': _navigateToStores,
         };
       case 2:
         return {
-          'title': 'Breeding',
-          'subtitle': 'Pet breeding',
-          'footerColor': Color(0xFFFF914C), // Purple
-          'icon': Assets.imagesLostAnimal,
-          'badgeNumber': _totalBreedingPets.toString(),
-          'badgeColor': Color(0xFF386641), // Orange
-          'onTap': _navigateToMating,
+          'title': TranslationService.instance.translate('home.adoption_animals'),
+          'subtitle': TranslationService.instance.translate('home.adoption_animals_subtitle'),
+          'footerColor': ThemeClass.of(context).primaryColor, // Green
+          'icon': Assets.imagesAdoption,
+          'badgeNumber': _totalAdoptionPets.toString(),
+          'badgeColor': ThemeClass.of(context).secondaryColor, // Orange
+          'onTap': _navigateToAdoption,
         };
       case 3:
         return {
-          'title': 'Adoption',
-          'subtitle': 'Adopt a pet',
-          'footerColor': Color(0xFF386641), // Green
-          'icon': Assets.imagesLostAnimal,
-          'badgeNumber': _totalAdoptionPets.toString(),
-          'badgeColor': Color(0xFFFF914C), // Orange
-          'onTap': _navigateToAdoption,
+          'title': TranslationService.instance.translate('home.mating_animals'),
+          'subtitle': TranslationService.instance.translate('home.mating_animals_subtitle'),
+          'footerColor': ThemeClass.of(context).secondaryColor, // Purple
+          'icon': Assets.imagesMating,
+          'badgeNumber': _totalBreedingPets.toString(),
+          'badgeColor': ThemeClass.of(context).primaryColor, // Orange
+          'onTap': _navigateToMating,
         };
+
       default:
         return {
-          'title': 'Service',
-          'subtitle': 'Coming soon',
+          'title': TranslationService.instance.translate('common.service'),
+          'subtitle': TranslationService.instance.translate('common.coming_soon'),
           'footerColor': Colors.grey,
           'icon': Icons.help,
           'badgeNumber': '0',
@@ -629,21 +621,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             children: [
                               Text(
                                 data['title'],
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: TextStyleHelper.of(context).s18RegTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
 
                               Text(
                                 data['subtitle'],
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.8),
-                                  fontSize: 12.sp,
-                                ),
+                                style: TextStyleHelper.of(context).s10RegTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
+
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -687,11 +673,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return GestureDetector(
       onTap: _navigateToVeterinary,
       child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 20.w),
+        margin: EdgeInsets.symmetric(horizontal: 30.w),
         height: 80.h,
         decoration: BoxDecoration(
-          color: Color(0xFF386641), // Green
-          borderRadius: BorderRadius.circular(20.r),
+          color: ThemeClass.of(context).secondaryColor, // Green
+          borderRadius: BorderRadius.circular(24.r),
         ),
         child: Row(
           children: [
@@ -705,22 +691,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Chat with Dr Now',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      TranslationService.instance.translate('chat_with_dr_now'),
+                      style: TextStyleHelper.of(context).s18RegTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: 4.h),
                     Text(
-                      'we have the best doctors in this app',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
-                        fontSize: 12.sp,
-                      ),
+                      TranslationService.instance.translate('we_have_the_best_doctors_in_this_app'),
+                      style: TextStyleHelper.of(context).s10RegTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
+
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -730,7 +710,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             // Chat Icon with Notification
             Padding(
-              padding: EdgeInsets.only(right: 20.w),
+              padding: EdgeInsets.symmetric(horizontal: 8.w),
               child: Stack(
                 children: [
                   SvgPicture.asset(Assets.iconsChat, height: 27.r, width: 27.r),
@@ -788,12 +768,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Pet Stores'),
-        content: Text('قريباً'),
+        title: Text(TranslationService.instance.translate('home.pet_stores')),
+        content: Text(TranslationService.instance.translate('common.coming_soon')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('موافق'),
+            child: Text(TranslationService.instance.translate('common.ok')),
           ),
         ],
       ),

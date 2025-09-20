@@ -73,8 +73,7 @@ class TextStyleHelper {
       getTextStyle(fontSize: 16, fontWeight: FontWeight.w600);
 
   // ----------- ready styles with custom font ------------
-  TextStyle s14InterTextStyle() =>
-      getCustomFontStyle(fontSize: 14, fontFamily: FontFamilyTypes.inter);
+  TextStyle s28InterTextStyle() => getCustomFontStyle(fontSize: 28, fontFamily: FontFamilyTypes.inter);
 
   TextStyle get s36ItimTextStyle => getCustomFontStyle(fontSize: 36, fontFamily: FontFamilyTypes.itim);
 
