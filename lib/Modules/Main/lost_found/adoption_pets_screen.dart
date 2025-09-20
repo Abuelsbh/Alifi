@@ -1,12 +1,16 @@
+import 'package:alifi/Modules/Main/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../Utilities/dialog_helper.dart';
+import '../../../Widgets/login_widget.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../Models/pet_report_model.dart';
 import '../../../Widgets/translated_text.dart';
 import '../../../Widgets/custom_card.dart';
 import '../../../Widgets/translated_custom_button.dart';
+import '../profile/simple_profile_screen.dart';
 import 'adoption_pet_details_screen.dart';
 import '../../add_animal/add_animal_screen.dart';
 import 'lost_found_screen.dart';
@@ -219,15 +223,22 @@ class _AdoptionPetsScreenState extends State<AdoptionPetsScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AddAnimalScreen(
-                reportType: ReportType.adoption,
-                title: 'إضافة حيوان للتبني',
+          if (AuthService.isAuthenticated) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AddAnimalScreen(
+                  reportType: ReportType.adoption,
+                  title: 'إضافة حيوان للتبني',
+                ),
               ),
-            ),
-          );
+            );
+          } else {
+            DialogHelper.custom(context: context).customDialog(
+              dialogWidget: LoginWidget(
+              ),
+            );
+          }
         },
         backgroundColor: AppTheme.primaryGreen,
         icon: Icon(

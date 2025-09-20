@@ -831,11 +831,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _navigateToProfile() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const SimpleProfileScreen(),
-      ),
-    );
+    if (AuthService.isAuthenticated) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SimpleProfileScreen(),
+        ),
+      );
+    } else {
+      DialogHelper.custom(context: context).customDialog(
+        dialogWidget: LoginWidget(
+          onLoginSuccess: () {
+            _dataLoaded = false;
+            _loadData();
+          },
+        ),
+      );
+    }
+
   }
 }

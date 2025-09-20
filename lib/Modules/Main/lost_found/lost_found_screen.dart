@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../Utilities/dialog_helper.dart';
+import '../../../Widgets/login_widget.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../Models/pet_report_model.dart';
 import '../../../Widgets/translated_custom_button.dart';
 import '../../../Widgets/translated_text.dart';
+import '../../../core/services/auth_service.dart';
 import 'lost_pets_tab.dart';
 import 'found_pets_tab.dart';
 import '../../add_animal/add_animal_screen.dart';
@@ -134,15 +137,23 @@ class _LostFoundScreenState extends State<LostFoundScreen>
                           type: ButtonType.secondary,
                           onPressed: () {
                             Navigator.pop(context);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const AddAnimalScreen(
-                                  reportType: ReportType.lost,
-                                  title: 'إضافة حيوان مفقود',
+                            if (AuthService.isAuthenticated) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const AddAnimalScreen(
+                                    reportType: ReportType.lost,
+                                    title: 'إضافة حيوان مفقود',
+                                  ),
                                 ),
-                              ),
-                            );
+                              );
+                            } else {
+                              DialogHelper.custom(context: context).customDialog(
+                                dialogWidget: LoginWidget(
+                                ),
+                              );
+                            }
+
                           },
                         ),
                       ),
@@ -154,15 +165,23 @@ class _LostFoundScreenState extends State<LostFoundScreen>
                           type: ButtonType.secondary,
                           onPressed: () {
                             Navigator.pop(context);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const AddAnimalScreen(
-                                  reportType: ReportType.found,
-                                  title: 'إضافة حيوان موجود',
+                            if (AuthService.isAuthenticated) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const AddAnimalScreen(
+                                    reportType: ReportType.found,
+                                    title: 'إضافة حيوان موجود',
+                                  ),
                                 ),
-                              ),
-                            );
+                              );
+                            } else {
+                              DialogHelper.custom(context: context).customDialog(
+                                dialogWidget: LoginWidget(
+                                ),
+                              );
+                            }
+
                           },
                         ),
                       ),

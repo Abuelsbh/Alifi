@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../Utilities/dialog_helper.dart';
+import '../../../Widgets/login_widget.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../Models/pet_report_model.dart';
 import '../../../Widgets/translated_text.dart';
 import '../../../Widgets/custom_card.dart';
+import '../../../core/services/auth_service.dart';
 import '../../../core/services/pet_reports_service.dart';
 import '../../add_animal/add_animal_screen.dart';
+import '../home/home_screen.dart';
 import 'breeding_pet_details_screen.dart';
 
 class BreedingPetsScreen extends StatefulWidget {
@@ -118,15 +122,23 @@ class _BreedingPetsScreenState extends State<BreedingPetsScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AddAnimalScreen(
-                reportType: ReportType.breeding,
-                title: 'إضافة حيوان للتزاوج',
+          if (AuthService.isAuthenticated) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AddAnimalScreen(
+                  reportType: ReportType.breeding,
+                  title: 'إضافة حيوان للتزاوج',
+                ),
               ),
-            ),
-          );
+            );
+          } else {
+            DialogHelper.custom(context: context).customDialog(
+              dialogWidget: LoginWidget(
+              ),
+            );
+          }
+
         },
         backgroundColor: AppTheme.primaryGreen,
         child: const Icon(Icons.add, color: Colors.white),

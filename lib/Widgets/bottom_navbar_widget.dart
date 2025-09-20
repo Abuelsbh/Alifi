@@ -7,10 +7,15 @@ import 'package:go_router/go_router.dart';
 import '../Modules/Auth/login_screen.dart';
 import '../Modules/Main/home/home_screen.dart';
 import '../Modules/Main/veterinary/enhanced_veterinary_screen.dart';
+import '../Modules/add_animal/add_animal_screen.dart';
+import '../Models/pet_report_model.dart';
 import '../Utilities/dialog_helper.dart';
+import '../Utilities/bottom_sheet_helper.dart';
 import '../core/firebase/firebase_config.dart';
 import '../core/services/auth_service.dart';
+import '../core/Theme/app_theme.dart';
 import 'login_widget.dart';
+import 'translated_text.dart';
 
 enum SelectedBottomNavBar { home, lostFound, veterinary, profile }
 
@@ -54,10 +59,18 @@ class BottomNavBarWidget extends StatelessWidget {
           return GestureDetector(
             onTap: () {
               if (onTap != null) {
-                onTap!(item.type);
+                if (item.type == SelectedBottomNavBar.lostFound) {
+                  _showAnimalTypeBottomSheet(context);
+                } else {
+                  onTap!(item.type);
+                }
               } else {
                 if (AuthService.isAuthenticated) {
-                  context.pushNamed(item.routeName ?? 'home');
+                  if (item.type == SelectedBottomNavBar.lostFound) {
+                    _showAnimalTypeBottomSheet(context);
+                  } else {
+                    context.pushNamed(item.routeName ?? 'home');
+                  }
                 } else {
                   DialogHelper.custom(context: context).customDialog(
                     dialogWidget: LoginWidget(
@@ -77,19 +90,232 @@ class BottomNavBarWidget extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: SvgPicture.asset(
+                child: _buildIcon(
                   item.iconPath,
-                  height: 24.r,
-                  width: 24.r,
-                  colorFilter: ColorFilter.mode(
-                    isActive ? const Color(0xFFF36F21) : Colors.white,
-                    BlendMode.srcIn,
-                  ),
+                  isActive ? const Color(0xFFF36F21) : Colors.white,
                 ),
               ),
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+
+  void _showAnimalTypeBottomSheet(BuildContext context) {
+    BottomSheetHelper.bottomSheet(
+      context: context,
+      widget: const AnimalTypeSelectionBottomSheet(),
+      topBorderRadius: 20,
+    );
+  }
+
+  Widget _buildIcon(String iconPath, Color color) {
+    if (iconPath.endsWith('.svg')) {
+      return SvgPicture.asset(
+        iconPath,
+        height: 24.r,
+        width: 24.r,
+        colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+      );
+    } else {
+      // للصور PNG
+      return Image.asset(
+        iconPath,
+        height: 24.r,
+        width: 24.r,
+        color: color,
+      );
+    }
+  }
+}
+
+class AnimalTypeSelectionBottomSheet extends StatelessWidget {
+  const AnimalTypeSelectionBottomSheet({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(20.w),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle bar
+          Container(
+            width: 40.w,
+            height: 4.h,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2.r),
+            ),
+          ),
+          SizedBox(height: 20.h),
+
+          // Title
+          Text(
+            'اختر نوع الإعلان',
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.lightOnSurface,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'ما نوع الحيوان الذي تريد إضافته؟',
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: AppTheme.lightOnBackground,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 30.h),
+
+          // Options
+                     _buildAnimalTypeOption(
+             context: context,
+             icon: Icons.search,
+             title: 'حيوان مفقود',
+             subtitle: 'أبلغ عن حيوان مفقود',
+             color: AppTheme.error,
+             onTap: () => _navigateToAddAnimal(context, ReportType.lost),
+           ),
+           SizedBox(height: 15.h),
+           
+           _buildAnimalTypeOption(
+             context: context,
+             icon: Icons.pets,
+             title: 'تم العثور على حيوان',
+             subtitle: 'أبلغ عن حيوان وجدته',
+             color: AppTheme.success,
+             onTap: () => _navigateToAddAnimal(context, ReportType.found),
+           ),
+           SizedBox(height: 15.h),
+           
+           _buildAnimalTypeOption(
+             context: context,
+             icon: Icons.favorite,
+             title: 'حيوان للتبني',
+             subtitle: 'اعرض حيوان للتبني',
+             color: AppTheme.primaryGreen,
+             onTap: () => _navigateToAddAnimal(context, ReportType.adoption),
+           ),
+           SizedBox(height: 15.h),
+           
+           _buildAnimalTypeOption(
+             context: context,
+             icon: Icons.family_restroom,
+             title: 'حيوان للتزاوج',
+             subtitle: 'اعرض حيوان للتزاوج',
+             color: AppTheme.primaryOrange,
+             onTap: () => _navigateToAddAnimal(context, ReportType.breeding),
+           ),
+          
+          SizedBox(height: 30.h),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnimalTypeOption({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 50.w,
+              height: 50.h,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 24.sp,
+              ),
+            ),
+            SizedBox(width: 16.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.lightOnSurface,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      color: AppTheme.lightOnBackground,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: color,
+              size: 18.sp,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _navigateToAddAnimal(BuildContext context, ReportType reportType) {
+    // إغلاق bottom sheet أولاً
+    Navigator.of(context).pop();
+    
+    // تحديد العنوان بناءً على نوع التقرير
+    String title;
+    switch (reportType) {
+      case ReportType.lost:
+        title = 'إبلاغ عن حيوان مفقود';
+        break;
+      case ReportType.found:
+        title = 'إبلاغ عن حيوان موجود';
+        break;
+      case ReportType.adoption:
+        title = 'عرض حيوان للتبني';
+        break;
+      case ReportType.breeding:
+        title = 'عرض حيوان للتزاوج';
+        break;
+    }
+    
+    // التنقل إلى صفحة إضافة الحيوان مع تمرير النوع والعنوان
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddAnimalScreen(
+          reportType: reportType,
+          title: title,
+        ),
       ),
     );
   }
@@ -117,9 +343,9 @@ class _BottomNavBarItemModel {
 
   static _BottomNavBarItemModel lostFound = _BottomNavBarItemModel(
     title: "Lost & Found",
-    iconPath: Assets.iconsSettings,
+    iconPath: Assets.imagesLostAnimal, // استخدام أيقونة أكثر مناسبة
     type: SelectedBottomNavBar.lostFound,
-    routeName: 'lostFound', // استخدام route name
+    // لا routeName لأنه سيعرض bottom sheet
   );
 
   static _BottomNavBarItemModel veterinary = _BottomNavBarItemModel(
