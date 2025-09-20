@@ -1,4 +1,6 @@
+import 'package:alifi/Utilities/text_style_helper.dart';
 import 'package:alifi/Utilities/theme_helper.dart';
+import 'package:alifi/core/Font/font_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -30,13 +32,9 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 20),
-          const Text(
+          Text(
             "Pet Details",
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+            style: TextStyleHelper.of(context).s36ItimTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
           ),
           const SizedBox(height: 30),
 
@@ -171,8 +169,8 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
 
   Widget _buildTextField(TextEditingController controller, String hint) {
     return CustomTextFieldWidget(
-      width: 280.w,
-      height: 42.h,
+      width: 240.w,
+      height: 39.h,
       controller: controller,
       borderStyleFlag: 1,
       hint: hint,
@@ -203,11 +201,8 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
               ),
               Text(
                 "${widget.con.age}",
-                style: const TextStyle(
-                  fontSize: 20,
-                  color: Colors.orange,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyleHelper.of(context).s18RegTextStyle.copyWith(color: Colors.black),
+
               ),
               IconButton(
                 icon: const Icon(Icons.chevron_right, color: Colors.orange),

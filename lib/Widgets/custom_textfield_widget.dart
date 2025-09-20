@@ -132,12 +132,13 @@ class CustomTextFieldWidget extends StatelessWidget {
         InputBorder? focusedBorder}) {
     return SizedBox(
       width: width,
-      height: height ?? 56.h,
+      height: height ?? 42.h,
       child: TextFormField(
         textInputAction: textInputAction,
         onFieldSubmitted: onSave,
         focusNode: unitCodeCtrlFocusNode,
         readOnly: readOnly ?? false,
+        textAlign: TextAlign.center,
         textAlignVertical: TextAlignVertical.center,
         validator: validator,
         onTap: onTap,
@@ -160,7 +161,7 @@ class CustomTextFieldWidget extends StatelessWidget {
           fillColor: backGroundColor,
           filled: backGroundColor != null,
           hintText: hint,
-          prefixIcon: prefixIcon ?? SizedBox(width: 20.w),
+          prefixIcon: prefixIcon,
           suffixIcon: suffixIcon == null
               ? SizedBox(width: 5.w)
               : InkWell(
@@ -171,12 +172,14 @@ class CustomTextFieldWidget extends StatelessWidget {
             highlightColor: Colors.transparent,
             child: SizedBox(width: 30.w, height: 60, child: suffixIcon),
           ),
-          contentPadding:
-          EdgeInsets.symmetric(vertical: 16.h, horizontal: 28.w),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 10.w,
+            vertical: 10.h,
+          ),
           hintStyle: hintStyle ??
               TextStyleHelper
                   .of(context)
-                  .s16SemiBoldTextStyle
+                  .s14SemiBoldTextStyle
                   .copyWith(
                   color: ThemeClass
                       .of(context)
@@ -192,9 +195,7 @@ class CustomTextFieldWidget extends StatelessWidget {
                 .of(context)
                 .s16SemiBoldTextStyle
                 .copyWith(
-                color: ThemeClass
-                    .of(context)
-                    .darkGreyColor),
+                color: Colors.black),
       ),
     );
   }

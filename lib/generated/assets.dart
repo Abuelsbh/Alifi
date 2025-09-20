@@ -15,12 +15,14 @@ class Assets {
   static const String iconsProfile = 'assets/icons/profile.svg';
   static const String iconsSettings = 'assets/icons/settings.svg';
   static const String iconsSplashIcon = 'assets/icons/splash_icon.png';
+  static const String iconsUpload = 'assets/icons/upload.svg';
   static const String imagesAlifi = 'assets/images/alifi.png';
   static const String imagesAlifi2 = 'assets/images/alifi2.png';
   static const String imagesBackground = 'assets/images/background.png';
   static const String imagesBackground2 = 'assets/images/background2.png';
   static const String imagesBackground3 = 'assets/images/background3.png';
   static const String imagesDottedPattern = 'assets/images/dotted_pattern.svg';
+  static const String imagesLogo = 'assets/images/logo.jpg';
   static const String imagesLogo2 = 'assets/images/logo2.png';
   static const String imagesLostAnimal = 'assets/images/lostAnimal.png';
   static const String imagesStore = 'assets/images/store.png';

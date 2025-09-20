@@ -10,7 +10,7 @@ import '../../Widgets/translated_text.dart';
 
 class SplashScreen extends StatefulWidget {
   static const String routeName = '/';
-  
+
   const SplashScreen({super.key});
 
   @override
@@ -110,7 +110,7 @@ class _SplashScreenState extends State<SplashScreen>
     // Wait for all animations to complete then navigate
     await Future.delayed(const Duration(milliseconds: 2000));
     if (mounted) {
-      context.go('/main');
+      context.go('/home');
       // // Check if Firebase is in demo mode
       // if (FirebaseConfig.isDemoMode) {
       //   // Firebase not configured, show demo mode screen
@@ -162,10 +162,10 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                 ),
-                
+
                 // Floating particles
                 ...List.generate(20, (index) => _buildFloatingParticle(index)),
-                
+
                 // Main content
                 Center(
                   child: Column(
@@ -203,9 +203,9 @@ class _SplashScreenState extends State<SplashScreen>
                           );
                         },
                       ),
-                      
+
                       SizedBox(height: 40.h),
-                      
+
                       // App name
                       AnimatedBuilder(
                         animation: _textController,
@@ -248,9 +248,9 @@ class _SplashScreenState extends State<SplashScreen>
                           );
                         },
                       ),
-                      
+
                       SizedBox(height: 60.h),
-                      
+
                       // Loading indicator
                       AnimatedBuilder(
                         animation: _textController,
@@ -286,7 +286,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ],
                   ),
                 ),
-                
+
                 // Bottom decoration
                 Positioned(
                   bottom: 0,
@@ -327,7 +327,7 @@ class _SplashScreenState extends State<SplashScreen>
     final size = (random % 20 + 10).toDouble();
     final left = (random % 100).toDouble();
 
-    
+
     return AnimatedBuilder(
       animation: _backgroundController,
       builder: (context, child) {
@@ -380,19 +380,19 @@ class SplashBackgroundPainter extends CustomPainter {
       final path = Path();
       final waveHeight = 20.0 + (i * 10);
       final waveOffset = animation.value * 100 * (i + 1);
-      
+
       path.moveTo(0, size.height * 0.7 + waveOffset);
-      
+
       for (double x = 0; x < size.width; x += 10) {
-        final y = size.height * 0.7 + 
-                 waveOffset + 
-                 (waveHeight * (i + 1)) *
-                 (animation.value * 0.5 + 0.5) * 
-                 (x / size.width) * 
-                 (1 + 0.5 * (i + 1));
+        final y = size.height * 0.7 +
+            waveOffset +
+            (waveHeight * (i + 1)) *
+                (animation.value * 0.5 + 0.5) *
+                (x / size.width) *
+                (1 + 0.5 * (i + 1));
         path.lineTo(x, y);
       }
-      
+
       canvas.drawPath(path, wavePaint);
     }
   }

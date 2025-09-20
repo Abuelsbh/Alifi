@@ -17,6 +17,7 @@ class ThemeModel extends ThemeExtension<ThemeModel>{
   final Color warningColor;
 
 
+
   ThemeModel({
     this.isDark = false,
     required this.primaryColor,

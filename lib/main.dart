@@ -43,7 +43,7 @@ Future<void> main() async {
       print('Could not initialize demo data: $e');
     }
   }
-  
+
   runApp(
       MultiProvider(
         providers: [
@@ -51,7 +51,7 @@ Future<void> main() async {
           ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
           ChangeNotifierProvider<FontProvider>(create: (_) => FontProvider()),
         ],
-      child: const AlifiApp(),
+        child: const AlifiApp(),
       )
   );
 }
@@ -65,7 +65,7 @@ class AlifiApp extends StatelessWidget {
     final appTheme = Provider.of<ThemeProvider>(context);
     appLan.fetchLocale();
     appTheme.fetchTheme();
-    
+
     return LayoutBuilder(
       builder: (context, constraints) {
         return ScreenUtilInit(

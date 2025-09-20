@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../Utilities/shared_preferences.dart';
 
-enum FontFamilyTypes {alexandria,cairo}
+enum FontFamilyTypes {poppins,inter,itim}
 
 class FontProvider extends ChangeNotifier {
 
   static const _maxScaleSize = 3;
   static const _minScaleSize = 0.3;
   static const double _defaultFontScaleSize = 1;
-  static const FontFamilyTypes _defaultFontFamily = FontFamilyTypes.alexandria;
+  static const FontFamilyTypes _defaultFontFamily = FontFamilyTypes.poppins;
+  static const FontFamilyTypes _secondaryFontFamily = FontFamilyTypes.inter;
+  static const FontFamilyTypes _titleFontFamily = FontFamilyTypes.itim;
+
 
   double _fontSizeScale = 1;
   double get fontSizeScale => _fontSizeScale;

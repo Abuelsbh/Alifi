@@ -20,7 +20,7 @@
     "name": "Name",
     "confirm_password": "Confirm Password",
     "forgot_password": "Forgot Password?",
-    "dont_have_account": "Don't have an account?",
+    "dont_have_account": "if you don’t have account please",
     "already_have_account": "Already have an account?"
   },
   "profile": {

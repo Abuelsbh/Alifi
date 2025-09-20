@@ -2,6 +2,7 @@ import 'package:alifi/Utilities/theme_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../Utilities/text_style_helper.dart';
 import '../../../Widgets/custom_textfield_widget.dart';
 import '../add_animal_controller.dart';
 
@@ -30,13 +31,9 @@ class _AddAnimalSecondStepState extends State<AddAnimalSecondStep> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 20),
-          const Text(
+          Text(
             "Contact Info.",
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+            style: TextStyleHelper.of(context).s36ItimTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
           ),
           const SizedBox(height: 30),
 

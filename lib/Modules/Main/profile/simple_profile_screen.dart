@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import '../../../Widgets/bottom_navbar_widget.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/auth_service.dart';
 import 'my_pets_screen.dart';
@@ -47,6 +48,9 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
+      bottomNavigationBar: BottomNavBarWidget(
+        selected: SelectedBottomNavBar.profile,
+      ),
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(
@@ -246,7 +250,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
               try {
                 await AuthService.signOut();
                 if (mounted) {
-                  context.go('/login');
+                  context.go('/home');
                 }
               } catch (e) {
                 if (mounted) {

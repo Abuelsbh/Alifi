@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:alifi/Modules/Auth/login_screen.dart';
 import 'package:alifi/Modules/add_animal/add_animal_screen.dart';
 import 'package:alifi/Widgets/login_widget.dart';
@@ -9,6 +10,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../Utilities/bottom_sheet_helper.dart';
 import '../../../Utilities/dialog_helper.dart';
 import '../../../Utilities/strings.dart';
+import '../../../Widgets/bottom_navbar_widget.dart';
+import '../../../Widgets/main_navigation_screen.dart';
 import '../../../core/firebase/firebase_config.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/pet_reports_service.dart';
@@ -24,6 +27,8 @@ import '../lost_found/breeding_pets_screen.dart'; // Added for BreedingPetsScree
 import '../../../Models/pet_report_model.dart';
 
 class HomeScreen extends StatefulWidget {
+
+  static const String routeName = '/Home';
   const HomeScreen({super.key});
 
   @override
@@ -50,6 +55,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _totalVeterinarians = 0;
   int _unreadMessages = 0;
   bool _isLoading = true;
+
+  // Stream subscriptions to manage
+  StreamSubscription? _lostPetsSubscription;
+  StreamSubscription? _foundPetsSubscription;
+  StreamSubscription? _unreadMessagesSubscription;
+  StreamSubscription? _veterinariansSubscription;
+  Timer? _refreshTimer;
+  bool _dataLoaded = false;
 
 
   @override
@@ -116,15 +129,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _loadData() async {
+    // تجنب التحميل المتكرر
+    if (_dataLoaded) return;
+
     try {
       if (AuthService.isAuthenticated) {
+        // Cancel existing subscriptions before creating new ones
+        await _cancelSubscriptions();
+
         // Get real statistics from Firebase
         final lostPetsStream = PetReportsService.getLostPetsStream();
         final foundPetsStream = PetReportsService.getFoundPetsStream();
         final userId = AuthService.userId;
 
         // Listen to streams and update counts
-        lostPetsStream.listen((lostPets) {
+        _lostPetsSubscription = lostPetsStream.listen((lostPets) {
           if (mounted) {
             setState(() {
               _totalLostPets = lostPets.length;
@@ -132,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           }
         });
 
-        foundPetsStream.listen((foundPets) {
+        _foundPetsSubscription = foundPetsStream.listen((foundPets) {
           if (mounted) {
             setState(() {
               _totalFoundPets = foundPets.length;
@@ -142,12 +161,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
         // Load adoption pets directly from Firebase
         _loadAdoptionPetsCount();
-        
+
         // Load breeding pets directly from Firebase
         _loadBreedingPetsCount();
-        
+
         // Refresh adoption and breeding count every 30 seconds
-        Timer.periodic(const Duration(seconds: 30), (timer) {
+        _refreshTimer?.cancel(); // Cancel existing timer
+        _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
           if (mounted) {
             _loadAdoptionPetsCount();
             _loadBreedingPetsCount();
@@ -159,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         if (userId != null) {
           // Get unread messages count
           final unreadStream = ChatService.getUnreadMessageCountStream(userId);
-          unreadStream.listen((count) {
+          _unreadMessagesSubscription = unreadStream.listen((count) {
             if (mounted) {
               setState(() {
                 _unreadMessages = count;
@@ -170,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
         // Get veterinarians count
         final vetsStream = ChatService.getVeterinariansStream();
-        vetsStream.listen((vets) {
+        _veterinariansSubscription = vetsStream.listen((vets) {
           if (mounted) {
             setState(() {
               _totalVeterinarians = vets.length;
@@ -179,6 +199,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             _shimmerController.stop();
           }
         });
+
+        _dataLoaded = true;
       }
     } catch (e) {
       if (mounted) {
@@ -188,6 +210,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _shimmerController.stop();
       }
     }
+  }
+
+  Future<void> _cancelSubscriptions() async {
+    await _lostPetsSubscription?.cancel();
+    await _foundPetsSubscription?.cancel();
+    await _unreadMessagesSubscription?.cancel();
+    await _veterinariansSubscription?.cancel();
+    _refreshTimer?.cancel();
   }
 
   Future<void> _loadAdoptionPetsCount() async {
@@ -230,12 +260,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _pulseController.dispose();
     _floatingController.dispose();
     _shimmerController.dispose();
+
+    // Cancel all subscriptions to prevent memory leaks
+    _cancelSubscriptions();
+
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: BottomNavBarWidget(
+        selected: SelectedBottomNavBar.home,
+      ),
       body: Container(
         color: Colors.white,
         child: SafeArea(
@@ -765,10 +802,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _navigateToVeterinary() {
     if (FirebaseConfig.isDemoMode) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const LoginScreen(),
+      DialogHelper.custom(context: context).customDialog(
+        dialogWidget: LoginWidget(
+          onLoginSuccess: () {
+            _dataLoaded = false;
+            _loadData();
+          },
         ),
       );
     } else if (AuthService.isAuthenticated) {
@@ -782,10 +821,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       DialogHelper.custom(context: context).customDialog(
         dialogWidget: LoginWidget(
           onLoginSuccess: () {
-            // Refresh the home screen after successful login
-            setState(() {
-              _loadData();
-            });
+            _dataLoaded = false;
+            _loadData();
           },
         ),
       );

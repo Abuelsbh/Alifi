@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../Widgets/bottom_navbar_widget.dart';
+import '../../../Widgets/main_navigation_screen.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/chat_service.dart';
@@ -9,6 +11,7 @@ import '../../../Models/chat_model.dart';
 import 'enhanced_chat_screen.dart';
 
 class EnhancedVeterinaryScreen extends StatefulWidget {
+  static const String routeName = '/EnhancedVeterinaryScreen';
   const EnhancedVeterinaryScreen({super.key});
 
   @override
@@ -24,7 +27,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
   List<Map<String, dynamic>> _filteredVeterinarians = [];
   List<ChatModel> _chats = [];
   bool _isLoading = true;
-  
+
   // Stream subscriptions
   StreamSubscription? _veterinariansSubscription;
   StreamSubscription? _chatsSubscription;
@@ -58,7 +61,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
   Future<void> _loadData() async {
     // Cancel existing subscriptions
     await _cancelSubscriptions();
-    
+
     setState(() {
       _isLoading = true;
     });
@@ -66,7 +69,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
     try {
       // Clear all caches to ensure fresh data
       ChatService.clearAllCaches();
-      
+
       // Load veterinarians with real-time stream
       _veterinariansSubscription = ChatService.getVeterinariansStream().listen((vets) {
         if (mounted) {
@@ -75,7 +78,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
             _filteredVeterinarians = vets;
             _isLoading = false;
           });
-          
+
           // Log for debugging
           print('Loaded ${vets.length} veterinarians');
           if (vets.isNotEmpty) {
@@ -128,8 +131,8 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
         final name = vet['name']?.toString().toLowerCase() ?? '';
         final specialization = vet['specialization']?.toString().toLowerCase() ?? '';
         final searchLower = query.toLowerCase();
-        
-        return name.contains(searchLower) || 
+
+        return name.contains(searchLower) ||
                specialization.contains(searchLower);
       }).toList();
     });
@@ -149,7 +152,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
     try {
       final userId = AuthService.userId!;
       final vetId = vet['id'] ?? '';
-      
+
       // Create or get existing chat
       final chatId = await ChatService.createChatWithVet(
         userId: userId,
@@ -185,6 +188,10 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
+      bottomNavigationBar: BottomNavBarWidget(
+        selected: SelectedBottomNavBar.veterinary,
+      ),
+      //bottomNavigationBar: MainNavigationScreen(initialSelected: SelectedBottomNavBar.veterinary),
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(
@@ -199,7 +206,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
           IconButton(
-            icon: _isLoading 
+            icon: _isLoading
               ? SizedBox(
                   width: 20.w,
                   height: 20.w,
@@ -257,7 +264,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
             ),
           ),
         ),
-        
+
         // Veterinarians List
         Expanded(
           child: _isLoading
@@ -265,16 +272,24 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
               : _filteredVeterinarians.isEmpty
                   ? _buildEmptyState()
                   : ListView.builder(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                      itemCount: _filteredVeterinarians.length,
-                      itemBuilder: (context, index) {
-                        final vet = _filteredVeterinarians[index];
-                        return Padding(
-                          padding: EdgeInsets.only(bottom: 12.h),
-                          child: _buildVeterinarianCard(vet),
-                        );
-                      },
+            padding: EdgeInsets.symmetric(horizontal: 8.w),
+            itemCount: _filteredVeterinarians.length,
+            itemBuilder: (context, index) {
+              final vet = _filteredVeterinarians[index];
+              return Column(
+                children: [
+                  _buildVeterinarianCard(vet),
+                  if (index < _filteredVeterinarians.length - 1) // avoid last divider
+                    Divider(
+                      thickness: 1,
+                      color: Colors.grey.shade300,
+                      height: 16.h,
                     ),
+                ],
+              );
+            },
+          )
+
         ),
       ],
     );
@@ -414,165 +429,74 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
   }
 
   Widget _buildVeterinarianCard(Map<String, dynamic> vet) {
-    final isOnline = vet['isOnline'] ?? false;
-    final isAvailable = vet['isAvailable'] ?? true;
-    
     return CustomCard(
-      child: Padding(
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                // Profile photo
-                Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 30.r,
-                      backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
-                      backgroundImage: vet['profilePhoto'] != null && vet['profilePhoto'].isNotEmpty
-                          ? NetworkImage(vet['profilePhoto'])
-                          : null,
-                      child: vet['profilePhoto'] == null || vet['profilePhoto'].isEmpty
-                          ? Icon(
-                              Icons.person,
-                              size: 30.sp,
-                              color: AppTheme.primaryGreen,
-                            )
-                          : null,
-                    ),
-                    // Online indicator
-                    if (isOnline)
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          width: 16.w,
-                          height: 16.h,
-                          decoration: BoxDecoration(
-                            color: Colors.green,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                SizedBox(width: 12.w),
-                
-                // Vet info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        vet['name'] ?? 'طبيب بيطري',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: 4.h),
-                      Text(
-                        vet['specialization'] ?? 'طب بيطري عام',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.primaryGreen,
-                        ),
-                      ),
-                      SizedBox(height: 4.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.star,
-                            size: 16.sp,
-                            color: Colors.amber,
-                          ),
-                          SizedBox(width: 4.w),
-                          Text(
-                            '${vet['rating'] ?? 4.5}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          Text(
-                            ' (${vet['totalReviews'] ?? 0} تقييم)',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Status and action
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                      decoration: BoxDecoration(
-                        color: isOnline ? Colors.green.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: Text(
-                        isOnline ? 'متصل' : 'غير متصل',
-                        style: TextStyle(
-                          color: isOnline ? Colors.green : Colors.grey,
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    ElevatedButton(
-                      onPressed: isAvailable ? () => _startChatWithVet(vet) : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryGreen,
-                        foregroundColor: Colors.white,
-                        minimumSize: Size(80.w, 32.h),
-                        padding: EdgeInsets.symmetric(horizontal: 12.w),
-                      ),
-                      child: Text(
-                        'محادثة',
-                        style: TextStyle(fontSize: 12.sp),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            
-            if (vet['bio'] != null && vet['bio'].isNotEmpty) ...[
-              SizedBox(height: 12.h),
-              Text(
-                vet['bio'],
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-            
-            if (vet['consultationFee'] != null) ...[
-              SizedBox(height: 8.h),
-              Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              // Profile photo
+              Stack(
                 children: [
-                  Icon(Icons.monetization_on, size: 16.sp, color: AppTheme.primaryGreen),
-                  SizedBox(width: 4.w),
-                  Text(
-                    'رسوم الاستشارة: ${vet['consultationFee']} جنيه',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  CircleAvatar(
+                    radius: 30.r,
+                    backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+                    backgroundImage: vet['profilePhoto'] != null && vet['profilePhoto'].isNotEmpty
+                        ? NetworkImage(vet['profilePhoto'])
+                        : null,
+                    child: vet['profilePhoto'] == null || vet['profilePhoto'].isEmpty
+                        ? Icon(
+                      Icons.person,
+                      size: 30.sp,
                       color: AppTheme.primaryGreen,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    )
+                        : null,
                   ),
+                  // Online indicator
+
                 ],
               ),
+              SizedBox(width: 12.w),
+
+              // Vet info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      vet['name'] ?? '',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      vet['specialization'] ?? '',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.primaryGreen,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                  ],
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => _startChatWithVet(vet),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGreen,
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(80.w, 32.h),
+                  padding: EdgeInsets.symmetric(horizontal: 12.w),
+                ),
+                child: Text(
+                  'محادثة',
+                  style: TextStyle(fontSize: 12.sp),
+                ),
+              ),
             ],
-          ],
-        ),
-      ),
+          ),
+        ],
+      )
     );
   }
 
@@ -663,28 +587,28 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
   String _getVetNameFromChat(ChatModel chat) {
     final userId = AuthService.userId;
     if (userId == null) return 'طبيب بيطري';
-    
+
     // Get the other participant's name (not the current user)
     for (final participantId in chat.participants) {
       if (participantId != userId) {
         return chat.participantNames[participantId] ?? 'طبيب بيطري';
       }
     }
-    
+
     return 'طبيب بيطري';
   }
 
   String _getVetIdFromChat(ChatModel chat) {
     final userId = AuthService.userId;
     if (userId == null) return '';
-    
+
     // Get the other participant's ID (not the current user)
     for (final participantId in chat.participants) {
       if (participantId != userId) {
         return participantId;
       }
     }
-    
+
     return '';
   }
 } 

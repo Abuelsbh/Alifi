@@ -1,7 +1,11 @@
+import 'package:alifi/Modules/Main/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../Modules/Splash/splash_screen.dart';
 import '../Modules/Main/main_screen.dart';
+import '../Modules/Main/lost_found/lost_found_screen.dart';
+import '../Modules/Main/veterinary/enhanced_veterinary_screen.dart';
+import '../Modules/Main/profile/simple_profile_screen.dart';
 import '../Modules/Auth/login_screen.dart';
 import '../Modules/Auth/register_screen.dart';
 import '../Modules/Auth/demo_mode_screen.dart';
@@ -16,6 +20,7 @@ class GoRouterConfig{
     routes: <RouteBase>[
       GoRoute(
         path: SplashScreen.routeName,
+        name: 'splash',
         pageBuilder: (_, GoRouterState state) {
           return getCustomTransitionPage(
             state: state,
@@ -26,6 +31,7 @@ class GoRouterConfig{
       ),
       GoRoute(
         path: DemoModeScreen.routeName,
+        name: 'demo',
         pageBuilder: (_, GoRouterState state) {
           return getCustomTransitionPage(
             state: state,
@@ -36,6 +42,7 @@ class GoRouterConfig{
       ),
       GoRoute(
         path: LoginScreen.routeName,
+        name: 'login',
         pageBuilder: (_, GoRouterState state) {
           return getCustomTransitionPage(
             state: state,
@@ -46,6 +53,7 @@ class GoRouterConfig{
       ),
       GoRoute(
         path: RegisterScreen.routeName,
+        name: 'register',
         pageBuilder: (_, GoRouterState state) {
           return getCustomTransitionPage(
             state: state,
@@ -55,17 +63,52 @@ class GoRouterConfig{
         routes: const <RouteBase>[],
       ),
       GoRoute(
-        path: MainScreen.routeName,
+        path: HomeScreen.routeName,
+        name: 'home',
         pageBuilder: (_, GoRouterState state) {
           return getCustomTransitionPage(
             state: state,
-            child: const MainScreen(),
+            child: const HomeScreen(),
+          );
+        },
+        routes: const <RouteBase>[],
+      ),
+      GoRoute(
+        path: '/LostFoundScreen',
+        name: 'lostFound',
+        pageBuilder: (_, GoRouterState state) {
+          return getCustomTransitionPage(
+            state: state,
+            child: const LostFoundScreen(),
+          );
+        },
+        routes: const <RouteBase>[],
+      ),
+      GoRoute(
+        path: '/VeterinaryScreen',
+        name: 'veterinary',
+        pageBuilder: (_, GoRouterState state) {
+          return getCustomTransitionPage(
+            state: state,
+            child: const EnhancedVeterinaryScreen(),
+          );
+        },
+        routes: const <RouteBase>[],
+      ),
+      GoRoute(
+        path: '/ProfileScreen',
+        name: 'profile',
+        pageBuilder: (_, GoRouterState state) {
+          return getCustomTransitionPage(
+            state: state,
+            child: const SimpleProfileScreen(),
           );
         },
         routes: const <RouteBase>[],
       ),
       GoRoute(
         path: '/test-register',
+        name: 'testRegister',
         pageBuilder: (_, GoRouterState state) {
           return getCustomTransitionPage(
             state: state,
@@ -98,7 +141,6 @@ class GoRouterConfig{
     );
   }
 }
-
 
 
 

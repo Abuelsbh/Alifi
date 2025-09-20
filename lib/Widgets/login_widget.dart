@@ -1,3 +1,5 @@
+import 'package:alifi/Utilities/text_style_helper.dart';
+import 'package:alifi/Utilities/theme_helper.dart';
 import 'package:alifi/Widgets/signup_widget.dart';
 import 'package:alifi/generated/assets.dart';
 import 'package:flutter/cupertino.dart';
@@ -227,11 +229,9 @@ class _LoginWidgetState extends State<LoginWidget> {
             ),
             child: TextButton(
               onPressed: _forgotPassword,
-              child: const TranslatedText(
+              child: TranslatedText(
                 'auth.forgot_password',
-                style: TextStyle(
-                  color: Color(0xFF386641),
-                ),
+                style: TextStyleHelper.of(context).s10RegTextStyle.copyWith(color: ThemeClass.of(context).secondaryColor)
               ),
             ),
           ),
@@ -248,9 +248,9 @@ class _LoginWidgetState extends State<LoginWidget> {
 
           SizedBox(height: 20.h),
 
-          const TranslatedText(
+          TranslatedText(
             'auth.dont_have_account',
-            style: TextStyle(color: Colors.grey),
+            style: TextStyleHelper.of(context).s10RegTextStyle.copyWith(color: ThemeClass.of(context).secondaryColor)
           ),
           TextButton(
             onPressed: () {
@@ -259,12 +259,9 @@ class _LoginWidgetState extends State<LoginWidget> {
                 dialogWidget: const SignupWidget(),
               );
             },
-            child: const TranslatedText(
+            child: TranslatedText(
               'auth.signup',
-              style: TextStyle(
-                color: AppTheme.primaryGreen,
-                fontWeight: FontWeight.bold,
-              ),
+                style: TextStyleHelper.of(context).s10RegTextStyle.copyWith(color: ThemeClass.of(context).primaryColor)
             ),
           ),
 

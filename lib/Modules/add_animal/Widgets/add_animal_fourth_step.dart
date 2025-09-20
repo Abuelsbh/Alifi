@@ -1,9 +1,12 @@
 import 'dart:io';
 import 'package:alifi/Utilities/theme_helper.dart';
+import 'package:alifi/generated/assets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../Utilities/text_style_helper.dart';
 import '../add_animal_controller.dart';
 
 class AddAnimalFourthStep extends StatefulWidget {
@@ -32,13 +35,9 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 20),
-          const Text(
+          Text(
             "Pictures",
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+            style: TextStyleHelper.of(context).s36ItimTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
           ),
           const SizedBox(height: 30),
 
@@ -171,27 +170,12 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Upload Cloud Icon
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF914C).withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.cloud_upload_outlined,
-                size: 40,
-                color: Color(0xFFFF914C),
-              ),
+            SvgPicture.asset(
+              Assets.iconsUpload,
+              height: 48.h,
+              width: 48.w,
             ),
-            const SizedBox(height: 15),
-            const Text(
-              "Tap to upload photos",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            
           ],
         ),
       ),
@@ -315,29 +299,17 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
       children: [
         Text(
           "It must be in size 500*500 Pix",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyleHelper.of(context).s10RegTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
         ),
         const SizedBox(height: 5),
         Text(
           "At least 2 pic. & Maximum 10 Pic",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyleHelper.of(context).s10RegTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
         ),
         const SizedBox(height: 5),
         Text(
           "the pic must contain the real pet",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyleHelper.of(context).s10RegTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
         ),
       ],
     );

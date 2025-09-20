@@ -141,10 +141,6 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
         ),
       bottomNavigationBar: BottomNavBarWidget(
         selected: SelectedBottomNavBar.lostFound,
-        onTap: (selected) {
-          // Handle navigation to other pages
-          // You can add navigation logic here
-        },
       ),
     );
   }

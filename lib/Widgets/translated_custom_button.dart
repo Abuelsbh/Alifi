@@ -1,6 +1,9 @@
+import 'package:alifi/Utilities/router_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import '../Utilities/text_style_helper.dart';
+import '../Utilities/theme_helper.dart';
 import '../core/Theme/app_theme.dart';
 import '../core/Language/app_languages.dart';
 
@@ -140,10 +143,8 @@ class TranslatedCustomButton extends StatelessWidget {
           SizedBox(width: 8.w),
           Text(
             text,
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
-            ),
+              style: TextStyleHelper.of(currentContext_!).s14RegTextStyle.copyWith(color: ThemeClass.of(currentContext_!).backGroundColor)
+
           ),
         ],
       );
@@ -151,10 +152,8 @@ class TranslatedCustomButton extends StatelessWidget {
 
     return Text(
       text,
-      style: TextStyle(
-        fontSize: 16.sp,
-        fontWeight: FontWeight.w600,
-      ),
+        style: TextStyleHelper.of(currentContext_!).s14RegTextStyle.copyWith(color: ThemeClass.of(currentContext_!).backGroundColor)
+
     );
   }
 }

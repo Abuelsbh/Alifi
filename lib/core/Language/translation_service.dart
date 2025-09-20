@@ -10,29 +10,77 @@ class TranslationService {
   
   Map<String, dynamic> _translations = {};
   String _currentLanguage = 'en';
+  bool _isInitialized = false;
   
   String get currentLanguage => _currentLanguage;
   Map<String, dynamic> get translations => _translations;
+  bool get isInitialized => _isInitialized;
   
-  // تحميل ملف الترجمة
+  // تحميل ملف الترجمة مع معالجة آمنة للأخطاء
   Future<void> loadTranslations(String languageCode) async {
     try {
       final String jsonString = await rootBundle.loadString('i18n/$languageCode.json');
       _translations = json.decode(jsonString) as Map<String, dynamic>;
       _currentLanguage = languageCode;
+      _isInitialized = true;
       
       // حفظ اللغة المحددة
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('language', languageCode);
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('language', languageCode);
+      } catch (e) {
+        print('Warning: Could not save language preference: $e');
+      }
     } catch (e) {
-      print('Error loading translations: $e');
-      // استخدام اللغة الإنجليزية كاحتياطي
-      await loadTranslations('en');
+      print('Error loading translations for $languageCode: $e');
+      
+      // إذا فشل تحميل اللغة المطلوبة، جرب الإنجليزية
+      if (languageCode != 'en') {
+        print('Falling back to English translations');
+        await _loadFallbackTranslations();
+      } else {
+        // إذا فشلت الإنجليزية أيضاً، استخدم ترجمات افتراضية
+        _loadDefaultTranslations();
+      }
     }
   }
   
-  // الحصول على النص المترجم
+  // تحميل ترجمات افتراضية في حالة فشل تحميل الملفات
+  Future<void> _loadFallbackTranslations() async {
+    try {
+      final String jsonString = await rootBundle.loadString('i18n/en.json');
+      _translations = json.decode(jsonString) as Map<String, dynamic>;
+      _currentLanguage = 'en';
+      _isInitialized = true;
+    } catch (e) {
+      print('Fallback translation loading failed: $e');
+      _loadDefaultTranslations();
+    }
+  }
+  
+  // ترجمات افتراضية مبرمجة للحالات الطارئة
+  void _loadDefaultTranslations() {
+    _translations = {
+      'app_description': 'Pet Care Platform',
+      'loading': 'Loading...',
+      'welcome': 'Welcome',
+      'home': 'Home',
+      'profile': 'Profile',
+      'pets': 'Pets',
+      'veterinary': 'Veterinary',
+      'lost_found': 'Lost & Found',
+    };
+    _currentLanguage = 'en';
+    _isInitialized = true;
+    print('Using default translations');
+  }
+  
+  // الحصول على النص المترجم مع fallback آمن
   String translate(String key) {
+    if (!_isInitialized) {
+      return key; // إرجاع المفتاح إذا لم يتم التهيئة بعد
+    }
+    
     final keys = key.split('.');
     dynamic value = _translations;
     
@@ -47,14 +95,20 @@ class TranslationService {
     return value?.toString() ?? key;
   }
   
-  // تحميل اللغة المحفوظة
+  // تحميل اللغة المحفوظة مع معالجة آمنة
   Future<void> loadSavedLanguage() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedLanguage = prefs.getString('language') ?? 'en';
-    await loadTranslations(savedLanguage);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedLanguage = prefs.getString('language') ?? 'en';
+      await loadTranslations(savedLanguage);
+    } catch (e) {
+      print('Error loading saved language: $e');
+      // استخدام الإنجليزية كافتراضي
+      await loadTranslations('en');
+    }
   }
   
-  // تغيير اللغة
+  // تغيير اللغة مع معالجة آمنة
   Future<void> changeLanguage(String languageCode) async {
     await loadTranslations(languageCode);
   }
