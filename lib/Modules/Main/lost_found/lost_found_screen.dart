@@ -149,8 +149,7 @@ class _LostFoundScreenState extends State<LostFoundScreen>
                               );
                             } else {
                               DialogHelper.custom(context: context).customDialog(
-                                dialogWidget: LoginWidget(
-                                ),
+                                dialogWidget: const LoginWidget(),
                               );
                             }
 
@@ -177,8 +176,7 @@ class _LostFoundScreenState extends State<LostFoundScreen>
                               );
                             } else {
                               DialogHelper.custom(context: context).customDialog(
-                                dialogWidget: LoginWidget(
-                                ),
+                                dialogWidget: const LoginWidget(),
                               );
                             }
 

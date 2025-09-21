@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../Utilities/theme_helper.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/pet_reports_service.dart';
 import 'unified_pet_card.dart';
@@ -83,7 +84,7 @@ class _FoundPetsTabState extends State<FoundPetsTab> {
     return Column(
       children: [
         // Search and Filter Section
-        _buildSearchAndFilter(),
+        //_buildSearchAndFilter(),
         
         // Results
         Expanded(
@@ -97,89 +98,89 @@ class _FoundPetsTabState extends State<FoundPetsTab> {
     );
   }
 
-  Widget _buildSearchAndFilter() {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      child: Column(
-        children: [
-          // Search Bar
-          TextField(
-            controller: _searchController,
-            onChanged: (_) => _filterPets(),
-            decoration: InputDecoration(
-              hintText: 'ابحث عن الحيوانات الموجودة...',
-              prefixIcon: Icon(Icons.search, color: AppTheme.primaryGreen),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: Colors.grey[100],
-            ),
-          ),
-          
-          SizedBox(height: 12.h),
-          
-          // Filter Options
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _selectedPetType,
-                  hint: const Text('نوع الحيوان'),
-                  decoration: InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                  items: ['كلب', 'قطة', 'أرنب', 'طائر', 'أخرى'].map((type) {
-                    return DropdownMenuItem(value: type, child: Text(type));
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedPetType = value;
-                    });
-                    _filterPets();
-                  },
-                ),
-              ),
-              
-              SizedBox(width: 12.w),
-              
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _selectedBreed,
-                  hint: const Text('السلالة'),
-                  decoration: InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                  items: ['جولدن ريتريفر', 'شيرازي', 'سيامي', 'بلدي'].map((breed) {
-                    return DropdownMenuItem(value: breed, child: Text(breed));
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedBreed = value;
-                    });
-                    _filterPets();
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildSearchAndFilter() {
+  //   return Container(
+  //     padding: EdgeInsets.all(16.w),
+  //     child: Column(
+  //       children: [
+  //         // Search Bar
+  //         TextField(
+  //           controller: _searchController,
+  //           onChanged: (_) => _filterPets(),
+  //           decoration: InputDecoration(
+  //             hintText: 'ابحث عن الحيوانات الموجودة...',
+  //             prefixIcon: Icon(Icons.search, color: AppTheme.primaryGreen),
+  //             border: OutlineInputBorder(
+  //               borderRadius: BorderRadius.circular(12.r),
+  //               borderSide: BorderSide.none,
+  //             ),
+  //             filled: true,
+  //             fillColor: Colors.grey[100],
+  //           ),
+  //         ),
+  //
+  //         SizedBox(height: 12.h),
+  //
+  //         // Filter Options
+  //         Row(
+  //           children: [
+  //             Expanded(
+  //               child: DropdownButtonFormField<String>(
+  //                 value: _selectedPetType,
+  //                 hint: const Text('نوع الحيوان'),
+  //                 decoration: InputDecoration(
+  //                   contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+  //                   border: OutlineInputBorder(
+  //                     borderRadius: BorderRadius.circular(8.r),
+  //                     borderSide: BorderSide.none,
+  //                   ),
+  //                   filled: true,
+  //                   fillColor: Colors.grey[100],
+  //                 ),
+  //                 items: ['كلب', 'قطة', 'أرنب', 'طائر', 'أخرى'].map((type) {
+  //                   return DropdownMenuItem(value: type, child: Text(type));
+  //                 }).toList(),
+  //                 onChanged: (value) {
+  //                   setState(() {
+  //                     _selectedPetType = value;
+  //                   });
+  //                   _filterPets();
+  //                 },
+  //               ),
+  //             ),
+  //
+  //             SizedBox(width: 12.w),
+  //
+  //             Expanded(
+  //               child: DropdownButtonFormField<String>(
+  //                 value: _selectedBreed,
+  //                 hint: const Text('السلالة'),
+  //                 decoration: InputDecoration(
+  //                   contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+  //                   border: OutlineInputBorder(
+  //                     borderRadius: BorderRadius.circular(8.r),
+  //                     borderSide: BorderSide.none,
+  //                   ),
+  //                   filled: true,
+  //                   fillColor: Colors.grey[100],
+  //                 ),
+  //                 items: ['جولدن ريتريفر', 'شيرازي', 'سيامي', 'بلدي'].map((breed) {
+  //                   return DropdownMenuItem(value: breed, child: Text(breed));
+  //                 }).toList(),
+  //                 onChanged: (value) {
+  //                   setState(() {
+  //                     _selectedBreed = value;
+  //                   });
+  //                   _filterPets();
+  //                 },
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildEmptyState() {
     return Center(
@@ -219,6 +220,7 @@ class _FoundPetsTabState extends State<FoundPetsTab> {
         return Padding(
           padding: EdgeInsets.only(bottom: 4.h),
           child: UnifiedPetCard(
+            color: index%2 == 0 ? ThemeClass.of(context).secondaryColor : ThemeClass.of(context).primaryColor,
             pet: _filteredPets[index],
             reportType: 'found',
           ),

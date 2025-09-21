@@ -444,8 +444,7 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
   }
 
   Widget _buildAppBar() {
-    return
-      Stack(
+    return Stack(
         clipBehavior: Clip.none,
         children: [
           Container(

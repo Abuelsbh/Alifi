@@ -1,3 +1,4 @@
+import 'package:alifi/Utilities/theme_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/Theme/app_theme.dart';
@@ -86,93 +87,93 @@ class _LostPetsTabState extends State<LostPetsTab> {
     return Column(
       children: [
         // Search and Filters
-        Padding(
-          padding: EdgeInsets.all(16.w),
-          child: Column(
-            children: [
-              // Search bar
-              TextField(
-                controller: _searchController,
-                onChanged: (value) => _filterPets(),
-                decoration: InputDecoration(
-                  hintText: 'البحث عن حيوان مفقود...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Theme.of(context).colorScheme.surface,
-                ),
-              ),
-              
-              SizedBox(height: 12.h),
-              
-              // Filter chips
-              Row(
-                children: [
-                  // Pet type filter
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: _selectedPetType,
-                      hint: const Text('نوع الحيوان'),
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: Theme.of(context).colorScheme.surface,
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'قط', child: Text('قط')),
-                        DropdownMenuItem(value: 'كلب', child: Text('كلب')),
-                        DropdownMenuItem(value: 'طائر', child: Text('طائر')),
-                        DropdownMenuItem(value: 'أرنب', child: Text('أرنب')),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedPetType = value;
-                          _filterPets();
-                        });
-                      },
-                    ),
-                  ),
-                  
-                  SizedBox(width: 8.w),
-                  
-                  // Breed filter
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: _selectedBreed,
-                      hint: const Text('السلالة'),
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: Theme.of(context).colorScheme.surface,
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'فارسي', child: Text('فارسي')),
-                        DropdownMenuItem(value: 'جيرمان', child: Text('جيرمان')),
-                        DropdownMenuItem(value: 'لابرادور', child: Text('لابرادور')),
-                        DropdownMenuItem(value: 'مختلط', child: Text('مختلط')),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedBreed = value;
-                          _filterPets();
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+        // Padding(
+        //   padding: EdgeInsets.all(16.w),
+        //   child: Column(
+        //     children: [
+        //       // Search bar
+        //       TextField(
+        //         controller: _searchController,
+        //         onChanged: (value) => _filterPets(),
+        //         decoration: InputDecoration(
+        //           hintText: 'البحث عن حيوان مفقود...',
+        //           prefixIcon: const Icon(Icons.search),
+        //           border: OutlineInputBorder(
+        //             borderRadius: BorderRadius.circular(12.r),
+        //             borderSide: BorderSide.none,
+        //           ),
+        //           filled: true,
+        //           fillColor: Theme.of(context).colorScheme.surface,
+        //         ),
+        //       ),
+        //
+        //       SizedBox(height: 12.h),
+        //
+        //       // Filter chips
+        //       Row(
+        //         children: [
+        //           // Pet type filter
+        //           Expanded(
+        //             child: DropdownButtonFormField<String>(
+        //               value: _selectedPetType,
+        //               hint: const Text('نوع الحيوان'),
+        //               decoration: InputDecoration(
+        //                 border: OutlineInputBorder(
+        //                   borderRadius: BorderRadius.circular(8.r),
+        //                   borderSide: BorderSide.none,
+        //                 ),
+        //                 filled: true,
+        //                 fillColor: Theme.of(context).colorScheme.surface,
+        //               ),
+        //               items: const [
+        //                 DropdownMenuItem(value: 'قط', child: Text('قط')),
+        //                 DropdownMenuItem(value: 'كلب', child: Text('كلب')),
+        //                 DropdownMenuItem(value: 'طائر', child: Text('طائر')),
+        //                 DropdownMenuItem(value: 'أرنب', child: Text('أرنب')),
+        //               ],
+        //               onChanged: (value) {
+        //                 setState(() {
+        //                   _selectedPetType = value;
+        //                   _filterPets();
+        //                 });
+        //               },
+        //             ),
+        //           ),
+        //
+        //           SizedBox(width: 8.w),
+        //
+        //           // Breed filter
+        //           Expanded(
+        //             child: DropdownButtonFormField<String>(
+        //               value: _selectedBreed,
+        //               hint: const Text('السلالة'),
+        //               decoration: InputDecoration(
+        //                 border: OutlineInputBorder(
+        //                   borderRadius: BorderRadius.circular(8.r),
+        //                   borderSide: BorderSide.none,
+        //                 ),
+        //                 filled: true,
+        //                 fillColor: Theme.of(context).colorScheme.surface,
+        //               ),
+        //               items: const [
+        //                 DropdownMenuItem(value: 'فارسي', child: Text('فارسي')),
+        //                 DropdownMenuItem(value: 'جيرمان', child: Text('جيرمان')),
+        //                 DropdownMenuItem(value: 'لابرادور', child: Text('لابرادور')),
+        //                 DropdownMenuItem(value: 'مختلط', child: Text('مختلط')),
+        //               ],
+        //               onChanged: (value) {
+        //                 setState(() {
+        //                   _selectedBreed = value;
+        //                   _filterPets();
+        //                 });
+        //               },
+        //             ),
+        //           ),
+        //         ],
+        //       ),
+        //     ],
+        //   ),
+        // ),
 
         // Pets List
         Expanded(
@@ -188,6 +189,7 @@ class _LostPetsTabState extends State<LostPetsTab> {
                         return Padding(
                           padding: EdgeInsets.only(bottom: 4.h),
                           child: UnifiedPetCard(
+                            color: index%2 == 0 ? ThemeClass.of(context).secondaryColor : ThemeClass.of(context).primaryColor,
                             pet: pet,
                             reportType: 'lost',
                           ),
