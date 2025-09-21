@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read/write access to all documents for authenticated users
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Public read for some collections (if needed)
+    match /petStores/{document} {
+      allow read: if true;
+    }
+    
+    match /veterinarians/{document} {
+      allow read: if true;
+    }
+
+    // Admin messages - users can only read their own messages
+    match /admin_messages/{document} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow write: if request.auth != null;
+    }
+
+    // User notifications subcollection
+    match /users/{userId}/notifications/{document} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // User documents
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+} 

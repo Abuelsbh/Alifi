@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alifi Admin Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: #386641;
+            border-radius: 20px;
+            margin: 0 auto 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .btn {
+            background: #386641;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0.5rem;
+        }
+
+        .btn:hover {
+            background: #2a4a2f;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(56, 102, 65, 0.3);
+        }
+
+        .btn-secondary {
+            background: #FF914C;
+        }
+
+        .btn-secondary:hover {
+            background: #e6823f;
+            box-shadow: 0 8px 20px rgba(255, 145, 76, 0.3);
+        }
+
+        .features {
+            text-align: left;
+            margin: 2rem 0;
+        }
+
+        .feature {
+            display: flex;
+            align-items: center;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .feature-icon {
+            width: 40px;
+            height: 40px;
+            background: #386641;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            margin-right: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .footer {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 2rem;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .btn {
+                display: block;
+                width: 100%;
+                margin: 0.5rem 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🏥</div>
+        <h1>Alifi Admin Dashboard</h1>
+        <p class="subtitle">Manage your pet care platform with ease</p>
+        
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">👨‍⚕️</div>
+                <div>
+                    <strong>Veterinarian Management</strong><br>
+                    <small>Add, edit, and manage veterinarian accounts</small>
+                </div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">👥</div>
+                <div>
+                    <strong>User Management</strong><br>
+                    <small>Monitor and manage user accounts</small>
+                </div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📊</div>
+                <div>
+                    <strong>Analytics & Reports</strong><br>
+                    <small>View platform statistics and reports</small>
+                </div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">⚙️</div>
+                <div>
+                    <strong>App Settings</strong><br>
+                    <small>Configure application settings</small>
+                </div>
+            </div>
+        </div>
+
+        <a href="/#/admin" class="btn">
+            🚀 Launch Admin Dashboard
+        </a>
+        
+        <a href="/#/main" class="btn btn-secondary">
+            📱 Go to App
+        </a>
+
+        <div class="footer">
+            <p>🔒 Admin access required</p>
+            <p>For support, contact: admin@alifi.com</p>
+        </div>
+    </div>
+
+    <script>
+        // Auto-redirect if on mobile
+        function isMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
+        if (isMobile()) {
+            document.querySelector('.btn').innerHTML = '📱 Open Mobile Admin';
+        }
+
+        // Add click analytics
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                console.log('Admin dashboard accessed');
+            });
+        });
+    </script>
+</body>
+</html> 

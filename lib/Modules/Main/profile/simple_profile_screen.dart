@@ -47,6 +47,16 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
     }
   }
 
+  // Check if current user is admin
+  bool _isAdmin() {
+    // For demo purposes, we'll check if email contains 'admin'
+    // In production, this should check user role in database
+    final email = _user?['email'] ?? '';
+    return email.contains('admin') || 
+           email == 'doctor@gmail.com' || 
+           email == 'admin@alifi.com';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -193,16 +203,16 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
                   },
                 ),
                 const Divider(height: 1),
-                ListTile(
-                  leading: Icon(Icons.chat, color: AppTheme.info),
-                  title: Text(Provider.of<AppLanguage>(context).translate('profile.my_chats')),
-                  subtitle: Text(Provider.of<AppLanguage>(context).translate('profile.my_chats_subtitle')),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    // TODO: Navigate to chats
-                  },
-                ),
-                const Divider(height: 1),
+                                        ListTile(
+                          leading: Icon(Icons.chat, color: AppTheme.info),
+                          title: Text(Provider.of<AppLanguage>(context).translate('profile.my_chats')),
+                          subtitle: Text(Provider.of<AppLanguage>(context).translate('profile.my_chats_subtitle')),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            // TODO: Navigate to chats
+                          },
+                                                ),
+                        const Divider(height: 1),
                 ListTile(
                   leading: Icon(Icons.settings, color: Colors.grey[600]),
                   title: Text(Provider.of<AppLanguage>(context).translate('profile.settings')),
@@ -220,6 +230,61 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
               ],
             ),
           ),
+          
+          // Admin Dashboard Button (only for admins)
+          // ...[
+          //   SizedBox(height: 16.h),
+          //   Card(
+          //     child: ListTile(
+          //       leading: Container(
+          //         width: 40.w,
+          //         height: 40.h,
+          //         decoration: BoxDecoration(
+          //           color: AppTheme.warning.withOpacity(0.1),
+          //           borderRadius: BorderRadius.circular(8.r),
+          //         ),
+          //         child: Icon(
+          //           Icons.admin_panel_settings,
+          //           color: AppTheme.warning,
+          //           size: 24.sp,
+          //         ),
+          //       ),
+          //       title: Text(
+          //         'Admin Dashboard',
+          //         style: TextStyle(
+          //           fontWeight: FontWeight.w600,
+          //           color: AppTheme.warning,
+          //         ),
+          //       ),
+          //       subtitle: const Text('Manage veterinarians and app settings'),
+          //       trailing: Row(
+          //         mainAxisSize: MainAxisSize.min,
+          //         children: [
+          //           Container(
+          //             padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+          //             decoration: BoxDecoration(
+          //               color: AppTheme.warning.withOpacity(0.1),
+          //               borderRadius: BorderRadius.circular(12.r),
+          //             ),
+          //             child: Text(
+          //               'ADMIN',
+          //               style: TextStyle(
+          //                 fontSize: 10.sp,
+          //                 fontWeight: FontWeight.bold,
+          //                 color: AppTheme.warning,
+          //               ),
+          //             ),
+          //           ),
+          //           SizedBox(width: 8.w),
+          //           Icon(Icons.chevron_right, color: AppTheme.warning),
+          //         ],
+          //       ),
+          //       onTap: () {
+          //         context.go('/admin');
+          //       },
+          //     ),
+          //   ),
+          // ],
           
           SizedBox(height: 24.h),
           

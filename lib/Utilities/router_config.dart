@@ -6,10 +6,12 @@ import '../Modules/Main/main_screen.dart';
 import '../Modules/Main/lost_found/lost_found_screen.dart';
 import '../Modules/Main/veterinary/enhanced_veterinary_screen.dart';
 import '../Modules/Main/profile/simple_profile_screen.dart';
+import '../Modules/Main/stores/pet_stores_screen.dart';
 import '../Modules/Auth/login_screen.dart';
 import '../Modules/Auth/register_screen.dart';
 import '../Modules/Auth/demo_mode_screen.dart';
 import '../Modules/Auth/simple_register_test.dart';
+import '../Modules/Admin/admin_dashboard_screen.dart';
 
 BuildContext? get currentContext_ =>
     GoRouterConfig.router.routerDelegate.navigatorKey.currentContext;
@@ -117,6 +119,28 @@ class GoRouterConfig{
         },
         routes: const <RouteBase>[],
       ),
+                    GoRoute(
+                path: PetStoresScreen.routeName,
+                name: 'pet-stores',
+                pageBuilder: (_, GoRouterState state) {
+                  return getCustomTransitionPage(
+                    state: state,
+                    child: const PetStoresScreen(),
+                  );
+                },
+                routes: const <RouteBase>[],
+              ),
+              GoRoute(
+                path: AdminDashboardScreen.routeName,
+                name: 'admin',
+                pageBuilder: (_, GoRouterState state) {
+                  return getCustomTransitionPage(
+                    state: state,
+                    child: const AdminDashboardScreen(),
+                  );
+                },
+                routes: const <RouteBase>[],
+              ),
     ],
     redirect: (BuildContext context, GoRouterState state) {
       // TODO: Add authentication logic

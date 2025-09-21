@@ -71,6 +71,8 @@
     "my_reports_subtitle": "بلاغات الضائع والمفقود",
     "my_chats": "محادثاتي",
     "my_chats_subtitle": "المحادثات البيطرية",
+    "notifications": "الإشعارات",
+    "notifications_subtitle": "رسائل الآدمن والتنبيهات",
     "app_preferences": "تفضيلات التطبيق",
     "sign_out": "تسجيل الخروج",
     "sign_out_confirm": "هل أنت متأكد من تسجيل الخروج؟",
@@ -393,7 +395,10 @@
     "optional": "اختياري",
     "feature_development": "هذه الميزة قيد التطوير وستكون متاحة قريباً",
     "service": "خدمة",
-    "coming_soon": "قريباً"
+    "coming_soon": "قريباً",
+    "call": "اتصال",
+    "clear_filters": "مسح المرشحات",
+    "all": "الكل"
   },
   "errors": {
     "network_error": "خطأ في الاتصال بالشبكة",
@@ -434,6 +439,16 @@
     "hours_ago": "منذ {0} ساعات",
     "minutes_ago": "منذ {0} دقائق",
     "just_now": "الآن"
+  },
+  "stores": {
+    "no_stores_found": "لم يتم العثور على متاجر",
+    "try_different_search": "جرب تعديل البحث أو المرشحات",
+    "description": "الوصف",
+    "contact_info": "معلومات الاتصال",
+    "features": "المميزات",
+    "rating": "التقييم",
+    "visit_website": "زيارة الموقع",
+    "get_directions": "الحصول على الاتجاهات"
   },
   "languages": {
     "english": "English",

@@ -18,6 +18,8 @@ import '../../../core/firebase/firebase_config.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/pet_reports_service.dart';
 import '../../../core/services/chat_service.dart';
+import '../../../core/services/notification_service.dart';
+import '../stores/pet_stores_screen.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/Language/translation_service.dart';
 import '../lost_found/lost_found_screen.dart';
@@ -27,6 +29,7 @@ import '../profile/simple_profile_screen.dart';
 import 'dart:async'; // Added for Timer
 import '../lost_found/breeding_pets_screen.dart'; // Added for BreedingPetsScreen
 import '../../../Models/pet_report_model.dart';
+import '../profile/notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
 
@@ -269,6 +272,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -362,24 +367,65 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           // Right side - Icons
           Row(
             children: [
-              // Bell Icon
-              GestureDetector(
-                onTap: () {
-                  // Navigate to notifications
+              // Bell Icon with notification badge
+              StreamBuilder<int>(
+                stream: NotificationService.getUnreadMessagesCountFromNotifications(),
+                builder: (context, snapshot) {
+                  final unreadCount = snapshot.data ?? 0;
+                  
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationsScreen(),
+                        ),
+                      );
+                    },
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 40.w,
+                          height: 40.h,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.notifications_outlined,
+                            color: unreadCount > 0 ? AppTheme.primaryOrange : Colors.grey[600],
+                            size: 20.sp,
+                          ),
+                        ),
+                        if (unreadCount > 0)
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              padding: EdgeInsets.all(1.w),
+                              decoration: BoxDecoration(
+                                color: AppTheme.error,
+                                borderRadius: BorderRadius.circular(8.r),
+                              ),
+                              constraints: BoxConstraints(
+                                minWidth: 14.w,
+                                minHeight: 14.h,
+                              ),
+                              child: Text(
+                                unreadCount > 9 ? '9+' : unreadCount.toString(),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
                 },
-                child: Container(
-                  width: 40.w,
-                  height: 40.h,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.notifications_outlined,
-                    color: Colors.grey[600],
-                    size: 20.sp,
-                  ),
-                ),
               ),
               SizedBox(width: 10.w),
               // Menu Icon
@@ -765,17 +811,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _navigateToStores() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(TranslationService.instance.translate('home.pet_stores')),
-        content: Text(TranslationService.instance.translate('common.coming_soon')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(TranslationService.instance.translate('common.ok')),
-          ),
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const PetStoresScreen(),
       ),
     );
   }

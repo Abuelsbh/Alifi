@@ -71,6 +71,8 @@
     "my_reports_subtitle": "Lost & Found reports",
     "my_chats": "My Chats",
     "my_chats_subtitle": "Veterinary conversations",
+    "notifications": "Notifications",
+    "notifications_subtitle": "Admin messages and alerts",
     "app_preferences": "App preferences",
     "sign_out": "Sign Out",
     "sign_out_confirm": "Are you sure you want to sign out?",
@@ -393,7 +395,10 @@
     "optional": "Optional",
     "feature_development": "This feature is under development and will be available soon",
     "service": "Service",
-    "coming_soon": "Coming soon"
+    "coming_soon": "Coming soon",
+    "call": "Call",
+    "clear_filters": "Clear Filters",
+    "all": "All"
   },
   "errors": {
     "network_error": "Network connection error",
@@ -434,6 +439,16 @@
     "hours_ago": "{0} hours ago",
     "minutes_ago": "{0} minutes ago",
     "just_now": "Just now"
+  },
+  "stores": {
+    "no_stores_found": "No stores found",
+    "try_different_search": "Try adjusting your search or filters",
+    "description": "Description",
+    "contact_info": "Contact Information",
+    "features": "Features",
+    "rating": "rating",
+    "visit_website": "Visit Website",
+    "get_directions": "Get Directions"
   },
   "languages": {
     "english": "English",

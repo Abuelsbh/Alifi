@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alifi Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-spinner"></div>
+        <p>Loading Admin Dashboard...</p>
+    </div>
+
+    <!-- Login Form -->
+    <div id="login-container" class="login-container" style="display: none;">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>🏥 Alifi Admin</h1>
+                <p>Dashboard Login</p>
+            </div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" id="login-btn">Login</button>
+            </form>
+            <div class="demo-credentials">
+                <h4>Demo Credentials:</h4>
+                <p>Email: admin@alifi.com</p>
+                <p>Password: admin123</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard-container" class="dashboard-container" style="display: none;">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>🏥 Alifi Admin</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-page="overview">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Overview</span>
+                </a>
+                <a href="#" class="nav-item" data-page="veterinarians">
+                    <i class="fas fa-user-md"></i>
+                    <span>Veterinarians</span>
+                </a>
+                <a href="#" class="nav-item" data-page="stores">
+                    <i class="fas fa-store"></i>
+                    <span>Pet Stores</span>
+                </a>
+                <a href="#" class="nav-item" data-page="users">
+                    <i class="fas fa-users"></i>
+                    <span>Users</span>
+                </a>
+                <a href="#" class="nav-item" data-page="reports">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Reports</span>
+                </a>
+                <a href="#" class="nav-item" data-page="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1 id="page-title">Dashboard Overview</h1>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <span id="user-name">Admin User</span>
+                        <div class="user-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <main class="content">
+                <!-- Overview Page -->
+                <div id="overview-page" class="page active">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-user-md"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="total-vets">0</h3>
+                                <p>Total Veterinarians</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="total-users">0</h3>
+                                <p>Total Users</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-store"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="total-stores">0</h3>
+                                <p>Pet Stores</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-paw"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="total-pets">0</h3>
+                                <p>Total Pet Reports</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-comments"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="total-chats">0</h3>
+                                <p>Active Chats</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="charts-section">
+                        <div class="chart-card">
+                            <h3>Recent Activity</h3>
+                            <div class="activity-list" id="recent-activity">
+                                <!-- Activity items will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Veterinarians Page -->
+                <div id="veterinarians-page" class="page">
+                    <div class="page-header">
+                        <h2>Veterinarians Management</h2>
+                        <button id="add-vet-btn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i>
+                            Add Veterinarian
+                        </button>
+                    </div>
+
+                    <div class="search-section">
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="vet-search" placeholder="Search veterinarians...">
+                        </div>
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" data-filter="all">All</button>
+                            <button class="filter-btn" data-filter="active">Active</button>
+                            <button class="filter-btn" data-filter="inactive">Inactive</button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Specialization</th>
+                                    <th>Experience</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vets-table-body">
+                                <!-- Veterinarians will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pet Stores Page -->
+                <div id="stores-page" class="page">
+                    <div class="page-header">
+                        <h2>Pet Stores Management</h2>
+                        <button id="add-store-btn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i>
+                            Add Pet Store
+                        </button>
+                    </div>
+
+                    <div class="search-section">
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="store-search" placeholder="Search stores...">
+                        </div>
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" data-filter="all">All</button>
+                            <button class="filter-btn" data-filter="active">Active</button>
+                            <button class="filter-btn" data-filter="inactive">Inactive</button>
+                        </div>
+                    </div>
+
+                    <div class="stores-grid" id="stores-grid">
+                        <!-- Stores will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Users Page -->
+                <div id="users-page" class="page">
+                    <div class="page-header">
+                        <h2>Users Management</h2>
+                        <div class="header-actions">
+                            <button id="export-users-btn" class="btn btn-secondary">
+                                <i class="fas fa-download"></i>
+                                Export Users
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="search-section">
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="user-search" placeholder="Search users...">
+                        </div>
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" data-filter="all">All Users</button>
+                            <button class="filter-btn" data-filter="active">Active</button>
+                            <button class="filter-btn" data-filter="banned">Banned</button>
+                            <button class="filter-btn" data-filter="recent">Recent</button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table" id="users-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Join Date</th>
+                                    <th>Status</th>
+                                    <th>Pets</th>
+                                    <th>Reports</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                <!-- Users will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Reports Page -->
+                <div id="reports-page" class="page">
+                    <div class="page-header">
+                        <h2>Pet Reports Management</h2>
+                        <div class="header-actions">
+                            <button id="export-reports-btn" class="btn btn-secondary">
+                                <i class="fas fa-download"></i>
+                                Export Reports
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="search-section">
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="report-search" placeholder="Search reports...">
+                        </div>
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" data-filter="all">All Reports</button>
+                            <button class="filter-btn" data-filter="lost">Lost Pets</button>
+                            <button class="filter-btn" data-filter="found">Found Pets</button>
+                            <button class="filter-btn" data-filter="adoption">Adoption</button>
+                            <button class="filter-btn" data-filter="breeding">Breeding</button>
+                            <button class="filter-btn" data-filter="urgent">Urgent</button>
+                        </div>
+                    </div>
+
+                    <div class="reports-grid" id="reports-grid">
+                        <!-- Reports will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Settings Page -->
+                <div id="settings-page" class="page">
+                    <div class="page-header">
+                        <h2>Application Settings</h2>
+                    </div>
+
+                    <div class="settings-container">
+                        <div class="settings-section">
+                            <h3>General Settings</h3>
+                            <div class="setting-item">
+                                <label for="app-name">Application Name</label>
+                                <input type="text" id="app-name" value="Alifi - Pet Care Platform">
+                            </div>
+                            <div class="setting-item">
+                                <label for="app-description">Description</label>
+                                <textarea id="app-description" rows="3">A comprehensive platform for pet care, adoption, and veterinary services.</textarea>
+                            </div>
+                            <div class="setting-item">
+                                <label for="maintenance-mode">Maintenance Mode</label>
+                                <select id="maintenance-mode">
+                                    <option value="false">Disabled</option>
+                                    <option value="true">Enabled</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3>Notification Settings</h3>
+                            <div class="setting-item">
+                                <label for="email-notifications">Email Notifications</label>
+                                <select id="email-notifications">
+                                    <option value="true">Enabled</option>
+                                    <option value="false">Disabled</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label for="push-notifications">Push Notifications</label>
+                                <select id="push-notifications">
+                                    <option value="true">Enabled</option>
+                                    <option value="false">Disabled</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label for="admin-email">Admin Email</label>
+                                <input type="email" id="admin-email" value="admin@alifi.com">
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3>Content Moderation</h3>
+                            <div class="setting-item">
+                                <label for="auto-approve-reports">Auto-approve Reports</label>
+                                <select id="auto-approve-reports">
+                                    <option value="false">Manual Review Required</option>
+                                    <option value="true">Auto-approve</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label for="max-images-per-report">Max Images per Report</label>
+                                <input type="number" id="max-images-per-report" value="5" min="1" max="10">
+                            </div>
+                            <div class="setting-item">
+                                <label for="report-expiry-days">Report Expiry (Days)</label>
+                                <input type="number" id="report-expiry-days" value="30" min="7" max="365">
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3>Database Management</h3>
+                            <div class="setting-actions">
+                                <button id="backup-database-btn" class="btn btn-secondary">
+                                    <i class="fas fa-database"></i>
+                                    Backup Database
+                                </button>
+                                <button id="clear-cache-btn" class="btn btn-warning">
+                                    <i class="fas fa-broom"></i>
+                                    Clear Cache
+                                </button>
+                                <button id="export-analytics-btn" class="btn btn-info">
+                                    <i class="fas fa-chart-bar"></i>
+                                    Export Analytics
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="settings-actions">
+                            <button id="save-settings-btn" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                Save Settings
+                            </button>
+                            <button id="reset-settings-btn" class="btn btn-danger">
+                                <i class="fas fa-undo"></i>
+                                Reset to Default
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- User Details Modal -->
+    <div id="user-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="user-modal-title">User Details</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div id="user-details" class="user-details">
+                <!-- User details will be loaded here -->
+            </div>
+            <div class="form-actions">
+                <button id="ban-user-btn" class="btn btn-danger">
+                    <i class="fas fa-ban"></i>
+                    Ban User
+                </button>
+                <button id="send-message-btn" class="btn btn-info">
+                    <i class="fas fa-envelope"></i>
+                    Send Message
+                </button>
+                <button id="close-user-modal" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Details Modal -->
+    <div id="report-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="report-modal-title">Report Details</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div id="report-details" class="report-details">
+                <!-- Report details will be loaded here -->
+            </div>
+            <div class="form-actions">
+                <button id="approve-report-btn" class="btn btn-success">
+                    <i class="fas fa-check"></i>
+                    Approve
+                </button>
+                <button id="reject-report-btn" class="btn btn-danger">
+                    <i class="fas fa-times"></i>
+                    Reject
+                </button>
+                <button id="contact-reporter-btn" class="btn btn-info">
+                    <i class="fas fa-phone"></i>
+                    Contact Reporter
+                </button>
+                <button id="close-report-modal" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Send Message Modal -->
+    <div id="send-message-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Send Message to User</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="send-message-form">
+                <div class="form-group">
+                    <label for="message-recipient">Recipient</label>
+                    <input type="text" id="message-recipient" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="message-subject">Subject *</label>
+                    <input type="text" id="message-subject" required placeholder="Message subject...">
+                </div>
+                <div class="form-group">
+                    <label for="message-type">Message Type</label>
+                    <select id="message-type">
+                        <option value="info">Information</option>
+                        <option value="warning">Warning</option>
+                        <option value="success">Success</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="message-content">Message Content *</label>
+                    <textarea id="message-content" rows="6" required placeholder="Type your message here..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i>
+                        Send Message
+                    </button>
+                    <button type="button" id="cancel-message-btn" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add/Edit Pet Store Modal -->
+    <div id="store-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="store-modal-title">Add Pet Store</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="store-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="store-name">Store Name *</label>
+                        <input type="text" id="store-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="store-category">Category *</label>
+                        <select id="store-category" required>
+                            <option value="">Select Category</option>
+                            <option value="pet_food">Pet Food</option>
+                            <option value="pet_accessories">Pet Accessories</option>
+                            <option value="veterinary_supplies">Veterinary Supplies</option>
+                            <option value="pet_toys">Pet Toys</option>
+                            <option value="pet_care">Pet Care Products</option>
+                            <option value="general">General Pet Store</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="store-phone">Phone Number *</label>
+                        <input type="tel" id="store-phone" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="store-email">Email</label>
+                        <input type="email" id="store-email">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="store-address">Address *</label>
+                        <textarea id="store-address" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="store-city">City *</label>
+                        <input type="text" id="store-city" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="store-website">Website</label>
+                        <input type="url" id="store-website" placeholder="https://example.com">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="store-hours">Working Hours</label>
+                        <input type="text" id="store-hours" placeholder="e.g. 9:00 AM - 10:00 PM">
+                    </div>
+                    <div class="form-group">
+                        <label for="store-delivery">Delivery Available</label>
+                        <select id="store-delivery">
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="store-description">Description</label>
+                        <textarea id="store-description" rows="3" placeholder="Brief description of the store..."></textarea>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="store-image">Store Image URL</label>
+                        <input type="url" id="store-image" placeholder="https://example.com/image.jpg">
+                    </div>
+                    <div class="form-group">
+                        <label for="store-rating">Rating (0-5)</label>
+                        <input type="number" id="store-rating" min="0" max="5" step="0.1" value="4.0">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-store-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="save-store-btn">Save Store</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add/Edit Veterinarian Modal -->
+    <div id="vet-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Add Veterinarian</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="vet-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="vet-name">Full Name *</label>
+                        <input type="text" id="vet-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vet-email">Email *</label>
+                        <input type="email" id="vet-email" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="vet-phone">Phone Number *</label>
+                        <input type="tel" id="vet-phone" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vet-specialization">Specialization *</label>
+                        <input type="text" id="vet-specialization" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="vet-experience">Experience *</label>
+                        <input type="text" id="vet-experience" placeholder="e.g., 5 years" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vet-license">License Number</label>
+                        <input type="text" id="vet-license">
+                    </div>
+                </div>
+                <div class="form-row" id="password-row">
+                    <div class="form-group">
+                        <label for="vet-password">Password *</label>
+                        <input type="password" id="vet-password" minlength="6">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="save-vet-btn">Save Veterinarian</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Application Scripts -->
+    <script src="firebase-config.js"></script>
+    <script src="admin-features.js"></script>
+    <script src="app.js"></script>
+</body>
+</html> 

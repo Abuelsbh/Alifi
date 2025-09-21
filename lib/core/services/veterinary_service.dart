@@ -104,6 +104,119 @@ class VeterinaryService {
     });
   }
 
+  // Get all veterinarians for admin (including unverified)
+  static Stream<List<Map<String, dynamic>>> getAllVeterinariansForAdmin() {
+    return _firestore
+        .collection('veterinarians')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    });
+  }
+
+  // Create veterinarian from admin dashboard
+  static Future<String> createVeterinarianFromAdmin({
+    required String email,
+    required String password,
+    required String name,
+    required String specialization,
+    required String experience,
+    required String phone,
+    String? license,
+  }) async {
+    try {
+      // Create Firebase Auth account
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final uid = userCredential.user!.uid;
+
+      // Create veterinarian profile in Firestore
+      await _firestore.collection('veterinarians').doc(uid).set({
+        'uid': uid,
+        'email': email,
+        'name': name,
+        'specialization': specialization,
+        'experience': experience,
+        'phone': phone,
+        'license': license,
+        'isOnline': false,
+        'isActive': true,
+        'rating': 0.0,
+        'totalRatings': 0,
+        'isVerified': true,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'joinDate': DateTime.now().toIso8601String(),
+        'userType': 'veterinarian',
+      });
+
+      // Update display name in Firebase Auth
+      await userCredential.user!.updateDisplayName(name);
+
+      return uid;
+    } catch (e) {
+      throw Exception('فشل في إنشاء حساب الطبيب البيطري: $e');
+    }
+  }
+
+  // Update veterinarian
+  static Future<void> updateVeterinarian({
+    required String vetId,
+    required String name,
+    required String email,
+    required String specialization,
+    required String experience,
+    required String phone,
+    String? license,
+  }) async {
+    try {
+      await _firestore.collection('veterinarians').doc(vetId).update({
+        'name': name,
+        'email': email,
+        'specialization': specialization,
+        'experience': experience,
+        'phone': phone,
+        'license': license,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('فشل في تحديث بيانات الطبيب البيطري: $e');
+    }
+  }
+
+  // Toggle veterinarian active status
+  static Future<void> toggleVeterinarianStatus(String vetId, bool isActive) async {
+    try {
+      await _firestore.collection('veterinarians').doc(vetId).update({
+        'isActive': isActive,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('فشل في تغيير حالة الطبيب البيطري: $e');
+    }
+  }
+
+  // Delete veterinarian
+  static Future<void> deleteVeterinarian(String vetId) async {
+    try {
+      // Delete from Firestore
+      await _firestore.collection('veterinarians').doc(vetId).delete();
+      
+      // Note: Firebase Auth user deletion requires admin SDK or the user to be signed in
+      // For production, you should use Firebase Admin SDK or Cloud Functions
+    } catch (e) {
+      throw Exception('فشل في حذف الطبيب البيطري: $e');
+    }
+  }
+
   // Get veterinarian by ID
   static Future<Map<String, dynamic>?> getVeterinarianById(String vetId) async {
     try {
