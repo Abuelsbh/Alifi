@@ -26,8 +26,8 @@ class TranslationService {
       
       // حفظ اللغة المحددة
       try {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('language', languageCode);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('language', languageCode);
       } catch (e) {
         print('Warning: Could not save language preference: $e');
       }
@@ -98,9 +98,9 @@ class TranslationService {
   // تحميل اللغة المحفوظة مع معالجة آمنة
   Future<void> loadSavedLanguage() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedLanguage = prefs.getString('language') ?? 'en';
-      await loadTranslations(savedLanguage);
+    final prefs = await SharedPreferences.getInstance();
+    final savedLanguage = prefs.getString('language') ?? 'en';
+    await loadTranslations(savedLanguage);
     } catch (e) {
       print('Error loading saved language: $e');
       // استخدام الإنجليزية كافتراضي

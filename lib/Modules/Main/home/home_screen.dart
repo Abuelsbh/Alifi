@@ -68,6 +68,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   StreamSubscription? _veterinariansSubscription;
   Timer? _refreshTimer;
   bool _dataLoaded = false;
+  // User data
+  Map<String, dynamic>? _user;
+  String _userName = 'User';
+  String? _userProfileImage;
+
+  Future<void> _loadUserData() async {
+    try {
+      if (AuthService.isAuthenticated && AuthService.userId != null) {
+        final userProfile = await AuthService.getUserProfile(AuthService.userId!);
+        if (userProfile != null) {
+          setState(() {
+            _user = userProfile;
+            _userName = userProfile['username'] ?? userProfile['name'] ?? 'User';
+            _userProfileImage = userProfile['profileImageUrl'];
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+    }
+  }
 
 
   @override
@@ -75,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.initState();
     _loadTranslations();
     _loadData();
-    _setupAnimations();
+    _loadUserData();    _setupAnimations();
   }
 
   Future<void> _loadTranslations() async {
@@ -166,10 +187,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
         // Load adoption pets directly from Firebase
         _loadAdoptionPetsCount();
-
+        
         // Load breeding pets directly from Firebase
         _loadBreedingPetsCount();
-
+        
         // Refresh adoption and breeding count every 30 seconds
         _refreshTimer?.cancel(); // Cancel existing timer
         _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
@@ -329,8 +350,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.grey[300]!, width: 2),
                 ),
-                child: ClipOval(
-                  child: Image.asset(
+
+                    child: ClipOval(
+                  child: _userProfileImage != null ? Image.network(_userProfileImage!, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) { return Container( color: Colors.grey[200], child: Icon( Icons.person, color: Colors.grey[600], size: 25.sp, ), ); },) : Image.asset(
                     'assets/images/profile_placeholder.png',
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
@@ -356,7 +378,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     style: TextStyleHelper.of(context).s28InterTextStyle().copyWith(color: ThemeClass.of(context).primaryColor),
                   ),
                   Text(
-                    'Fares Walid',
+                    _userName,
                     style: TextStyleHelper.of(context).s16RegTextStyle.copyWith(color: ThemeClass.of(context).secondaryColor),
                   ),
                 ],
@@ -374,7 +396,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   final unreadCount = snapshot.data ?? 0;
                   
                   return GestureDetector(
-                    onTap: () {
+                onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -385,18 +407,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: Stack(
                       children: [
                         Container(
-                          width: 40.w,
-                          height: 40.h,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.notifications_outlined,
+                  width: 40.w,
+                  height: 40.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.notifications_outlined,
                             color: unreadCount > 0 ? AppTheme.primaryOrange : Colors.grey[600],
-                            size: 20.sp,
-                          ),
-                        ),
+                    size: 20.sp,
+                  ),
+                ),
                         if (unreadCount > 0)
                           Positioned(
                             right: 0,
@@ -826,7 +848,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           onLoginSuccess: () {
             _dataLoaded = false;
             _loadData();
-          },
+    _loadUserData();          },
         ),
       );
     } else if (AuthService.isAuthenticated) {
@@ -841,8 +863,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         dialogWidget: LoginWidget(
           onLoginSuccess: () {
             _dataLoaded = false;
-            _loadData();
-          },
+              _loadData();
+    _loadUserData();          },
         ),
       );
     }
@@ -851,19 +873,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _navigateToProfile() {
     if (AuthService.isAuthenticated) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const SimpleProfileScreen(),
-        ),
-      );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SimpleProfileScreen(),
+      ),
+    );
     } else {
       DialogHelper.custom(context: context).customDialog(
         dialogWidget: LoginWidget(
           onLoginSuccess: () {
             _dataLoaded = false;
             _loadData();
-          },
+    _loadUserData();          },
         ),
       );
     }

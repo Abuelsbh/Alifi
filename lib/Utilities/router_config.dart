@@ -137,10 +137,10 @@ class GoRouterConfig{
                   return getCustomTransitionPage(
                     state: state,
                     child: const AdminDashboardScreen(),
-                  );
-                },
-                routes: const <RouteBase>[],
-              ),
+          );
+        },
+        routes: const <RouteBase>[],
+      ),
     ],
     redirect: (BuildContext context, GoRouterState state) {
       // TODO: Add authentication logic

@@ -79,7 +79,9 @@
     "sign_out_error": "خطأ في تسجيل الخروج",
     "edit_profile": "تعديل الملف الشخصي",
     "change_password": "تغيير كلمة المرور",
-    "account_settings": "إعدادات الحساب"
+    "account_settings": "إعدادات الحساب",
+    "image_updated": "تم تحديث صورة الملف الشخصي بنجاح",
+    "image_error": "خطأ في تحديث صورة الملف الشخصي"
   },
   "home": {
     "welcome": "مرحباً بك في عليفي",

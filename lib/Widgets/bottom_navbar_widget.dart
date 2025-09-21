@@ -1,3 +1,5 @@
+import 'package:alifi/Utilities/text_style_helper.dart';
+import 'package:alifi/Utilities/theme_helper.dart';
 import 'package:alifi/generated/assets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -93,7 +95,7 @@ class BottomNavBarWidget extends StatelessWidget {
               child: Center(
                 child: _buildIcon(
                   item.iconPath,
-                  isActive ? const Color(0xFFF36F21) : Colors.white,
+                    isActive ? const Color(0xFFF36F21) : Colors.white,
                 ),
               ),
             ),
@@ -138,81 +140,40 @@ class AnimalTypeSelectionBottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        color: ThemeClass.of(context).primaryColor,
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(20.r), topRight: Radius.circular(20.r)),
+
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle bar
-          Container(
-            width: 40.w,
-            height: 4.h,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(2.r),
-            ),
-          ),
-          SizedBox(height: 20.h),
-
-          // Title
-          Text(
-            TranslationService.instance.translate('lost_found.select_report_type'),
-            style: TextStyle(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.lightOnSurface,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            TranslationService.instance.translate('lost_found.select_report_type_subtitle'),
-            style: TextStyle(
-              fontSize: 14.sp,
-              color: AppTheme.lightOnBackground,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 30.h),
-
-          // Options
-                     _buildAnimalTypeOption(
+          _buildAnimalTypeOption(
              context: context,
-             icon: Icons.search,
              title: TranslationService.instance.translate('lost_found.lost_pet'),
-             subtitle: TranslationService.instance.translate('post_report.lost_pet_subtitle'),
-             color: AppTheme.error,
              onTap: () => _navigateToAddAnimal(context, ReportType.lost),
            ),
            SizedBox(height: 15.h),
            
            _buildAnimalTypeOption(
              context: context,
-             icon: Icons.pets,
              title: TranslationService.instance.translate('lost_found.found_pet'),
-             subtitle: TranslationService.instance.translate('post_report.found_pet_subtitle'),
-             color: AppTheme.success,
              onTap: () => _navigateToAddAnimal(context, ReportType.found),
            ),
            SizedBox(height: 15.h),
            
            _buildAnimalTypeOption(
              context: context,
-             icon: Icons.favorite,
              title: TranslationService.instance.translate('adoption.adoption_pet'),
-             subtitle: TranslationService.instance.translate('post_report.adoption_pet_subtitle'),
-             color: AppTheme.primaryGreen,
              onTap: () => _navigateToAddAnimal(context, ReportType.adoption),
            ),
            SizedBox(height: 15.h),
            
            _buildAnimalTypeOption(
              context: context,
-             icon: Icons.family_restroom,
              title: TranslationService.instance.translate('breeding.breeding_pet'),
-             subtitle: TranslationService.instance.translate('post_report.breeding_pet_subtitle'),
-             color: AppTheme.primaryOrange,
              onTap: () => _navigateToAddAnimal(context, ReportType.breeding),
            ),
-          
-          SizedBox(height: 30.h),
         ],
       ),
     );
@@ -220,10 +181,7 @@ class AnimalTypeSelectionBottomSheet extends StatelessWidget {
 
   Widget _buildAnimalTypeOption({
     required BuildContext context,
-    required IconData icon,
     required String title,
-    required String subtitle,
-    required Color color,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -231,56 +189,21 @@ class AnimalTypeSelectionBottomSheet extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12.r),
+          color: ThemeClass.of(context).secondaryColor,
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(24.r), bottomRight: Radius.circular(24.r)),
+
           border: Border.all(
-            color: color.withOpacity(0.3),
+            color: ThemeClass.of(context).secondaryColor,
             width: 1,
           ),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 50.w,
-              height: 50.h,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              child: Icon(
-                icon,
-                color: Colors.white,
-                size: 24.sp,
-              ),
-            ),
-            SizedBox(width: 16.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.lightOnSurface,
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      color: AppTheme.lightOnBackground,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: color,
-              size: 18.sp,
+            Text(
+                title,
+                style:TextStyleHelper.of(context).s18RegTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor)
             ),
           ],
         ),

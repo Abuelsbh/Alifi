@@ -51,20 +51,20 @@ class AppLanguage extends ChangeNotifier {
 
   Future changeLanguage({Languages? language}) async {
     try {
-      if(language == _appLanguage) return;
-      
-      Languages newLanguage;
-      switch(language){
-        case Languages.en:
-          newLanguage = Languages.en;
-          break;
-        case Languages.ar:
-          newLanguage = Languages.ar;
-          break;
+    if(language == _appLanguage) return;
+    
+    Languages newLanguage;
+    switch(language){
+      case Languages.en:
+        newLanguage = Languages.en;
+        break;
+      case Languages.ar:
+        newLanguage = Languages.ar;
+        break;
         case Languages.he:
           newLanguage = Languages.he;
           break;
-        case null:
+      case null:
           // التنقل بين اللغات بدورة: EN -> AR -> HE -> EN
           switch(_appLanguage) {
             case Languages.en:
@@ -77,23 +77,23 @@ class AppLanguage extends ChangeNotifier {
               newLanguage = Languages.en;
               break;
           }
-          break;
-      }
-      
-      // تغيير اللغة في خدمة الترجمة
-      await _translationService.changeLanguage(newLanguage.name);
-      
-      // تحديث اللغة المحلية
-      _appLanguage = newLanguage;
-      
+        break;
+    }
+    
+    // تغيير اللغة في خدمة الترجمة
+    await _translationService.changeLanguage(newLanguage.name);
+    
+    // تحديث اللغة المحلية
+    _appLanguage = newLanguage;
+    
       // حفظ اللغة في SharedPreferences بشكل آمن
       try {
-        await SharedPref.setLanguage(lang: _appLanguage.name);
+    await SharedPref.setLanguage(lang: _appLanguage.name);
       } catch (e) {
         print('Warning: Could not save language to preferences: $e');
       }
-      
-      notifyListeners();
+    
+    notifyListeners();
     } catch (e) {
       print('Error changing language: $e');
     }
@@ -102,7 +102,7 @@ class AppLanguage extends ChangeNotifier {
   // الحصول على النص المترجم مع fallback آمن
   String translate(String key) {
     try {
-      return _translationService.translate(key);
+    return _translationService.translate(key);
     } catch (e) {
       print('Error translating key "$key": $e');
       return key; // إرجاع المفتاح كـ fallback
