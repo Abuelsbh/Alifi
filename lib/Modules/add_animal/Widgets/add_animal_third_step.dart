@@ -27,7 +27,7 @@ class _AddAnimalThirdStepState extends State<AddAnimalThirdStep> {
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
       height: 520.h,
       decoration: BoxDecoration(
-        color: ThemeClass.of(context).primaryColor, // background color
+        color: ThemeClass.of(context).secondaryColor, // background color
         borderRadius: BorderRadius.circular(24.r), // rounded corners
       ),
       child: Column(

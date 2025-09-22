@@ -1,12 +1,9 @@
 import 'package:alifi/Utilities/text_style_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:gap/gap.dart';
 import '../../../Utilities/theme_helper.dart';
 import '../../../core/Theme/app_theme.dart';
-import '../../../core/services/auth_service.dart';
 import '../../../Widgets/custom_card.dart';
-import '../../../Widgets/custom_button.dart';
 import 'pet_report_details_screen.dart';
 
 class UnifiedPetCard extends StatelessWidget {
@@ -45,7 +42,7 @@ class UnifiedPetCard extends StatelessWidget {
           // الـ Card الأساسي
           Container(
             width: double.infinity,
-            height: 73.h,
+            height: 75.h,
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             decoration: BoxDecoration(
               color: color,
@@ -91,7 +88,7 @@ class UnifiedPetCard extends StatelessWidget {
             top: 6.h,
             left: 16.w,
             child: Container(
-              height: 81.h,
+              height: 83.h,
               width: 121.w,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.only(
@@ -131,37 +128,6 @@ class UnifiedPetCard extends StatelessWidget {
           ),
         ],
       )
-    );
-  }
-
-  void _showMessageDialog(BuildContext context, Map<String, dynamic> pet) {
-    final petName = pet['petDetails']?['name'] ?? pet['petName'] ?? 'الحيوان';
-    final reportTypeText = reportType == 'lost' ? 'مفقود' : 'موجود';
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('رسالة إلى صاحب الإعلان'),
-        content: Text('هل تريد إرسال رسالة إلى صاحب إعلان $petName $reportTypeText؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('إلغاء'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('سيتم إضافة ميزة المحادثة قريباً'),
-                  backgroundColor: AppTheme.info,
-                ),
-              );
-            },
-            child: Text('إرسال رسالة'),
-          ),
-        ],
-      ),
     );
   }
 }

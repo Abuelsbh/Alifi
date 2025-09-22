@@ -1,3 +1,5 @@
+import 'package:alifi/Utilities/text_style_helper.dart';
+import 'package:alifi/Utilities/theme_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -130,21 +132,22 @@ class _PetStoresScreenState extends State<PetStoresScreen> {
       ),
       appBar: AppBar(
         title: const TranslatedText('home.pet_stores'),
+        titleTextStyle: TextStyleHelper.of(context).s22RegTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
         centerTitle: true,
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
           // Temporary debug button
-          IconButton(
-            onPressed: () async {
-              print('🧪 Creating test store...');
-              await PetStoresService.createTestStore();
-              _loadStores(); // Refresh
-            },
-            icon: const Icon(Icons.add_circle),
-            tooltip: 'Add Test Store',
-          ),
+          // IconButton(
+          //   onPressed: () async {
+          //     print('🧪 Creating test store...');
+          //     await PetStoresService.createTestStore();
+          //     _loadStores(); // Refresh
+          //   },
+          //   icon: const Icon(Icons.add_circle),
+          //   tooltip: 'Add Test Store',
+          // ),
         ],
       ),
       body: _isLoading
@@ -153,7 +156,7 @@ class _PetStoresScreenState extends State<PetStoresScreen> {
               onRefresh: _loadStores,
               child: Column(
                 children: [
-                  _buildSearchAndFilters(),
+                 // _buildSearchAndFilters(),
                   Expanded(
                     child: _filteredStores.isEmpty
                         ? _buildEmptyState()

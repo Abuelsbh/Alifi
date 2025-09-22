@@ -534,7 +534,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'دكتور بيطري', // Will be enhanced with real vet name
+                    _getVetNameFromChat(chat), // Will be enhanced with real vet name
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -597,6 +597,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
 
     return 'طبيب بيطري';
   }
+
 
   String _getVetIdFromChat(ChatModel chat) {
     final userId = AuthService.userId;

@@ -134,7 +134,7 @@ class _LostFoundScreenState extends State<LostFoundScreen>
                         child: TranslatedCustomButton(
                           textKey: 'lost_found.lost_pet',
                           icon: Icons.search,
-                          type: ButtonType.secondary,
+                          type: ButtonType.primary,
                           onPressed: () {
                             Navigator.pop(context);
                             if (AuthService.isAuthenticated) {
@@ -161,7 +161,7 @@ class _LostFoundScreenState extends State<LostFoundScreen>
                         child: TranslatedCustomButton(
                           textKey: 'lost_found.found_pet',
                           icon: Icons.favorite,
-                          type: ButtonType.secondary,
+                          type: ButtonType.primary,
                           onPressed: () {
                             Navigator.pop(context);
                             if (AuthService.isAuthenticated) {

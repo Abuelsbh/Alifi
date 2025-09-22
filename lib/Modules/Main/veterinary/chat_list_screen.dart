@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../core/services/auth_service.dart';
@@ -123,7 +124,7 @@ class _ChatListScreenState extends State<ChatListScreen>
             // Search bar
             if (_searchQuery.isNotEmpty || _searchController.text.isNotEmpty)
               _buildSearchBar(),
-            
+
             // Chats list
             Expanded(
               child: _isLoading
@@ -318,32 +319,57 @@ class _ChatListScreenState extends State<ChatListScreen>
           child: Row(
             children: [
               // Avatar
-              Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 25.r,
-                    backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
-                    child: Icon(
-                      Icons.person,
-                      size: 25.sp,
-                      color: AppTheme.primaryGreen,
-                    ),
-                  ),
-                  // Online indicator
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 12.w,
-                      height: 12.h,
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+              FutureBuilder<DocumentSnapshot>(
+                future: _getVetIdFromChat(chat) != null 
+                    ? FirebaseFirestore.instance
+                        .collection('veterinarians')
+                        .doc(_getVetIdFromChat(chat))
+                        .get()
+                    : null,
+                builder: (context, snapshot) {
+                  String? profilePhoto;
+                  bool isOnline = false;
+                  
+                  if (snapshot.hasData && snapshot.data!.exists) {
+                    final data = snapshot.data!.data() as Map<String, dynamic>?;
+                    profilePhoto = data?['profilePhoto'] as String?;
+                    isOnline = data?['isOnline'] as bool? ?? false;
+                  }
+                  
+                  return Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 25.r,
+                        backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+                        backgroundImage: profilePhoto != null && profilePhoto.isNotEmpty
+                            ? NetworkImage(profilePhoto)
+                            : null,
+                        child: profilePhoto == null || profilePhoto.isEmpty
+                            ? Icon(
+                                Icons.person,
+                                size: 25.sp,
+                                color: AppTheme.primaryGreen,
+                              )
+                            : null,
                       ),
-                    ),
-                  ),
-                ],
+                      // Online indicator - only show if online
+                      if (isOnline)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 12.w,
+                            height: 12.h,
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
               
               SizedBox(width: 12.w),
@@ -430,6 +456,20 @@ class _ChatListScreenState extends State<ChatListScreen>
     return 'طبيب بيطري';
   }
 
+  String? _getVetIdFromChat(ChatModel chat) {
+    final userId = AuthService.userId;
+    if (userId == null) return null;
+    
+    // Get the other participant's ID (not the current user)
+    for (final participantId in chat.participants) {
+      if (participantId != userId) {
+        return participantId;
+      }
+    }
+    
+    return null;
+  }
+
   void _toggleSearch() {
     setState(() {
       if (_searchController.text.isEmpty && _searchQuery.isEmpty) {
@@ -451,7 +491,6 @@ class _ChatListScreenState extends State<ChatListScreen>
 
   void _openChat(ChatModel chat) {
     final vetName = _getVetNameFromChat(chat);
-    final vetId = _getVetIdFromChat(chat);
     
     Navigator.push(
       context,
@@ -459,24 +498,24 @@ class _ChatListScreenState extends State<ChatListScreen>
         builder: (context) => RealTimeChatScreen(
           chatId: chat.id,
           vetName: vetName,
-          vetImage: null, // No image available in chat model
+          vetImage: _getVetImageFromChat(chat),
         ),
       ),
     );
   }
 
-  String _getVetIdFromChat(ChatModel chat) {
+  String? _getVetImageFromChat(ChatModel chat) {
     final userId = AuthService.userId;
-    if (userId == null) return '';
+    if (userId == null) return null;
     
-    // Get the other participant's ID (not the current user)
+    // Get the other participant's profile photo (not the current user)
     for (final participantId in chat.participants) {
       if (participantId != userId) {
-        return participantId;
+        return null; // Profile photos are fetched dynamically via FutureBuilder
       }
     }
     
-    return '';
+    return null;
   }
 
   void _showNewChatDialog() {

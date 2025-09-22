@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../Utilities/dialog_helper.dart';
+import '../../../Utilities/text_style_helper.dart';
+import '../../../Utilities/theme_helper.dart';
 import '../../../Widgets/login_widget.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../Models/pet_report_model.dart';
@@ -191,187 +193,145 @@ class _BreedingPetsScreenState extends State<BreedingPetsScreen> {
       itemCount: filteredPets.length,
       itemBuilder: (context, index) {
         final pet = filteredPets[index];
-        return _buildPetCard(pet);
+        return _buildPetCard(context,pet,index%2 == 0 ? ThemeClass.of(context).secondaryColor : ThemeClass.of(context).primaryColor);
       },
     );
   }
 
-  Widget _buildPetCard(BreedingPetModel pet) {
+  Widget _buildPetCard(BuildContext context, BreedingPetModel pet, Color color) {
+    final imageUrls = pet.photos;
+
     return CustomCard(
-      margin: EdgeInsets.only(bottom: 16.h),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => BreedingPetDetailsScreen(pet: pet),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(12.r),
-        child: Padding(
-          padding: EdgeInsets.all(16.w),
-          child: Row(
-            children: [
-              // Pet Image
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8.r),
-                child: SizedBox(
-                  width: 80.w,
-                  height: 80.h,
-                  child: pet.photos.isNotEmpty
-                      ? Image.network(
-                          pet.photos.first,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: AppTheme.primaryGreen.withOpacity(0.1),
-                              child: Icon(
-                                Icons.pets,
-                                color: AppTheme.primaryGreen,
-                                size: 30.sp,
-                              ),
-                            );
-                          },
-                        )
-                      : Container(
-                          color: AppTheme.primaryGreen.withOpacity(0.1),
-                          child: Icon(
-                            Icons.pets,
-                            color: AppTheme.primaryGreen,
-                            size: 30.sp,
-                          ),
-                        ),
-                ),
-              ),
-              
-              SizedBox(width: 12.w),
-              
-              // Pet Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            pet.petName,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.primaryGreen,
-                            ),
-                          ),
-                        ),
-                        if (pet.isRegistered)
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(4.r),
-                            ),
-                            child: Text(
-                              'مسجل',
-                              style: TextStyle(
-                                color: Colors.orange,
-                                fontSize: 10.sp,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    SizedBox(height: 4.h),
-                    Row(
-                      children: [
-                        Text(
-                          '${pet.petType} • ${pet.breed}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                          ),
-                        ),
-                        SizedBox(width: 8.w),
-                        Container(
-                          width: 4.w,
-                          height: 4.h,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          '${pet.age} سنة',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 4.h),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: 16.sp,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                        ),
-                        SizedBox(width: 4.w),
-                        Expanded(
-                          child: Text(
-                            pet.address,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Breeding Fee
-              if (pet.breedingFee > 0)
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Text(
-                    '${pet.breedingFee.toStringAsFixed(0)} ج.م',
-                    style: TextStyle(
-                      color: AppTheme.primaryGreen,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                )
-              else
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Text(
-                    'مجاني',
-                    style: TextStyle(
-                      color: Colors.green,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            ],
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BreedingPetDetailsScreen(pet: pet),
           ),
-        ),
+        );
+      },
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Base Card
+          Container(
+            width: double.infinity,
+            height: 85.h,
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(24.r),
+                bottomRight: Radius.circular(24.r),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(width: 130.w),
+
+                // Pet Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              pet.petName,
+                              style: TextStyleHelper.of(context).s22RegTextStyle.copyWith(
+                                color: ThemeClass.of(context).backGroundColor,
+                              ),
+                            ),
+                          ),
+                          if (pet.isRegistered)
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4.r),
+                              ),
+                              child: Text(
+                                'مسجل',
+                                style: TextStyle(
+                                  color: Colors.orange,
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      SizedBox(height: 4.h),
+
+                      // Type • Breed • Age
+                      Text(
+                        pet.petType,
+                        style: TextStyleHelper.of(context).s12RegTextStyle.copyWith(
+                          color: ThemeClass.of(context).backGroundColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: color == ThemeClass.of(context).primaryColor
+                      ? ThemeClass.of(context).secondaryColor
+                      : ThemeClass.of(context).primaryColor,
+                  size: 18.sp,
+                ),
+              ],
+            ),
+          ),
+
+          // Pet Image
+          Positioned(
+            top: 6.h,
+            left: 16.w,
+            child: Container(
+              height: 93.h,
+              width: 121.w,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(24.r),
+                  bottomRight: Radius.circular(24.r),
+                  topRight: Radius.circular(24.r),
+                ),
+                color: Colors.grey[300],
+              ),
+              child: imageUrls.isNotEmpty
+                  ? ClipRRect(
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(24.r),
+                  bottomRight: Radius.circular(24.r),
+                  topRight: Radius.circular(24.r),
+                ),
+                child: Image.network(
+                  imageUrls.first,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.pets,
+                    size: 40.sp,
+                    color: AppTheme.primaryGreen,
+                  ),
+                ),
+              )
+                  : Icon(
+                Icons.pets,
+                size: 40.sp,
+                color: AppTheme.primaryGreen,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
+
 
   List<BreedingPetModel> _getFilteredPets() {
     if (_selectedFilter == 'الكل') {
