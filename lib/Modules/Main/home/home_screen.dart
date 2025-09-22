@@ -30,6 +30,8 @@ import 'dart:async'; // Added for Timer
 import '../lost_found/breeding_pets_screen.dart'; // Added for BreedingPetsScreen
 import '../../../Models/pet_report_model.dart';
 import '../profile/notifications_screen.dart';
+import '../../../Widgets/advertisement_widget.dart';
+import '../../../core/services/advertisement_service.dart';
 
 class HomeScreen extends StatefulWidget {
 
@@ -312,9 +314,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 SizedBox(height: 10.h),
 
                 // Cat Image Card
-                _buildCatCard(),
-
-                SizedBox(height: 10.h),
+                // _buildCatCard(),
+                //
+                // SizedBox(height: 10.h),
+                // Advertisements Section
+                const AdvertisementCarousel(),
 
                 // Available Services Section
                 _buildServicesSection(),

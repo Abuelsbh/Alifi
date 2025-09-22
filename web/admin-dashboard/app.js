@@ -2,6 +2,8 @@
 let currentUser = null;
 let veterinariansData = [];
 let petStoresData = [];
+let usersData = []; // Added for users data
+let reportsData = []; // Added for reports data
 let unsubscribeVets = null;
 let unsubscribeStores = null;
 let currentEditingVet = null;
@@ -34,6 +36,18 @@ const storeModal = document.getElementById('store-modal');
 const storeForm = document.getElementById('store-form');
 const storeSearch = document.getElementById('store-search');
 const storesGrid = document.getElementById('stores-grid');
+
+// Users elements (Added)
+const exportUsersBtn = document.getElementById('export-users-btn');
+const userSearch = document.getElementById('user-search');
+const usersTableBody = document.getElementById('users-table-body');
+const userFilterBtns = document.querySelectorAll('#users-page .filter-btn');
+
+// Reports elements (Added)
+const exportReportsBtn = document.getElementById('export-reports-btn');
+const reportSearch = document.getElementById('report-search');
+const reportsGrid = document.getElementById('reports-grid');
+const reportFilterBtns = document.querySelectorAll('#reports-page .filter-btn');
 
 // Statistics elements
 const totalVetsEl = document.getElementById('total-vets');
@@ -87,7 +101,9 @@ function initializeEventListeners() {
     });
     
     // Add veterinarian button
-    addVetBtn.addEventListener('click', () => openVetModal());
+    if (addVetBtn) { // Added null check
+        addVetBtn.addEventListener('click', () => openVetModal());
+    }
     
     // Add pet store button
     if (addStoreBtn) {
@@ -99,40 +115,109 @@ function initializeEventListeners() {
         btn.addEventListener('click', () => {
             closeVetModal();
             closeStoreModal();
+            // Close user and report modals (Added)
+            if (document.getElementById('user-modal')) adminFeatures.closeModal('user-modal');
+            if (document.getElementById('report-modal')) adminFeatures.closeModal('report-modal');
+            if (document.getElementById('send-message-modal')) adminFeatures.closeModal('send-message-modal');
         });
     });
     
     // Veterinarian form
-    vetForm.addEventListener('submit', handleVetSubmit);
+    if (vetForm) { // Added null check
+        vetForm.addEventListener('submit', handleVetSubmit);
+    }
     
     // Pet store form
     if (storeForm) {
         storeForm.addEventListener('submit', handleStoreSubmit);
     }
     
-    // Search and filters
-    vetSearch.addEventListener('input', filterVeterinarians);
+    // Search and filters for Veterinarians
+    if (vetSearch) { // Added null check
+        vetSearch.addEventListener('input', filterVeterinarians);
+    }
+
+    // Search and filters for Pet Stores
     if (storeSearch) {
         storeSearch.addEventListener('input', filterPetStores);
     }
-    
-    filterBtns.forEach(btn => {
+
+    filterBtns.forEach(btn => { // These are the general filter buttons, need to be more specific
         btn.addEventListener('click', (e) => {
             filterBtns.forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
             filterVeterinarians();
             filterPetStores();
+            // User and Report filters are handled in admin-features.js
         });
     });
     
-    // Close modal when clicking outside
-    vetModal.addEventListener('click', (e) => {
-        if (e.target === vetModal) closeVetModal();
+    // User page event listeners (Added)
+    if (exportUsersBtn) {
+        exportUsersBtn.addEventListener('click', () => window.adminFeatures.exportUsers());
+    }
+    if (userSearch) {
+        userSearch.addEventListener('input', (e) => window.adminFeatures.filterUsers(e.target.value));
+    }
+    userFilterBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            userFilterBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            window.adminFeatures.filterUsersByStatus(btn.dataset.filter);
+        });
     });
+
+    // Report page event listeners (Added)
+    if (exportReportsBtn) {
+        exportReportsBtn.addEventListener('click', () => window.adminFeatures.exportReports());
+    }
+    if (reportSearch) {
+        reportSearch.addEventListener('input', (e) => window.adminFeatures.filterReports(e.target.value));
+    }
+    reportFilterBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            reportFilterBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            window.adminFeatures.filterReportsByType(btn.dataset.filter);
+        });
+    });
+
+    // Close modal when clicking outside
+    if (vetModal) { // Added null check
+        vetModal.addEventListener('click', (e) => {
+            if (e.target === vetModal) closeVetModal();
+        });
+    }
     
     if (storeModal) {
         storeModal.addEventListener('click', (e) => {
             if (e.target === storeModal) closeStoreModal();
+        });
+    }
+
+    // User modal close outside (Added)
+    const userModal = document.getElementById('user-modal');
+    if (userModal) {
+        userModal.addEventListener('click', (e) => {
+            if (e.target === userModal) adminFeatures.closeModal('user-modal');
+        });
+    }
+
+    // Report modal close outside (Added)
+    const reportModal = document.getElementById('report-modal');
+    if (reportModal) {
+        reportModal.addEventListener('click', (e) => {
+            if (e.target === reportModal) adminFeatures.closeModal('report-modal');
+        });
+    }
+
+    // Send message modal close outside (Added)
+    const sendMessageModal = document.getElementById('send-message-modal');
+    if (sendMessageModal) {
+        sendMessageModal.addEventListener('click', (e) => {
+            if (e.target === sendMessageModal) adminFeatures.closeModal('send-message-modal');
         });
     }
 }
@@ -232,7 +317,8 @@ function navigateToPage(pageName) {
         veterinarians: 'Veterinarians Management',
         stores: 'Pet Stores Management',
         users: 'Users Management',
-        reports: 'Pet Reports',
+        reports: 'Pet Reports Management', // Changed 'Pet Reports' to 'Pet Reports Management' for consistency
+        advertisements: 'Advertisements Management',
         settings: 'Settings'
     };
     
@@ -246,14 +332,28 @@ function navigateToPage(pageName) {
     } else if (pageName === 'users') {
         if (window.adminFeatures) {
             window.adminFeatures.loadUsers();
+        } else {
+            console.error('adminFeatures not available when navigating to users'); // Added error log
         }
     } else if (pageName === 'reports') {
         if (window.adminFeatures) {
             window.adminFeatures.loadReports();
+        } else {
+            console.error('adminFeatures not available when navigating to reports'); // Added error log
+        }
+    } else if (pageName === 'advertisements') {
+        console.log('Navigating to advertisements page...');
+        if (window.adminFeatures) {
+            console.log('Loading advertisements...');
+            window.adminFeatures.loadAds();
+        } else {
+            console.error('adminFeatures not available when navigating to advertisements');
         }
     } else if (pageName === 'settings') {
         if (window.adminFeatures) {
             window.adminFeatures.loadSettings();
+        } else {
+            console.error('adminFeatures not available when navigating to settings'); // Added error log
         }
     }
 }
@@ -972,3 +1072,76 @@ async function deleteStore(storeId) {
 }
 
 console.log('✅ Admin Dashboard initialized successfully!'); 
+// Advertisements Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, initializing ad event listeners...');
+    
+    // Wait for adminFeatures to be available
+    const initAdEventListeners = () => {
+        console.log('Checking for adminFeatures...', window.adminFeatures);
+        
+        if (window.adminFeatures) {
+            console.log('adminFeatures found, setting up event listeners...');
+            
+            // Add Advertisement button
+            const addBtn = document.getElementById('add-ad-btn');
+            console.log('Add button found:', addBtn);
+            
+            if (addBtn) {
+                addBtn.addEventListener('click', () => {
+                    console.log('Add advertisement button clicked!');
+                    adminFeatures.showAddAdModal();
+                });
+            }
+
+            // Advertisement form submission
+            document.getElementById('ad-form')?.addEventListener('submit', (e) => {
+                e.preventDefault();
+                console.log('Ad form submitted!');
+                adminFeatures.saveAd();
+            });
+
+            // Cancel advertisement form
+            document.getElementById('cancel-ad-btn')?.addEventListener('click', () => {
+                adminFeatures.closeModal('ad-modal');
+            });
+
+            // Close advertisement modal
+            document.getElementById('close-ad-modal')?.addEventListener('click', () => {
+                adminFeatures.closeModal('ad-modal');
+            });
+
+            // Close preview modal
+            document.getElementById('close-ad-preview-modal')?.addEventListener('click', () => {
+                adminFeatures.closeModal('ad-preview-modal');
+            });
+
+            document.getElementById('close-preview-btn')?.addEventListener('click', () => {
+                adminFeatures.closeModal('ad-preview-modal');
+            });
+
+            // Edit from preview modal
+            document.getElementById('edit-ad-from-preview-btn')?.addEventListener('click', () => {
+                const adId = document.getElementById('edit-ad-from-preview-btn').dataset.adId;
+                adminFeatures.closeModal('ad-preview-modal');
+                adminFeatures.editAd(adId);
+            });
+            
+            console.log('Ad event listeners set up successfully!');
+        } else {
+            console.log('adminFeatures not found, retrying...');
+            // Retry after a short delay
+            setTimeout(initAdEventListeners, 100);
+        }
+    };
+    
+    initAdEventListeners();
+});
+
+// Load advertisements when advertisements page is shown
+function loadAdvertisementsPage() {
+    console.log('📢 Loading advertisements page...');
+    adminFeatures.loadAds();
+}
+
+console.log('✅ Advertisements module initialized!');

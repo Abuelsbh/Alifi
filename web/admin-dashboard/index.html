@@ -68,6 +68,11 @@
                     <i class="fas fa-file-alt"></i>
                     <span>Reports</span>
                 </a>
+                <a href="#" class="nav-item" data-page="advertisements">
+                    <i class="fas fa-ad"></i>
+                    <span>Advertisements</span>
+                </a>
+
                 <a href="#" class="nav-item" data-page="settings">
                     <i class="fas fa-cog"></i>
                     <span>Settings</span>
@@ -303,6 +308,56 @@
 
                     <div class="reports-grid" id="reports-grid">
                         <!-- Reports will be loaded here -->
+                    </div>
+                </div>
+
+
+                <!-- Advertisements Page -->
+                <div id="advertisements-page" class="page">
+                    <div class="page-header">
+                        <h2>Advertisements Management</h2>
+                        <div class="header-actions">
+                            <button id="add-ad-btn" class="btn btn-primary" onclick="
+                                // Simple direct approach
+                                const modal = document.getElementById('ad-modal');
+                                if (modal) {
+                                    modal.classList.add('show');
+                                    document.body.style.overflow = 'hidden';
+                                    
+                                    // Reset form
+                                    document.getElementById('ad-modal-title').textContent = 'Add Advertisement';
+                                    document.getElementById('ad-form').reset();
+                                    document.getElementById('ad-form').dataset.mode = 'add';
+                                    delete document.getElementById('ad-form').dataset.adId;
+                                } else {
+                                    alert('Modal not found');
+                                }
+                            ">
+                                <i class="fas fa-plus"></i>
+                                Add Advertisement
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="ads-container">
+                        <div class="ads-info">
+                            <div class="info-card">
+                                <i class="fas fa-info-circle"></i>
+                                <div>
+                                    <h4>Advertisement Guidelines</h4>
+                                    <ul>
+                                        <li>Maximum 10 advertisements allowed</li>
+                                        <li>Images should be high quality (recommended: 1200x600px)</li>
+                                        <li>Use appropriate display order for positioning</li>
+                                        <li>Deactivated ads will not show in the mobile app</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ads-grid" id="ads-grid">
+                            <!-- Advertisements will be loaded here -->
+                        </div>
                     </div>
                 </div>
 
@@ -639,6 +694,190 @@
             </form>
         </div>
     </div>
+
+
+    <!-- Add/Edit Advertisement Modal -->
+    <div id="ad-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="ad-modal-title">Add Advertisement</h3>
+                <button class="modal-close" id="close-ad-modal" onclick="
+                    document.getElementById('ad-modal').classList.remove('show');
+                    document.body.style.overflow = 'auto';
+                ">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+                        <form id="ad-form" onsubmit="
+                event.preventDefault();
+                
+                // Get form data
+                const title = document.getElementById('ad-title').value.trim();
+                const description = document.getElementById('ad-description').value.trim();
+                const imageUrl = document.getElementById('ad-image-url').value.trim();
+                const displayOrder = parseInt(document.getElementById('ad-display-order').value) || 1;
+                const clickUrl = document.getElementById('ad-click-url').value.trim();
+                const isActive = document.getElementById('ad-is-active').checked;
+                
+                // Validate
+                if (!imageUrl) {
+                    alert('Image URL is required');
+                    return;
+                }
+                
+                // Show loading
+                const submitBtn = document.querySelector('#ad-form button[type=submit]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = 'Saving...';
+                submitBtn.disabled = true;
+                
+                // Create ad data
+                const adData = {
+                    title: title,
+                    description: description,
+                    imageUrl: imageUrl,
+                    displayOrder: displayOrder,
+                    clickUrl: clickUrl,
+                    isActive: isActive
+                };
+                
+                // Save using Firebase directly
+                console.log('Form submitted with data:', adData);
+                console.log('FirebaseService available:', !!window.FirebaseService);
+                if (window.FirebaseService) {
+                    const mode = document.getElementById('ad-form').dataset.mode;
+                    const adId = document.getElementById('ad-form').dataset.adId;
+                    
+                    // Use async function properly
+                    (async () => {
+                        try {
+                            let result;
+                            if (mode === 'edit' && adId) {
+                                result = await FirebaseService.updateAd(adId, adData);
+                            } else {
+                                result = await FirebaseService.createAd(adData);
+                            }
+                            
+                            if (result.success) {
+                                alert('Advertisement saved successfully!');
+                                document.getElementById('ad-modal').classList.remove('show');
+                                document.body.style.overflow = 'auto';
+                                
+                                // Reload ads if adminFeatures is available
+                                if (window.adminFeatures) {
+                                    window.adminFeatures.loadAds();
+                                }
+                            } else {
+                                alert(result.error || 'Failed to save advertisement');
+                            }
+                        } catch (error) {
+                            console.error('Error saving ad:', error);
+                            alert('Error saving advertisement: ' + error.message);
+                        } finally {
+                            // Reset button
+                            submitBtn.innerHTML = originalText;
+                            submitBtn.disabled = false;
+                        }
+                    })();
+                } else {
+                    alert('Firebase service not available');
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            ">
+                <div class="form-group">
+                    <label for="ad-title">Title (Optional)</label>
+                    <input type="text" id="ad-title" placeholder="Advertisement title...">
+                </div>
+                
+                <div class="form-group">
+                    <label for="ad-description">Description (Optional)</label>
+                    <textarea id="ad-description" rows="3" placeholder="Advertisement description..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ad-image-url">Image URL *</label>
+                    <input type="url" id="ad-image-url" required placeholder="https://example.com/image.jpg">
+                    <small>Enter the direct URL to the advertisement image</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ad-display-order">Display Order</label>
+                    <input type="number" id="ad-display-order" min="1" max="10" value="1">
+                    <small>Order in which the ad will appear (1 = first)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ad-click-url">Click URL (Optional)</label>
+                    <input type="url" id="ad-click-url" placeholder="https://example.com">
+                    <small>URL to redirect when user clicks the ad</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="ad-is-active" checked>
+                        <span class="checkmark"></span>
+                        Active (show in mobile app)
+                    </label>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" id="cancel-ad-btn" class="btn btn-secondary" onclick="
+                        document.getElementById('ad-modal').classList.remove('show');
+                        document.body.style.overflow = 'auto';
+                    ">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i>
+                        Save Advertisement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Ad Preview Modal -->
+    <div id="ad-preview-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Advertisement Preview</h3>
+                <button class="modal-close" id="close-ad-preview-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="ad-preview-container" id="ad-preview-content">
+                <!-- Preview content will be loaded here -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="close-preview-btn">Close</button>
+                <button class="btn btn-primary" id="edit-ad-from-preview-btn">
+                    <i class="fas fa-edit"></i>
+                    Edit Advertisement
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script>
+        // Ensure adminFeatures is available globally
+        window.addEventListener('load', function() {
+            if (!window.adminFeatures) {
+                console.log('AdminFeatures not found on load, initializing...');
+                // This will be handled by admin-features.js
+            }
+        });
+        
+        // Add a global function to show ad modal
+        window.showAdModal = function() {
+            if (window.adminFeatures) {
+                window.adminFeatures.showAddAdModal();
+            } else {
+                console.log('AdminFeatures not ready, retrying...');
+                setTimeout(window.showAdModal, 100);
+            }
+        };
+    </script>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>

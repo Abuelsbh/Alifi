@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Advertisements</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .btn { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .btn:hover { background: #0056b3; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal.show { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 20px; border-radius: 10px; max-width: 500px; width: 90%; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; }
+        .form-group input, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Test Advertisements Feature</h1>
+    
+    <button id="add-ad-btn" class="btn">Add Advertisement</button>
+    
+    <div id="ad-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="ad-modal-title">Add Advertisement</h3>
+            <form id="ad-form">
+                <div class="form-group">
+                    <label for="ad-title">Title (Optional)</label>
+                    <input type="text" id="ad-title" placeholder="Advertisement title...">
+                </div>
+                <div class="form-group">
+                    <label for="ad-image-url">Image URL *</label>
+                    <input type="url" id="ad-image-url" required placeholder="https://example.com/image.jpg">
+                </div>
+                <div class="form-group">
+                    <label for="ad-display-order">Display Order</label>
+                    <input type="number" id="ad-display-order" min="1" max="10" value="1">
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn">Save Advertisement</button>
+                    <button type="button" id="cancel-ad-btn" class="btn" style="background: #6c757d;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Simple test functions
+        function showModal(modalId) {
+            console.log('showModal called with ID:', modalId);
+            const modal = document.getElementById(modalId);
+            console.log('Modal element found:', modal);
+            if (modal) {
+                console.log('Adding show class to modal...');
+                modal.classList.add('show');
+                console.log('Modal classes after adding show:', modal.classList.toString());
+            } else {
+                console.error('Modal not found with ID:', modalId);
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('show');
+            }
+        }
+
+        function showAddAdModal() {
+            console.log('showAddAdModal called!');
+            const modal = document.getElementById('ad-modal');
+            console.log('Modal element:', modal);
+            
+            document.getElementById('ad-modal-title').textContent = 'Add Advertisement';
+            document.getElementById('ad-form').reset();
+            document.getElementById('ad-form').dataset.mode = 'add';
+            delete document.getElementById('ad-form').dataset.adId;
+            
+            console.log('About to show modal...');
+            showModal('ad-modal');
+            console.log('Modal should be shown now');
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, setting up test event listeners...');
+            
+            const addBtn = document.getElementById('add-ad-btn');
+            console.log('Add button found:', addBtn);
+            
+            if (addBtn) {
+                addBtn.addEventListener('click', () => {
+                    console.log('Add advertisement button clicked!');
+                    showAddAdModal();
+                });
+            }
+
+            document.getElementById('ad-form')?.addEventListener('submit', (e) => {
+                e.preventDefault();
+                console.log('Ad form submitted!');
+                alert('Form submitted (test mode)');
+            });
+
+            document.getElementById('cancel-ad-btn')?.addEventListener('click', () => {
+                closeModal('ad-modal');
+            });
+        });
+    </script>
+</body>
+</html>

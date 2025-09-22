@@ -2,24 +2,30 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read/write access to all documents for authenticated users
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // Helper function to check if the user is an admin
+    function isAdmin() { 
+      return request.auth != null && request.auth.token.admin == true;
     }
 
-    // Public read for some collections (if needed)
-    match /petStores/{document} {
-      allow read: if true;
+    // Default rule: Deny all access unless explicitly allowed
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Allow admin full access to all documents
+    match /{document=**} {
+      allow read, write: if isAdmin();
     }
     
-    match /veterinarians/{document} {
-      allow read: if true;
+    // Allow authenticated users to read and write their own user profiles
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
     // Admin messages - users can only read their own messages
     match /admin_messages/{document} {
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
 
     // User notifications subcollection
@@ -27,9 +33,50 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // User documents
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Pet Stores - public read for active stores, admin write
+    match /petStores/{document} {
+      allow read: if resource.data.isActive == true;
+      allow write: if isAdmin();
+    }
+    
+    // Veterinarians - public read for active vets, admin write
+    match /veterinarians/{document} {
+      allow read: if resource.data.isActive == true;
+      allow write: if isAdmin();
+    }
+
+    // Advertisements collection - public read for active ads, admin write
+    match /advertisements/{document} {
+      allow read: if resource.data.isActive == true;
+      allow write: if isAdmin();
+    }
+
+    // Report Collections (lost_pets, found_pets, adoption_pets, breeding_pets)
+    // Public users can only read approved reports
+    // Authenticated users can create new reports
+    // Admins can read/write all reports
+    match /lost_pets/{document} {
+      allow read: if resource.data.status == 'approved' || isAdmin();
+      allow create: if request.auth != null;
+      allow update, delete: if isAdmin();
+    }
+
+    match /found_pets/{document} {
+      allow read: if resource.data.status == 'approved' || isAdmin();
+      allow create: if request.auth != null;
+      allow update, delete: if isAdmin();
+    }
+
+    match /adoption_pets/{document} {
+      allow read: if resource.data.status == 'approved' || isAdmin();
+      allow create: if request.auth != null;
+      allow update, delete: if isAdmin();
+    }
+
+    match /breeding_pets/{document} {
+      allow read: if resource.data.status == 'approved' || isAdmin();
+      allow create: if request.auth != null;
+      allow update, delete: if isAdmin();
     }
   }
 } 
