@@ -13,6 +13,7 @@ class AddAnimalController extends StateXController {
   bool loading = false;
   int activeStep = 0;
   ReportType? reportType;
+  String? adoptionType; // 'seeking' or 'offering'
   
   // Additional fields for different report types
   double adoptionFee = 0.0;
@@ -285,6 +286,7 @@ class AddAnimalController extends StateXController {
             'temperament': medicalStatus,
             'healthStatus': medicalStatus,
             'preferredContact': 'phone',
+            'adoptionType': adoptionType ?? 'offering', // Default to offering
           });
           reportId = await PetReportsService.createAdoptionPetReport(
             report: baseReport,

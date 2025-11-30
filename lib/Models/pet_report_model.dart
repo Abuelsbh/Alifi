@@ -434,6 +434,7 @@ class AdoptionPetModel extends Equatable {
   final String preferredHomeType;
   final List<String> medicalHistory;
   final String microchipId;
+  final String adoptionType; // 'seeking' (أبحث عن حيوان) or 'offering' (أعرض حيوان للتبني)
 
   const AdoptionPetModel({
     required this.id,
@@ -468,6 +469,7 @@ class AdoptionPetModel extends Equatable {
     this.preferredHomeType = '',
     this.medicalHistory = const [],
     this.microchipId = '',
+    this.adoptionType = 'offering', // Default to offering (أعرض حيوان للتبني)
   });
 
   factory AdoptionPetModel.fromFirestore(DocumentSnapshot doc) {
@@ -505,6 +507,7 @@ class AdoptionPetModel extends Equatable {
       preferredHomeType: data['preferredHomeType'] ?? '',
       medicalHistory: List<String>.from(data['medicalHistory'] ?? []),
       microchipId: data['microchipId'] ?? '',
+      adoptionType: data['adoptionType'] ?? 'offering',
     );
   }
 
@@ -561,6 +564,7 @@ class AdoptionPetModel extends Equatable {
       'preferredHomeType': preferredHomeType,
       'medicalHistory': medicalHistory,
       'microchipId': microchipId,
+      'adoptionType': adoptionType,
     };
   }
 
@@ -602,6 +606,7 @@ class AdoptionPetModel extends Equatable {
       preferredHomeType: json['preferredHomeType'] ?? '',
       medicalHistory: List<String>.from(json['medicalHistory'] ?? []),
       microchipId: json['microchipId'] ?? '',
+      adoptionType: json['adoptionType'] ?? 'offering',
     );
   }
 
@@ -642,6 +647,7 @@ class AdoptionPetModel extends Equatable {
       'preferredHomeType': preferredHomeType,
       'medicalHistory': medicalHistory,
       'microchipId': microchipId,
+      'adoptionType': adoptionType,
     };
   }
 
@@ -678,6 +684,7 @@ class AdoptionPetModel extends Equatable {
     String? preferredHomeType,
     List<String>? medicalHistory,
     String? microchipId,
+    String? adoptionType,
   }) {
     return AdoptionPetModel(
       id: id ?? this.id,
@@ -712,6 +719,7 @@ class AdoptionPetModel extends Equatable {
       preferredHomeType: preferredHomeType ?? this.preferredHomeType,
       medicalHistory: medicalHistory ?? this.medicalHistory,
       microchipId: microchipId ?? this.microchipId,
+      adoptionType: adoptionType ?? this.adoptionType,
     );
   }
 
@@ -749,6 +757,7 @@ class AdoptionPetModel extends Equatable {
         preferredHomeType,
         medicalHistory,
         microchipId,
+        adoptionType,
       ];
 } 
 

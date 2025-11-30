@@ -424,31 +424,36 @@ class _RealTimeChatScreenState extends State<RealTimeChatScreen>
       ).animate(_slideAnimation),
       child: ListView.builder(
         controller: _scrollController,
-        reverse: true,
+        reverse: false,
         padding: EdgeInsets.all(16.w),
         addAutomaticKeepAlives: true,
         addRepaintBoundaries: true,
-        itemCount: _messages.length,
+        itemCount: _getMessageListItems().length,
         itemBuilder: (context, index) {
-          final message = _messages[index];
-          final isMe = message.senderId == AuthService.userId;
-          final showDateHeader = _shouldShowDateHeader(index);
-          
-          return RepaintBoundary(
-            key: ValueKey('message_${message.id ?? index}'),
-            child: Column(
-              children: [
-                if (showDateHeader) _buildDateHeader(message.timestamp),
-                MessageBubble(
-                  message: message,
-                  isMe: isMe,
-                  onTap: () => _handleMessageTap(message),
-                  onLongPress: () => _handleMessageLongPress(message),
-                ),
-                SizedBox(height: 8.h),
-              ],
-            ),
-          );
+          final item = _getMessageListItems()[index];
+          if (item is String) {
+            // Date separator
+            return _buildDateSeparator(item);
+          } else {
+            // Message
+            final message = item as ChatMessage;
+            final isMe = message.senderId == AuthService.userId;
+            
+            return RepaintBoundary(
+              key: ValueKey('message_${message.id}_$index'),
+              child: Column(
+                children: [
+                  MessageBubble(
+                    message: message,
+                    isMe: isMe,
+                    onTap: () => _handleMessageTap(message),
+                    onLongPress: () => _handleMessageLongPress(message),
+                  ),
+                  SizedBox(height: 8.h),
+                ],
+              ),
+            );
+          }
         },
       ),
     );
@@ -491,32 +496,62 @@ class _RealTimeChatScreenState extends State<RealTimeChatScreen>
     );
   }
 
-  bool _shouldShowDateHeader(int index) {
-    if (index == _messages.length - 1) return true;
+  List<dynamic> _getMessageListItems() {
+    final items = <dynamic>[];
+    DateTime? currentDate;
     
-    final currentMessage = _messages[index];
-    final nextMessage = _messages[index + 1];
-    
-    final currentDate = currentMessage.timestamp;
-    final nextDate = nextMessage.timestamp;
-    
-    return currentDate.day != nextDate.day ||
-           currentDate.month != nextDate.month ||
-           currentDate.year != nextDate.year;
-  }
-
-  Widget _buildDateHeader(DateTime timestamp) {
-    final now = DateTime.now();
-    
-    String dateText;
-    if (timestamp.day == now.day && timestamp.month == now.month && timestamp.year == now.year) {
-      dateText = 'اليوم';
-    } else if (timestamp.day == now.day - 1 && timestamp.month == now.month && timestamp.year == now.year) {
-      dateText = 'أمس';
-    } else {
-      dateText = '${timestamp.day}/${timestamp.month}/${timestamp.year}';
+    for (var message in _messages) {
+      final messageDate = DateTime(
+        message.timestamp.year,
+        message.timestamp.month,
+        message.timestamp.day,
+      );
+      
+      // Add date separator if it's a new day
+      if (currentDate == null || !_isSameDay(currentDate, messageDate)) {
+        items.add(_formatDateSeparator(messageDate));
+        currentDate = messageDate;
+      }
+      
+      items.add(message);
     }
     
+    return items;
+  }
+
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+           date1.month == date2.month &&
+           date1.day == date2.day;
+  }
+
+  String _formatDateSeparator(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final messageDate = DateTime(date.year, date.month, date.day);
+    
+    if (_isSameDay(messageDate, today)) {
+      return 'اليوم';
+    } else if (_isSameDay(messageDate, yesterday)) {
+      return 'أمس';
+    } else {
+      final months = [
+        'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+        'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+      ];
+      return '${date.day} ${months[date.month - 1]}';
+    }
+  }
+
+  DateTime _getDateFromSeparator(String dateText) {
+    // This is a helper to get date from separator text
+    // For simplicity, we'll use current date as fallback
+    // The actual date is stored in the separator text format
+    return DateTime.now();
+  }
+
+  Widget _buildDateSeparator(String dateText) {
     return Container(
       margin: EdgeInsets.symmetric(vertical: 16.h),
       child: Row(

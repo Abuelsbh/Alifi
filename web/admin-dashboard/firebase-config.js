@@ -842,6 +842,88 @@ const FirebaseService = {
         }
     },
 
+    async sendMessageToAllUsers(messageData, progressCallback) {
+        try {
+            // Get all users
+            const usersSnapshot = await db.collection('users').get();
+            const totalUsers = usersSnapshot.size;
+            let successCount = 0;
+            let failCount = 0;
+            
+            if (totalUsers === 0) {
+                return { success: false, error: 'No users found in the system.' };
+            }
+
+            // Process users in batches to avoid overwhelming Firestore
+            const batchSize = 10;
+            const batches = [];
+            
+            for (let i = 0; i < usersSnapshot.docs.length; i += batchSize) {
+                batches.push(usersSnapshot.docs.slice(i, i + batchSize));
+            }
+
+            // Process each batch
+            for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+                const batch = batches[batchIndex];
+                const writeBatch = db.batch();
+                
+                for (const userDoc of batch) {
+                    const userId = userDoc.id;
+                    
+                    // Create message document
+                    const messageDoc = {
+                        userId: userId,
+                        subject: messageData.subject,
+                        content: messageData.content,
+                        type: messageData.type || 'info',
+                        isRead: false,
+                        isAdminMessage: true,
+                        isBroadcast: true, // Mark as broadcast message
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
+                    // Add to admin_messages collection
+                    const messageRef = db.collection('admin_messages').doc();
+                    writeBatch.set(messageRef, messageDoc);
+                    
+                    // Also add to user's notifications
+                    const notificationRef = db.collection('users').doc(userId).collection('notifications').doc();
+                    writeBatch.set(notificationRef, {
+                        ...messageDoc,
+                        messageId: messageRef.id,
+                        notificationType: 'admin_message'
+                    });
+                }
+                
+                try {
+                    await writeBatch.commit();
+                    successCount += batch.length;
+                } catch (error) {
+                    console.error(`Error in batch ${batchIndex}:`, error);
+                    failCount += batch.length;
+                }
+                
+                // Report progress
+                if (progressCallback) {
+                    const progress = Math.round(((batchIndex + 1) / batches.length) * 100);
+                    progressCallback(progress, successCount, failCount, totalUsers);
+                }
+            }
+
+            console.log(`Message sent to ${successCount} users successfully`);
+            return { 
+                success: true, 
+                totalUsers: totalUsers,
+                successCount: successCount,
+                failCount: failCount
+            };
+        } catch (error) {
+            console.error('Error sending message to all users:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
     async getAdminMessages() {
         try {
             const snapshot = await db.collection('admin_messages')
@@ -974,6 +1056,7 @@ const FirebaseService = {
                 displayOrder: parseInt(adData.displayOrder) || 1,
                 isActive: adData.isActive !== false,
                 clickUrl: adData.clickUrl || '',
+                locations: adData.locations && adData.locations.length > 0 ? adData.locations : ['all'],
                 clickCount: 0,
                 views: 0,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -997,6 +1080,7 @@ const FirebaseService = {
                 displayOrder: parseInt(adData.displayOrder) || 1,
                 isActive: adData.isActive !== false,
                 clickUrl: adData.clickUrl || '',
+                locations: adData.locations && adData.locations.length > 0 ? adData.locations : ['all'],
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
@@ -1049,6 +1133,132 @@ const FirebaseService = {
         } catch (error) {
             console.error('Error incrementing ad click:', error);
         }
+    },
+
+    // Locations CRUD operations
+    async getAllLocations() {
+        try {
+            console.log('📍 Fetching all locations...');
+            
+            // Try with orderBy first
+            let snapshot;
+            try {
+                snapshot = await db.collection('locations')
+                    .orderBy('displayOrder', 'asc')
+                    .orderBy('name', 'asc')
+                    .get();
+            } catch (orderByError) {
+                console.warn('⚠️ OrderBy failed, trying simple query:', orderByError);
+                // Fallback to simple query
+                snapshot = await db.collection('locations').get();
+            }
+            
+            const locations = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                locations.push({
+                    id: doc.id,
+                    name: data.name || '',
+                    description: data.description || '',
+                    displayOrder: data.displayOrder || 0,
+                    isActive: data.isActive !== false,
+                    createdAt: data.createdAt,
+                    updatedAt: data.updatedAt
+                });
+            });
+            
+            // Sort manually if orderBy failed
+            if (snapshot.empty || locations.length > 0) {
+                locations.sort((a, b) => {
+                    if (a.displayOrder !== b.displayOrder) {
+                        return a.displayOrder - b.displayOrder;
+                    }
+                    return (a.name || '').localeCompare(b.name || '');
+                });
+            }
+            
+            console.log(`✅ Found ${locations.length} locations`);
+            return { success: true, data: locations };
+        } catch (error) {
+            console.error('❌ Error getting locations:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async createLocation(locationData) {
+        try {
+            const locationRef = await db.collection('locations').add({
+                name: locationData.name,
+                description: locationData.description || '',
+                displayOrder: parseInt(locationData.displayOrder) || 0,
+                isActive: locationData.isActive !== false,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            return { success: true, id: locationRef.id };
+        } catch (error) {
+            console.error('Error creating location:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async updateLocation(locationId, locationData) {
+        try {
+            await db.collection('locations').doc(locationId).update({
+                name: locationData.name,
+                description: locationData.description || '',
+                displayOrder: parseInt(locationData.displayOrder) || 0,
+                isActive: locationData.isActive !== false,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            return { success: true };
+        } catch (error) {
+            console.error('Error updating location:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async deleteLocation(locationId) {
+        try {
+            await db.collection('locations').doc(locationId).delete();
+            return { success: true };
+        } catch (error) {
+            console.error('Error deleting location:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async toggleLocationStatus(locationId, isActive) {
+        try {
+            await db.collection('locations').doc(locationId).update({
+                isActive: isActive,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            return { success: true };
+        } catch (error) {
+            console.error('Error toggling location status:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Listen to locations in real-time
+    onLocationsChange(callback) {
+        return db.collection('locations')
+            .orderBy('displayOrder', 'asc')
+            .orderBy('name', 'asc')
+            .onSnapshot(snapshot => {
+                const locations = [];
+                snapshot.forEach(doc => {
+                    locations.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                callback(locations);
+            });
     },
 
     // Admin Roles and Permissions System

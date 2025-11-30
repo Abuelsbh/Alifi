@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:gap/gap.dart';
 import '../../../Utilities/bottom_sheet_helper.dart';
 import '../../../Utilities/dialog_helper.dart';
 import '../../../Utilities/strings.dart';
@@ -25,6 +26,7 @@ import '../../../core/Theme/app_theme.dart';
 import '../../../core/Language/translation_service.dart';
 import '../lost_found/lost_found_screen.dart';
 import '../lost_found/adoption_pets_screen.dart';
+import '../lost_found/unified_chat_list_screen.dart';
 import '../veterinary/enhanced_veterinary_screen.dart';
 import '../profile/simple_profile_screen.dart';
 import 'dart:async'; // Added for Timer
@@ -34,6 +36,10 @@ import '../profile/notifications_screen.dart';
 import '../../../Widgets/advertisement_widget.dart';
 import '../../../core/services/advertisement_service.dart';
 import '../../Admin/admin_reports_screen.dart';
+import '../../../core/services/location_service.dart';
+import '../../../Models/location_model.dart';
+import '../location/location_selection_screen.dart';
+import '../../../Widgets/home_header_widget.dart';
 
 class HomeScreen extends StatefulWidget {
 
@@ -70,12 +76,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   StreamSubscription? _foundPetsSubscription;
   StreamSubscription? _unreadMessagesSubscription;
   StreamSubscription? _veterinariansSubscription;
+  StreamSubscription? _locationSubscription;
   Timer? _refreshTimer;
   bool _dataLoaded = false;
   // User data
   Map<String, dynamic>? _user;
   String _userName = 'User';
   String? _userProfileImage;
+  // Location data
+  LocationModel? _selectedLocation;
 
   Future<void> _loadUserData() async {
     try {
@@ -100,7 +109,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.initState();
     _loadTranslations();
     _loadData();
-    _loadUserData();    _setupAnimations();
+    _loadUserData();
+    _loadLocation();
+    _setupAnimations();
   }
 
   Future<void> _loadTranslations() async {
@@ -247,7 +258,70 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     await _foundPetsSubscription?.cancel();
     await _unreadMessagesSubscription?.cancel();
     await _veterinariansSubscription?.cancel();
+    await _locationSubscription?.cancel();
     _refreshTimer?.cancel();
+  }
+
+  Future<void> _loadLocation() async {
+    try {
+      print('🔄 Loading user location...');
+      final locationId = LocationService.getUserLocation();
+      print('📍 Current user location ID: $locationId');
+      
+      if (locationId != null && locationId.isNotEmpty) {
+        final location = await LocationService.getLocationById(locationId);
+        if (mounted) {
+          setState(() {
+            _selectedLocation = location;
+          });
+          print('✅ Location loaded: ${location?.name ?? "null"}');
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _selectedLocation = null;
+          });
+        }
+      }
+
+      // Listen for location changes from Firebase
+      final locationsStream = LocationService.getActiveLocationsStream();
+      _locationSubscription = locationsStream.listen((locations) {
+        if (mounted) {
+          final locationId = LocationService.getUserLocation();
+          if (locationId != null && locationId.isNotEmpty) {
+            try {
+              final location = locations.firstWhere(
+                (loc) => loc.id == locationId,
+                orElse: () => LocationModel(
+                  id: '',
+                  name: '',
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                ),
+              );
+              setState(() {
+                _selectedLocation = location.id.isNotEmpty ? location : null;
+              });
+            } catch (e) {
+              print('⚠️ Location not found in list: $e');
+              setState(() {
+                _selectedLocation = null;
+              });
+            }
+          } else {
+            setState(() {
+              _selectedLocation = null;
+            });
+          }
+        }
+      }, onError: (error) {
+        print('❌ Error in location stream: $error');
+      });
+    } catch (e, stackTrace) {
+      print('❌ Error loading location: $e');
+      print('Stack trace: $stackTrace');
+    }
   }
 
   Future<void> _loadAdoptionPetsCount() async {
@@ -308,7 +382,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: ListView(
               children: [
                 // Header Section
-                _buildHeader(),
+                HomeHeaderWidget(
+                  userName: _userName,
+                  userProfileImage: _userProfileImage,
+                  onLocationChanged: _loadLocation,
+                ),
 
                 SizedBox(height: 10.h),
 
@@ -317,8 +395,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 //
                 // SizedBox(height: 10.h),
                 // Advertisements Section
-                const AdvertisementCarousel(),
+                // Use key based on location to reload ads when location changes
+                AdvertisementCarousel(
+                  key: ValueKey('ads_${_selectedLocation?.id ?? 'none'}'),
+                ),
 
+                Gap(12.h),
                 // Available Services Section
                 _buildServicesSection(),
 
@@ -336,188 +418,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 15.h),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Left side - Profile and Welcome
-          Row(
-            children: [
-              // Profile Image
-              Container(
-                width: 50.w,
-                height: 50.h,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.grey[300]!, width: 2),
-                ),
-
-                    child: ClipOval(
-                  child: _userProfileImage != null 
-                      ? CachedNetworkImage(
-                          imageUrl: _userProfileImage!,
-                          fit: BoxFit.cover,
-                          memCacheWidth: 100,
-                          memCacheHeight: 100,
-                          maxWidthDiskCache: 200,
-                          maxHeightDiskCache: 200,
-                          placeholder: (context, url) => Container(
-                            color: Colors.grey[200],
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ),
-                          errorWidget: (context, url, error) => Container(
-                            color: Colors.grey[200],
-                            child: Icon(
-                              Icons.person,
-                              color: Colors.grey[600],
-                              size: 25.sp,
-                            ),
-                          ),
-                        )
-                      : Image.asset(
-                          'assets/images/profile_placeholder.png',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey[200],
-                              child: Icon(
-                                Icons.person,
-                                color: Colors.grey[600],
-                                size: 25.sp,
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ),
-              SizedBox(width: 15.w),
-              // Welcome Text
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    TranslationService.instance.translate('auth.welcome'),
-                    style: TextStyleHelper.of(context).s28InterTextStyle().copyWith(color: ThemeClass.of(context).primaryColor),
-                  ),
-                  Text(
-                    _userName,
-                    style: TextStyleHelper.of(context).s16RegTextStyle.copyWith(color: ThemeClass.of(context).secondaryColor),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          // Right side - Icons
-          Row(
-            children: [
-              // Bell Icon with notification badge (or Admin Reports for admins)
-              StreamBuilder<int>(
-                stream: NotificationService.getUnreadMessagesCountFromNotifications(),
-                builder: (context, snapshot) {
-                  final unreadCount = snapshot.data ?? 0;
-                  final isAdmin = AuthService.isAdmin;
-                  
-                  return GestureDetector(
-                onTap: () {
-                      if (isAdmin) {
-                        // Navigate to Admin Reports Screen
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AdminReportsScreen(),
-                          ),
-                        );
-                      } else {
-                        // Navigate to Notifications Screen
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const NotificationsScreen(),
-                          ),
-                        );
-                      }
-                    },
-                    child: Stack(
-                      children: [
-                        Container(
-                  width: 40.w,
-                  height: 40.h,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    isAdmin ? Icons.admin_panel_settings : Icons.notifications_outlined,
-                            color: isAdmin 
-                                ? AppTheme.primaryGreen 
-                                : (unreadCount > 0 ? AppTheme.primaryOrange : Colors.grey[600]),
-                    size: 20.sp,
-                  ),
-                ),
-                        if (unreadCount > 0)
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              padding: EdgeInsets.all(1.w),
-                              decoration: BoxDecoration(
-                                color: AppTheme.error,
-                                borderRadius: BorderRadius.circular(8.r),
-                              ),
-                              constraints: BoxConstraints(
-                                minWidth: 14.w,
-                                minHeight: 14.h,
-                              ),
-                              child: Text(
-                                unreadCount > 9 ? '9+' : unreadCount.toString(),
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 8.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-              SizedBox(width: 10.w),
-              // Menu Icon
-              GestureDetector(
-                onTap: () {
-                  _navigateToProfile();
-                },
-                child: Container(
-                  width: 40.w,
-                  height: 40.h,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.menu,
-                    color: Colors.grey[600],
-                    size: 20.sp,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildCatCard() {
     return Container(
@@ -569,7 +469,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Text(
                     TranslationService.instance.translate('home.available_services'),
                     style: TextStyleHelper.of(context).s18RegTextStyle.copyWith(color: ThemeClass.of(context).secondaryColor),
-
                   ),
                   Container(
                     width: 100.w,
@@ -787,7 +686,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildChatButton() {
     return GestureDetector(
-      onTap: _navigateToVeterinary,
+      onTap: _navigateToChats,
       child: Container(
         margin: EdgeInsets.symmetric(horizontal: 30.w),
         height: 80.h,
@@ -885,6 +784,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       context,
       MaterialPageRoute(
         builder: (context) => const PetStoresScreen(),
+      ),
+    );
+  }
+
+  void _navigateToChats() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const EnhancedVeterinaryScreen(),
       ),
     );
   }

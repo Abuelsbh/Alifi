@@ -219,7 +219,13 @@
     "email_subject": "Inquiry about adopting {0}",
     "email_body": "Hello,\n\nI'm interested in adopting {0} and would like to get more information.\n\nThank you",
     "adoption_requirements": "Adoption Requirements",
-    "adoption_process": "Adoption Process"
+    "adoption_process": "Adoption Process",
+    "offering_adoption": "I want someone to adopt my pet",
+    "seeking_adoption": "I want to adopt a pet",
+    "no_seeking_pets": "No adoption requests found",
+    "no_seeking_pets_subtitle": "No adoption requests at the moment",
+    "no_offering_pets": "No pets available for adoption",
+    "no_offering_pets_subtitle": "Check back later or add a pet for adoption"
   },
   "breeding": {
     "title": "Pets for Breeding",
@@ -453,6 +459,15 @@
     "rating": "rating",
     "visit_website": "Visit Website",
     "get_directions": "Get Directions"
+  },
+  "location": {
+    "title": "Location",
+    "explore_service_area": "Explore our service area",
+    "select_location": "Select Location",
+    "current_location": "Current Location",
+    "no_locations": "No locations available",
+    "save_error": "Failed to save location",
+    "change_location": "Change Location"
   },
   "languages": {
     "english": "English",

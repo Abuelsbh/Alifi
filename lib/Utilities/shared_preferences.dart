@@ -53,5 +53,15 @@ class SharedPref{
 
   static Future<void> setLanguage({required String lang})async => await prefs.setString(_language,lang);
 
+  static const String _userLocationKey = "user_selected_location";
+
+  static String? getUserLocation() => prefs.getString(_userLocationKey);
+
+  static Future<void> setUserLocation({required String locationId}) async => 
+      await prefs.setString(_userLocationKey, locationId);
+
+  static Future<void> clearUserLocation() async => 
+      await prefs.remove(_userLocationKey);
+
 
 }

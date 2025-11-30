@@ -219,7 +219,13 @@
     "email_subject": "استفسار عن تبني {0}",
     "email_body": "مرحبا،\n\nأنا مهتم بتبني {0} وأرغب في الحصول على مزيد من المعلومات.\n\nشكراً",
     "adoption_requirements": "متطلبات التبني",
-    "adoption_process": "عملية التبني"
+    "adoption_process": "عملية التبني",
+    "offering_adoption": "أنا بدي أحد يتبني الحيوان تبعي",
+    "seeking_adoption": "أنا بدي حيوان للتبني",
+    "no_seeking_pets": "لا توجد طلبات بحث عن حيوانات للتبني",
+    "no_seeking_pets_subtitle": "لا توجد طلبات بحث حالياً",
+    "no_offering_pets": "لا توجد حيوانات متاحة للتبني",
+    "no_offering_pets_subtitle": "تحقق مرة أخرى لاحقاً أو قم بإضافة حيوان للتبني"
   },
   "breeding": {
     "title": "حيوانات للتزاوج",
@@ -453,6 +459,15 @@
     "rating": "التقييم",
     "visit_website": "زيارة الموقع",
     "get_directions": "الحصول على الاتجاهات"
+  },
+  "location": {
+    "title": "الموقع",
+    "explore_service_area": "استكشف منطقة الخدمة الخاصة بنا",
+    "select_location": "اختر الموقع",
+    "current_location": "الموقع الحالي",
+    "no_locations": "لا توجد مواقع متاحة",
+    "save_error": "فشل حفظ الموقع",
+    "change_location": "تغيير الموقع"
   },
   "languages": {
     "english": "English",

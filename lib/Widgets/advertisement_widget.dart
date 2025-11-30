@@ -1,10 +1,79 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/services/advertisement_service.dart';
-import '../generated/assets.dart';
+import '../core/services/location_service.dart';
+
+// Helper function to build image widget (supports base64 and network images)
+Widget _buildAdvertisementImageWidget(String imageUrl, BuildContext context) {
+  // Check if image is base64
+  if (imageUrl.startsWith('data:image')) {
+    try {
+      // Extract base64 string from data URI
+      final base64String = imageUrl.split(',')[1];
+      final imageBytes = base64Decode(base64String);
+      
+      return Image.memory(
+        imageBytes,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _buildImageErrorWidget(context);
+        },
+      );
+    } catch (e) {
+      print('❌ Error decoding base64 image: $e');
+      return _buildImageErrorWidget(context);
+    }
+  } else if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    // Regular network image
+    return CachedNetworkImage(
+      imageUrl: imageUrl,
+      fit: BoxFit.cover,
+      placeholder: (context, url) => Container(
+        color: Colors.grey[200],
+        child: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              Theme.of(context).primaryColor,
+            ),
+          ),
+        ),
+      ),
+      errorWidget: (context, url, error) => _buildImageErrorWidget(context),
+    );
+  } else {
+    // Invalid image URL
+    return _buildImageErrorWidget(context);
+  }
+}
+
+Widget _buildImageErrorWidget(BuildContext context) {
+  return Container(
+    color: Colors.grey[300],
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.image_not_supported,
+          size: 40.sp,
+          color: Colors.grey[600],
+        ),
+        SizedBox(height: 8.h),
+        Text(
+          'Image not available',
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: 12.sp,
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
 class AdvertisementCarousel extends StatefulWidget {
   const AdvertisementCarousel({super.key});
@@ -14,44 +83,21 @@ class AdvertisementCarousel extends StatefulWidget {
 }
 
 class _AdvertisementCarouselState extends State<AdvertisementCarousel> {
-  List<Advertisement> _advertisements = [];
-  bool _isLoading = true;
   int _currentIndex = 0;
+  Future<List<Advertisement>>? _advertisementsFuture;
 
   @override
   void initState() {
     super.initState();
+    // Load advertisements once when widget is created - no continuous streams
     _loadAdvertisements();
   }
 
-  Future<void> _loadAdvertisements() async {
-    try {
-      print('🎯 AdvertisementCarousel: Loading advertisements...');
-      final ads = await AdvertisementService.getActiveAdvertisements();
-      print('🎯 AdvertisementCarousel: Received ${ads.length} advertisements');
-      
-      if (mounted) {
-        setState(() {
-          _advertisements = ads;
-          _isLoading = false;
-        });
-        
-        print('🎯 AdvertisementCarousel: State updated with ${ads.length} ads');
-        
-        // Track views for visible ads
-        if (ads.isNotEmpty) {
-          print('🎯 AdvertisementCarousel: Tracking view for first ad: ${ads.first.id}');
-          AdvertisementService.incrementAdView(ads.first.id);
-        }
-      }
-    } catch (e) {
-      print('❌ AdvertisementCarousel: Error loading ads: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
+  void _loadAdvertisements() {
+    // Load advertisements once - no continuous stream or polling
+    setState(() {
+      _advertisementsFuture = AdvertisementService.getActiveAdvertisements();
+    });
   }
 
   // Future<void> _onAdTap(Advertisement ad) async {
@@ -89,127 +135,120 @@ class _AdvertisementCarouselState extends State<AdvertisementCarousel> {
   }
 
 
-  void _onPageChanged(int index) {
+
+  @override
+  Widget build(BuildContext context) {
+    // Use FutureBuilder to load advertisements once only
+    if (_advertisementsFuture == null) {
+      return const SizedBox.shrink();
+    }
+
+    return FutureBuilder<List<Advertisement>>(
+      future: _advertisementsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            height: 180.h,
+            margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(15.r),
+            ),
+            child: Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Theme.of(context).primaryColor,
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          print('❌ AdvertisementCarousel: Error: ${snapshot.error}');
+          return const SizedBox.shrink();
+        }
+
+        final advertisements = snapshot.data ?? [];
+        final userLocationId = LocationService.getUserLocation();
+        
+        print('🎯 AdvertisementCarousel: Building with ${advertisements.length} ads for location: $userLocationId');
+
+        if (advertisements.isEmpty) {
+          print('🎯 AdvertisementCarousel: No ads to display for current location');
+          return const SizedBox.shrink(); // Don't show anything if no ads
+        }
+
+        // Track view for first ad when it loads (only once)
+        if (advertisements.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            AdvertisementService.incrementAdView(advertisements.first.id);
+          });
+        }
+
+        return Container(
+         // margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+          child: Column(
+            children: [
+              // Carousel
+              CarouselSlider.builder(
+                itemCount: advertisements.length,
+                itemBuilder: (context, index, realIndex) {
+                  final ad = advertisements[index];
+                  return _buildAdCard(ad);
+                },
+                options: CarouselOptions(
+                  height: 180.h,
+                  autoPlay: advertisements.length > 1,
+                  autoPlayInterval: const Duration(seconds: 5),
+                  autoPlayAnimationDuration: const Duration(milliseconds: 800),
+                  autoPlayCurve: Curves.fastOutSlowIn,
+                  enlargeCenterPage: true,
+                  viewportFraction: 0.9,
+                  onPageChanged: (index, reason) => _onPageChanged(index, advertisements),
+                ),
+              ),
+              
+              // Indicators (only if more than 1 ad)
+              if (advertisements.length > 1) ...[
+                SizedBox(height: 15.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: advertisements.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final isActive = index == _currentIndex;
+                    
+                    return Container(
+                      width: isActive ? 20.w : 8.w,
+                      height: 8.h,
+                      margin: EdgeInsets.symmetric(horizontal: 3.w),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4.r),
+                        color: isActive 
+                            ? Theme.of(context).primaryColor
+                            : Colors.grey[300],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _onPageChanged(int index, List<Advertisement> ads) {
     setState(() {
       _currentIndex = index;
     });
     
     // Track view for the new ad
-    if (index < _advertisements.length) {
-      AdvertisementService.incrementAdView(_advertisements[index].id);
+    if (index < ads.length) {
+      AdvertisementService.incrementAdView(ads[index].id);
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    print('🎯 AdvertisementCarousel: Building with ${_advertisements.length} ads, loading: $_isLoading');
-    
-    if (_isLoading) {
-      return Container(
-        height: 180.h,
-        margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(15.r),
-        ),
-        child: Center(
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              Theme.of(context).primaryColor,
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (_advertisements.isEmpty) {
-      print('🎯 AdvertisementCarousel: No ads to display, returning empty widget');
-      return const SizedBox.shrink(); // Don't show anything if no ads
-    }
-
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-      child: Column(
-        children: [
-          // Carousel
-
-          CarouselSlider.builder(
-            itemCount: _advertisements.length,
-            itemBuilder: (context, index, realIndex) {
-              final ad = _advertisements[index];
-              return _buildAdCard(ad);
-            },
-            options: CarouselOptions(
-              height: 180.h,
-              autoPlay: _advertisements.length > 1,
-              autoPlayInterval: const Duration(seconds: 5),
-              autoPlayAnimationDuration: const Duration(milliseconds: 800),
-              autoPlayCurve: Curves.fastOutSlowIn,
-              enlargeCenterPage: true,
-              viewportFraction: 0.9,
-              onPageChanged: (index, reason) => _onPageChanged(index),
-            ),
-          ),
-          
-          // Indicators (only if more than 1 ad)
-          if (_advertisements.length > 1) ...[
-            SizedBox(height: 15.h),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: _advertisements.asMap().entries.map((entry) {
-                final index = entry.key;
-                final isActive = index == _currentIndex;
-                
-                return Container(
-                  width: isActive ? 20.w : 8.w,
-                  height: 8.h,
-                  margin: EdgeInsets.symmetric(horizontal: 3.w),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4.r),
-                    color: isActive 
-                        ? Theme.of(context).primaryColor
-                        : Colors.grey[300],
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-          if(_advertisements.isEmpty)
-            Container(
-              margin: EdgeInsets.symmetric(horizontal: 20.w),
-              height: 200.h,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(18.r),
-                child: Stack(
-                  children: [
-                    // Cat Image Background
-                    Container(
-                      width: double.infinity,
-                      height: double.infinity,
-                      color: Color(0xFFFF914C), // Orange background
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(24.r),
-                          topRight: Radius.circular(24.r),
-                        ),
-                        child: Image.asset(
-                          Assets.imagesLostAnimal,
-                          fit: BoxFit.cover, // makes sure image fills area properly
-                        ),
-                      ),
-                    ),
-
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
   }
 
   Widget _buildAdCard(Advertisement ad) {
@@ -233,42 +272,7 @@ class _AdvertisementCarouselState extends State<AdvertisementCarousel> {
             children: [
               // Background Image
               Positioned.fill(
-                child: CachedNetworkImage(
-                  imageUrl: ad.imageUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[200],
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Theme.of(context).primaryColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.grey[300],
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.image_not_supported,
-                          size: 40.sp,
-                          color: Colors.grey[600],
-                        ),
-                        SizedBox(height: 8.h),
-                        Text(
-                          'Image not available',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12.sp,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                child: _buildAdvertisementImageWidget(ad.imageUrl, context),
               ),
               
               // Gradient Overlay (for better text readability)
@@ -420,29 +424,7 @@ class AdvertisementCard extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12.r),
-          child: CachedNetworkImage(
-            imageUrl: advertisement.imageUrl,
-            fit: BoxFit.cover,
-            placeholder: (context, url) => Container(
-              color: Colors.grey[200],
-              child: Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    Theme.of(context).primaryColor,
-                  ),
-                ),
-              ),
-            ),
-            errorWidget: (context, url, error) => Container(
-              color: Colors.grey[300],
-              child: Icon(
-                Icons.image_not_supported,
-                size: 30.sp,
-                color: Colors.grey[600],
-              ),
-            ),
-          ),
+          child: _buildAdvertisementImageWidget(advertisement.imageUrl, context),
         ),
       ),
     );

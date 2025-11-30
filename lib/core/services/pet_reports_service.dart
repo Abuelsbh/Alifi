@@ -633,6 +633,7 @@ class PetReportsService {
           'isHouseTrained': report['isHouseTrained'] ?? false,
           'preferredHomeType': report['preferredHomeType'] ?? '',
         },
+        'adoptionType': report['adoptionType'] ?? 'offering', // 'seeking' or 'offering'
       });
 
       // Add to Firestore

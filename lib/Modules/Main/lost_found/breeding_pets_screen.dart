@@ -25,9 +25,6 @@ class BreedingPetsScreen extends StatefulWidget {
 class _BreedingPetsScreenState extends State<BreedingPetsScreen> {
   List<BreedingPetModel> _breedingPets = [];
   bool _isLoading = true;
-  String _selectedFilter = 'الكل'; // All, Dog, Cat, etc.
-
-  final List<String> _filterOptions = ['الكل', 'كلب', 'قط', 'أخرى'];
 
   @override
   void initState() {
@@ -85,39 +82,11 @@ class _BreedingPetsScreenState extends State<BreedingPetsScreen> {
       ),
       body: Column(
         children: [
-          // Filter Chips
-          Container(
-            height: 60.h,
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _filterOptions.length,
-              itemBuilder: (context, index) {
-                final filter = _filterOptions[index];
-                final isSelected = _selectedFilter == filter;
-                return Padding(
-                  padding: EdgeInsets.only(right: 8.w),
-                  child: FilterChip(
-                    label: Text(filter),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        _selectedFilter = filter;
-                      });
-                    },
-                    selectedColor: AppTheme.primaryGreen.withOpacity(0.2),
-                    checkmarkColor: AppTheme.primaryGreen,
-                  ),
-                );
-              },
-            ),
-          ),
-
           // Content
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _getFilteredPets().isEmpty
+                : _breedingPets.isEmpty
                     ? _buildEmptyState()
                     : _buildPetsList(),
           ),
@@ -188,12 +157,11 @@ class _BreedingPetsScreenState extends State<BreedingPetsScreen> {
   }
 
   Widget _buildPetsList() {
-    final filteredPets = _getFilteredPets();
     return ListView.builder(
       padding: EdgeInsets.all(16.w),
-      itemCount: filteredPets.length,
+      itemCount: _breedingPets.length,
       itemBuilder: (context, index) {
-        final pet = filteredPets[index];
+        final pet = _breedingPets[index];
         return _buildPetCard(context,pet,index%2 == 0 ? ThemeClass.of(context).secondaryColor : ThemeClass.of(context).primaryColor);
       },
     );
@@ -350,10 +318,4 @@ class _BreedingPetsScreenState extends State<BreedingPetsScreen> {
   }
 
 
-  List<BreedingPetModel> _getFilteredPets() {
-    if (_selectedFilter == 'الكل') {
-      return _breedingPets;
-    }
-    return _breedingPets.where((pet) => pet.petType == _selectedFilter).toList();
-  }
 } 

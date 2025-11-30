@@ -145,6 +145,34 @@ function initializeEventListeners() {
         addAdminBtn.addEventListener('click', () => adminFeatures.openAddAdminModal());
     }
 
+    // Locations elements
+    const addLocationBtn = document.getElementById('add-location-btn');
+    const locationModal = document.getElementById('location-modal');
+    const locationForm = document.getElementById('location-form');
+    const locationSearch = document.getElementById('location-search');
+    const locationsTableBody = document.getElementById('locations-table-body');
+
+    // Add Location button
+    if (addLocationBtn) {
+        addLocationBtn.addEventListener('click', () => openLocationModal());
+    }
+
+    // Location form submission
+    if (locationForm) {
+        locationForm.addEventListener('submit', handleLocationSubmit);
+    }
+
+    // Cancel Location button
+    const cancelLocationBtn = document.getElementById('cancel-location-btn');
+    if (cancelLocationBtn) {
+        cancelLocationBtn.addEventListener('click', () => closeLocationModal());
+    }
+
+    // Search for Locations
+    if (locationSearch) {
+        locationSearch.addEventListener('input', (e) => filterLocations(e.target.value));
+    }
+
     // Admin form submission (Added)
     if (addAdminForm) {
         addAdminForm.addEventListener('submit', (e) => {
@@ -165,10 +193,11 @@ function initializeEventListeners() {
     }
 
     // Modal close buttons
-    document.querySelectorAll('.modal-close, #cancel-btn, #cancel-store-btn').forEach(btn => {
+    document.querySelectorAll('.modal-close, #cancel-btn, #cancel-store-btn, #cancel-location-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             closeVetModal();
             closeStoreModal();
+            closeLocationModal();
             // Close user and report modals (Added)
             if (document.getElementById('user-modal')) adminFeatures.closeModal('user-modal');
             if (document.getElementById('report-modal')) adminFeatures.closeModal('report-modal');
@@ -384,6 +413,7 @@ function navigateToPage(pageName) {
         users: 'Users Management',
         reports: 'Pet Reports Management', // Changed 'Pet Reports' to 'Pet Reports Management' for consistency
         advertisements: 'Advertisements Management',
+        locations: 'Locations Management',
         admins: 'Admins Management', // Added for Admins page
         settings: 'Settings'
     };
@@ -415,6 +445,8 @@ function navigateToPage(pageName) {
         } else {
             console.error('adminFeatures not available when navigating to advertisements');
         }
+    } else if (pageName === 'locations') {
+        loadLocations();
     } else if (pageName === 'admins') { // Added for Admins page
         if (window.adminFeatures) {
             window.adminFeatures.loadAdmins();
@@ -1217,3 +1249,251 @@ function loadAdvertisementsPage() {
 }
 
 console.log('✅ Advertisements module initialized!');
+
+// Locations Management Functions
+let locationsData = [];
+let currentEditingLocation = null;
+
+// Make locationsData globally accessible
+window.locationsData = locationsData;
+
+function openLocationModal(location = null) {
+    currentEditingLocation = location;
+    const modal = document.getElementById('location-modal');
+    const form = document.getElementById('location-form');
+    const title = document.getElementById('location-modal-title');
+    
+    if (location) {
+        title.textContent = 'Edit Location';
+        document.getElementById('location-name').value = location.name || '';
+        document.getElementById('location-description').value = location.description || '';
+        document.getElementById('location-display-order').value = location.displayOrder || 0;
+        document.getElementById('location-is-active').checked = location.isActive !== false;
+        form.dataset.mode = 'edit';
+        form.dataset.locationId = location.id;
+    } else {
+        title.textContent = 'Add Location';
+        form.reset();
+        form.dataset.mode = 'add';
+        delete form.dataset.locationId;
+    }
+    
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLocationModal() {
+    const modal = document.getElementById('location-modal');
+    modal.classList.remove('show');
+    document.body.style.overflow = 'auto';
+    currentEditingLocation = null;
+    const form = document.getElementById('location-form');
+    form.reset();
+    delete form.dataset.mode;
+    delete form.dataset.locationId;
+}
+
+async function handleLocationSubmit(e) {
+    e.preventDefault();
+    
+    const form = document.getElementById('location-form');
+    const mode = form.dataset.mode;
+    const locationId = form.dataset.locationId;
+    
+    const locationData = {
+        name: document.getElementById('location-name').value.trim(),
+        description: document.getElementById('location-description').value.trim(),
+        displayOrder: parseInt(document.getElementById('location-display-order').value) || 0,
+        isActive: document.getElementById('location-is-active').checked
+    };
+    
+    // Validate
+    if (!locationData.name) {
+        alert('Location name is required');
+        return;
+    }
+    
+    // Show loading
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    submitBtn.disabled = true;
+    
+    try {
+        let result;
+        if (mode === 'edit' && locationId) {
+            result = await FirebaseService.updateLocation(locationId, locationData);
+        } else {
+            result = await FirebaseService.createLocation(locationData);
+        }
+        
+        if (result.success) {
+            alert(`Location ${mode === 'edit' ? 'updated' : 'created'} successfully!`);
+            closeLocationModal();
+            loadLocations(); // Refresh the list
+        } else {
+            alert(result.error || `Failed to ${mode === 'edit' ? 'update' : 'create'} location`);
+        }
+    } catch (error) {
+        console.error('Error saving location:', error);
+        alert('Failed to save location: ' + error.message);
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+async function loadLocations() {
+    console.log('🔄 Loading locations...');
+    try {
+        const result = await FirebaseService.getAllLocations();
+        console.log('📍 Load locations result:', result);
+        
+        if (result.success) {
+            locationsData = result.data || [];
+            window.locationsData = locationsData; // Update global reference
+            console.log(`✅ Loaded ${locationsData.length} locations:`, locationsData);
+            displayLocations(locationsData);
+        } else {
+            console.error('❌ Error loading locations:', result.error);
+            showNotification('Failed to load locations: ' + (result.error || 'Unknown error'), 'error');
+            // Show empty state
+            displayLocations([]);
+        }
+    } catch (error) {
+        console.error('❌ Exception loading locations:', error);
+        showNotification('Failed to load locations: ' + error.message, 'error');
+        displayLocations([]);
+    }
+}
+
+function displayLocations(locations) {
+    console.log('📊 Displaying locations:', locations);
+    const tbody = document.getElementById('locations-table-body');
+    if (!tbody) {
+        console.error('❌ locations-table-body not found!');
+        return;
+    }
+    
+    if (!locations || locations.length === 0) {
+        console.log('⚠️ No locations to display');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
+                    <i class="fas fa-map-marker-alt" style="font-size: 48px; margin-bottom: 16px; display: block;"></i>
+                    <p>No locations found. Click "Add Location" to create your first location.</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    console.log(`✅ Displaying ${locations.length} locations`);
+    
+    tbody.innerHTML = locations.map((location, index) => {
+        const createdAt = location.createdAt ? 
+            new Date(location.createdAt.seconds * 1000).toLocaleDateString() : 
+            'N/A';
+        
+        return `
+            <tr>
+                <td>${escapeHtml(location.name)}</td>
+                <td>${escapeHtml(location.description || '-')}</td>
+                <td>${location.displayOrder || 0}</td>
+                <td>
+                    <span class="status-badge ${location.isActive ? 'active' : 'inactive'}">
+                        ${location.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                </td>
+                <td>${createdAt}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon" onclick="editLocation('${location.id}')" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon" onclick="toggleLocationStatus('${location.id}', ${!location.isActive})" title="${location.isActive ? 'Deactivate' : 'Activate'}">
+                            <i class="fas fa-${location.isActive ? 'eye-slash' : 'eye'}"></i>
+                        </button>
+                        <button class="btn-icon delete" onclick="deleteLocation('${location.id}', '${escapeHtml(location.name)}')" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function filterLocations(searchTerm) {
+    if (!searchTerm) {
+        displayLocations(locationsData);
+        return;
+    }
+    
+    const filtered = locationsData.filter(location => {
+        const name = (location.name || '').toLowerCase();
+        const description = (location.description || '').toLowerCase();
+        const search = searchTerm.toLowerCase();
+        return name.includes(search) || description.includes(search);
+    });
+    
+    displayLocations(filtered);
+}
+
+async function toggleLocationStatus(locationId, isActive) {
+    if (!confirm(`Are you sure you want to ${isActive ? 'activate' : 'deactivate'} this location?`)) {
+        return;
+    }
+    
+    try {
+        const result = await FirebaseService.toggleLocationStatus(locationId, isActive);
+        if (result.success) {
+            showNotification(`Location ${isActive ? 'activated' : 'deactivated'} successfully`, 'success');
+            loadLocations();
+        } else {
+            showNotification(result.error || 'Failed to update location status', 'error');
+        }
+    } catch (error) {
+        console.error('Error toggling location status:', error);
+        showNotification('Failed to update location status', 'error');
+    }
+}
+
+async function deleteLocation(locationId, locationName) {
+    if (!confirm(`Are you sure you want to delete "${locationName}"? This action cannot be undone.`)) {
+        return;
+    }
+    
+    try {
+        const result = await FirebaseService.deleteLocation(locationId);
+        if (result.success) {
+            showNotification('Location deleted successfully', 'success');
+            loadLocations();
+        } else {
+            showNotification(result.error || 'Failed to delete location', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting location:', error);
+        showNotification('Failed to delete location', 'error');
+    }
+}
+
+function editLocation(locationId) {
+    const location = (window.locationsData || locationsData).find(loc => loc.id === locationId);
+    if (location) {
+        openLocationModal(location);
+    } else {
+        console.error('Location not found:', locationId);
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showNotification(message, type = 'info') {
+    // Simple notification - you can enhance this with a toast library
+    alert(message);
+}

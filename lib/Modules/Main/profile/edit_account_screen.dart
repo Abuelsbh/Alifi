@@ -3,12 +3,15 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 import '../../../Widgets/bottom_navbar_widget.dart';
+import '../../../Widgets/custom_textfield_widget.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/Language/app_languages.dart';
 import '../../../core/firebase/firebase_config.dart';
+import '../../../generated/assets.dart';
 
 class EditAccountScreen extends StatefulWidget {
   const EditAccountScreen({super.key});
@@ -23,8 +26,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  bool _isPasswordVisible = false;
+  final TextEditingController _emailController = TextEditingController();
 
   @override
   void initState() {
@@ -36,7 +38,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
-    _passwordController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -48,9 +50,34 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
         final userProfile = await AuthService.getUserProfile(AuthService.userId!);
         if (userProfile != null) {
           _user = userProfile;
-          _nameController.text = userProfile['username'] ?? userProfile['name'] ?? '';
-          _phoneController.text = userProfile['phoneNumber'] ?? userProfile['phone'] ?? '';
+          // Load name (check multiple possible fields)
+          final name = userProfile['username'] ?? 
+                      userProfile['name'] ?? 
+                      AuthService.userDisplayName ?? 
+                      'User';
+          _nameController.text = name;
+          
+          // Load phone (check multiple possible fields)
+          final phone = userProfile['phoneNumber'] ?? 
+                       userProfile['phone'] ?? 
+                       '';
+          _phoneController.text = phone;
+          
+          // Load email
+          final email = userProfile['email'] ?? 
+                       AuthService.userEmail ?? 
+                       '';
+          _emailController.text = email;
+          
+          // Ensure profileImageUrl is set (check multiple possible fields)
+          if (_user!['profileImageUrl'] == null && _user!['profilePhoto'] != null) {
+            _user!['profileImageUrl'] = _user!['profilePhoto'];
+          }
+          if (_user!['profileImageUrl'] == null && AuthService.userPhotoURL != null) {
+            _user!['profileImageUrl'] = AuthService.userPhotoURL;
+          }
         } else {
+          // If no profile exists, create one from Auth data
           _user = {
             'uid': AuthService.userId,
             'email': AuthService.userEmail ?? '',
@@ -59,10 +86,20 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
             'profileImageUrl': AuthService.userPhotoURL,
           };
           _nameController.text = AuthService.userDisplayName ?? 'User';
+          _emailController.text = AuthService.userEmail ?? '';
+          _phoneController.text = '';
         }
       }
     } catch (e) {
       print('Error loading user data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading user data: $e'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -97,11 +134,21 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
       await ref.putFile(File(image.path));
       final imageUrl = await ref.getDownloadURL();
 
-      // Update user profile in Firestore
+      // Update user profile in Firestore (support both field names)
       await FirebaseConfig.firestore
           .collection('users')
           .doc(userId)
-          .update({'profileImageUrl': imageUrl});
+          .update({
+        'profileImageUrl': imageUrl,
+        'profilePhoto': imageUrl, // Also update profilePhoto for consistency
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      
+      // Also update in AuthService
+      await AuthService.updateUserProfile(
+        uid: userId,
+        photoUrl: imageUrl,
+      );
 
       // Reload user data
       await _loadUserData();
@@ -109,7 +156,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(Provider.of<AppLanguage>(context).translate('profile.image_updated')),
+            content: Text(Provider.of<AppLanguage>(context, listen: false).translate('profile.image_updated')),
             backgroundColor: AppTheme.success,
           ),
         );
@@ -119,7 +166,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${Provider.of<AppLanguage>(context).translate('profile.image_error')}: $e'),
+            content: Text('${Provider.of<AppLanguage>(context, listen: false).translate('profile.image_error')}: $e'),
             backgroundColor: AppTheme.error,
           ),
         );
@@ -135,7 +182,18 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
     if (!AuthService.isAuthenticated || AuthService.userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(Provider.of<AppLanguage>(context).translate('profile.login_prompt')),
+          content: Text(Provider.of<AppLanguage>(context, listen: false).translate('profile.login_prompt')),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+      return;
+    }
+
+    // Validate name
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('الاسم مطلوب'),
           backgroundColor: AppTheme.error,
         ),
       );
@@ -147,29 +205,20 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
     try {
       final userId = AuthService.userId!;
       
-      // Update name and phone
+      // Update name and phone only (email is read-only)
       await AuthService.updateUserProfile(
         uid: userId,
-        name: _nameController.text.trim().isNotEmpty ? _nameController.text.trim() : null,
+        name: _nameController.text.trim(),
         phone: _phoneController.text.trim().isNotEmpty ? _phoneController.text.trim() : null,
       );
 
-      // Update password if provided
-      if (_passwordController.text.trim().isNotEmpty) {
-        if (_passwordController.text.length < 6) {
-          throw Exception('Password must be at least 6 characters');
-        }
-        await AuthService.updatePassword(_passwordController.text.trim());
-        _passwordController.clear();
-      }
-
-      // Reload user data
+      // Reload user data to get latest changes
       await _loadUserData();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(Provider.of<AppLanguage>(context).translate('profile.image_updated') ?? 'Profile updated successfully'),
+            content: Text(Provider.of<AppLanguage>(context, listen: false).translate('profile.image_updated') ?? 'تم تحديث الملف الشخصي بنجاح'),
             backgroundColor: AppTheme.success,
           ),
         );
@@ -179,7 +228,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('خطأ في التحديث: $e'),
             backgroundColor: AppTheme.error,
           ),
         );
@@ -198,16 +247,45 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
       bottomNavigationBar: BottomNavBarWidget(
         selected: SelectedBottomNavBar.profile,
       ),
-      body: _isLoading && _user == null
-          ? const Center(child: CircularProgressIndicator())
-          : _user == null
-              ? Center(
-                  child: Text(
-                    Provider.of<AppLanguage>(context).translate('profile.login_prompt'),
-                    style: const TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                )
-              : _buildEditAccountView(),
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              Expanded(flex: 1, child: Container()),
+              Expanded(
+                flex: 9,
+                child: Image.asset(
+                  Assets.imagesBackground3,
+                  fit: BoxFit.contain,
+                  width: double.infinity,
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Image.asset(
+                  Assets.imagesAlifi2,
+                  height: 100,
+                  width: 200,
+                ),
+              ),
+            ],
+          ),
+
+          // المحتوى فوق الخلفية
+          Container(
+            child:  _isLoading && _user == null
+                ? const Center(child: CircularProgressIndicator())
+                : _user == null
+                ? Center(
+              child: Text(
+                Provider.of<AppLanguage>(context).translate('profile.login_prompt'),
+                style: const TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+            )
+                : _buildEditAccountView(),
+          ),
+        ],
+      )
     );
   }
 
@@ -218,12 +296,12 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
     return SingleChildScrollView(
       child: Column(
         children: [
-          SizedBox(height: 40.h),
+          SizedBox(height: 80.h),
           // Profile Picture
           GestureDetector(
             onTap: _pickAndUploadImage,
             child: CircleAvatar(
-              radius: 50.r,
+              radius: 60.r,
               backgroundColor: Colors.grey[300],
               backgroundImage: profileImageUrl != null 
                   ? NetworkImage(profileImageUrl) 
@@ -231,7 +309,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
               child: profileImageUrl == null
                   ? Icon(
                       Icons.person,
-                      size: 50.sp,
+                      size: 60.sp,
                       color: Colors.grey[600],
                     )
                   : null,
@@ -249,47 +327,51 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
               color: AppTheme.primaryGreen,
             ),
           ),
+
           
-          SizedBox(height: 16.h),
+          SizedBox(height: 32.h),
           
-          // Account Button (Orange)
+          // Email Field (Read-only, First)
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 40.w),
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryOrange,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 32.w),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+            child: CustomTextFieldWidget(
+              controller: _emailController,
+              hint: _user!['email'] ?? AuthService.userEmail ?? 'email@example.com',
+              backGroundColor: AppTheme.primaryGreen,
+              borderStyleFlag: 3,
+              borderRadiusValue: 24.r,
+              textInputType: TextInputType.emailAddress,
+              readOnly: true,
+              enable: false,
+              prefixIcon: Icon(
+                Icons.email,
+                color: Colors.white70,
+                size: 20.sp,
               ),
-              child: Text(
-                Provider.of<AppLanguage>(context).translate('profile.account') ?? 'Account',
-                style: TextStyle(fontSize: 16.sp),
-              ),
+              style: TextStyle(color: Colors.white70, fontSize: 16.sp),
+              hintStyle: TextStyle(color: Colors.white54, fontSize: 16.sp),
             ),
           ),
           
-          SizedBox(height: 24.h),
-          
-          // Three dots (ellipsis)
-          Icon(
-            Icons.more_vert,
-            color: Colors.grey[400],
-            size: 24.sp,
-          ),
-          
-          SizedBox(height: 32.h),
+          SizedBox(height: 16.h),
           
           // Name Field
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 40.w),
-            child: _buildInputField(
+            child: CustomTextFieldWidget(
               controller: _nameController,
-              hintText: username,
-              icon: Icons.edit,
+              hint: username,
+              backGroundColor: AppTheme.primaryGreen,
+              borderStyleFlag: 3,
+              borderRadiusValue: 24.r,
+              textInputType: TextInputType.text,
+              prefixIcon: Icon(
+                Icons.edit,
+                color: Colors.white,
+                size: 20.sp,
+              ),
+              style: TextStyle(color: Colors.white, fontSize: 16.sp),
+              hintStyle: TextStyle(color: Colors.white70, fontSize: 16.sp),
             ),
           ),
           
@@ -298,22 +380,24 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
           // Phone Field
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 40.w),
-            child: _buildInputField(
+            child: CustomTextFieldWidget(
               controller: _phoneController,
-              hintText: _user!['phoneNumber'] ?? _user!['phone'] ?? '0100000000',
-              icon: Icons.edit,
+              hint: _user!['phoneNumber'] ?? _user!['phone'] ?? '0100000000',
+              backGroundColor: AppTheme.primaryGreen,
+              borderStyleFlag: 3,
+              borderRadiusValue: 24.r,
+              textInputType: TextInputType.phone,
+              prefixIcon: Icon(
+                Icons.phone,
+                color: Colors.white,
+                size: 20.sp,
+              ),
+              style: TextStyle(color: Colors.white, fontSize: 16.sp),
+              hintStyle: TextStyle(color: Colors.white70, fontSize: 16.sp),
             ),
           ),
           
-          SizedBox(height: 16.h),
-          
-          // Password Field
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40.w),
-            child: _buildPasswordField(),
-          ),
-          
-          SizedBox(height: 32.h),
+          SizedBox(height: 60.h),
           
           // Submit Button
           Padding(
@@ -327,7 +411,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                   foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(vertical: 14.h),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(24.r),
                   ),
                 ),
                 child: _isLoading
@@ -353,60 +437,5 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
     );
   }
 
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String hintText,
-    required IconData icon,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.primaryGreen,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TextField(
-        controller: controller,
-        style: TextStyle(color: Colors.white, fontSize: 16.sp),
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: TextStyle(color: Colors.white70, fontSize: 16.sp),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-          suffixIcon: Icon(icon, color: Colors.white, size: 20.sp),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPasswordField() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.primaryGreen,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TextField(
-        controller: _passwordController,
-        obscureText: !_isPasswordVisible,
-        style: TextStyle(color: Colors.white, fontSize: 16.sp),
-        decoration: InputDecoration(
-          hintText: 'Password',
-          hintStyle: TextStyle(color: Colors.white70, fontSize: 16.sp),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-          suffixIcon: IconButton(
-            icon: Icon(
-              _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
-              color: Colors.white,
-              size: 20.sp,
-            ),
-            onPressed: () {
-              setState(() {
-                _isPasswordVisible = !_isPasswordVisible;
-              });
-            },
-          ),
-        ),
-      ),
-    );
-  }
 }
 

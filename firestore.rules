@@ -51,6 +51,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Locations collection - public read for active locations, admin can read/write all
+    match /locations/{document} {
+      allow read: if resource.data.isActive == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
     // Admins collection - For Firebase Authentication, not Firestore data directly
     // This rule assumes you might store some admin-specific metadata in a Firestore collection
     // However, the primary admin status is controlled by custom claims.

@@ -13,6 +13,7 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/Language/app_languages.dart';
 import '../../../core/firebase/firebase_config.dart';
 import '../../../generated/assets.dart';
+import '../veterinary/enhanced_veterinary_screen.dart';
 import 'my_pets_screen.dart';
 import 'my_reports_screen.dart';
 import 'settings_screen.dart';
@@ -176,6 +177,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
         children: [
           Column(
             children: [
+              Expanded(flex: 1, child: Container()),
               Expanded(
                 flex: 9,
                 child: Image.asset(
@@ -302,7 +304,12 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
             _buildSection(
               title: Provider.of<AppLanguage>(context).translate('profile.my_chats') ?? 'Chats',
               onTap: () {
-                // TODO: Navigate to chats
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const EnhancedVeterinaryScreen(),
+                  ),
+                );
               },
             ),
 
@@ -350,14 +357,6 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
             // Sign Out Section
             _buildSignOutSection(),
 
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w),
-              width: 120,
-              child: Divider(
-                color: Colors.grey,
-                thickness: 1,
-              ),
-            ),
           ],
         )
 
@@ -366,18 +365,20 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
   }
   
   Widget _buildSignOutSection() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 20.w),
-      child: InkWell(
-        onTap: _showSignOutDialog,
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 16.h),
-          child: Text(
-            Provider.of<AppLanguage>(context).translate('profile.sign_out') ?? 'Sign Out',
-            style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.error,
+    return Center(
+      child: Container(
+        margin: EdgeInsets.symmetric(horizontal: 20.w),
+        child: InkWell(
+          onTap: _showSignOutDialog,
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 16.h),
+            child: Text(
+              Provider.of<AppLanguage>(context).translate('profile.sign_out') ?? 'Sign Out',
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.error,
+              ),
             ),
           ),
         ),
@@ -387,6 +388,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
   
   Widget _buildServicesSection() {
     return Container(
+      width: 200.w,
       margin: EdgeInsets.symmetric(horizontal: 20.w),
       child: Column(
         children: [

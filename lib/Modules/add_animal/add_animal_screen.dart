@@ -18,11 +18,13 @@ import 'package:provider/provider.dart';
 class AddAnimalScreen extends StatefulWidget {
   final ReportType reportType;
   final String title;
+  final String? adoptionType; // 'seeking' or 'offering'
   
   const AddAnimalScreen({
     super.key, 
     required this.reportType,
     required this.title,
+    this.adoptionType,
   });
 
   @override
@@ -41,6 +43,9 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
     super.initState();
     con.activeStep = 0;
     con.reportType = widget.reportType;
+    if (widget.adoptionType != null) {
+      con.adoptionType = widget.adoptionType;
+    }
   }
 
 

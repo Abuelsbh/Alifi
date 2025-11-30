@@ -94,6 +94,21 @@ class AdminFeatures {
             this.closeModal('send-message-modal');
         });
 
+        // Send message to all users button
+        document.getElementById('send-message-all-btn')?.addEventListener('click', () => {
+            this.openSendMessageToAllModal();
+        });
+
+        // Send message to all users modal events
+        document.getElementById('send-message-all-form')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.sendMessageToAllUsers();
+        });
+
+        document.getElementById('cancel-message-all-btn')?.addEventListener('click', () => {
+            this.closeModal('send-message-all-modal');
+        });
+
         document.getElementById('close-user-modal')?.addEventListener('click', () => {
             this.closeModal('user-modal');
         });
@@ -1031,7 +1046,7 @@ class AdminFeatures {
         `).join('');
     }
 
-    showAddAdModal() {
+    async showAddAdModal() {
         console.log('showAddAdModal called!');
         const modal = document.getElementById('ad-modal');
         console.log('Modal element:', modal);
@@ -1041,9 +1056,44 @@ class AdminFeatures {
         document.getElementById('ad-form').dataset.mode = 'add';
         delete document.getElementById('ad-form').dataset.adId;
         
+        // Load locations and set default to "all"
+        await this.loadAdLocations();
+        document.getElementById('ad-location-all').checked = true;
+        this.toggleLocationCheckboxes(false);
+        
         console.log('About to show modal...');
         this.showModal('ad-modal');
         console.log('Modal should be shown now');
+    }
+    
+    async loadAdLocations() {
+        try {
+            const result = await FirebaseService.getAllLocations();
+            if (result.success && result.data) {
+                const locationsList = document.getElementById('ad-locations-list');
+                if (!locationsList) return;
+                
+                locationsList.innerHTML = result.data
+                    .filter(loc => loc.isActive !== false)
+                    .map(loc => `
+                        <div style="margin-bottom: 8px;">
+                            <label class="checkbox-label">
+                                <input type="checkbox" class="ad-location-checkbox" value="${loc.id}" data-location-name="${loc.name}">
+                                <span class="checkmark"></span>
+                                ${loc.name}
+                            </label>
+                        </div>
+                    `).join('');
+            }
+        } catch (error) {
+            console.error('Error loading locations:', error);
+            document.getElementById('ad-locations-list').innerHTML = '<p style="color: #f44336;">Failed to load locations</p>';
+        }
+    }
+    
+    toggleLocationCheckboxes(disabled) {
+        const checkboxes = document.querySelectorAll('.ad-location-checkbox');
+        checkboxes.forEach(cb => cb.disabled = disabled);
     }
 
     async editAd(adId) {
@@ -1062,6 +1112,23 @@ class AdminFeatures {
             document.getElementById('ad-click-url').value = ad.clickUrl || '';
             document.getElementById('ad-is-active').checked = ad.isActive !== false;
             
+            // Load locations and set selected ones
+            await this.loadAdLocations();
+            
+            // Set location checkboxes
+            const locations = ad.locations || [];
+            if (locations.includes('all') || !locations || locations.length === 0) {
+                document.getElementById('ad-location-all').checked = true;
+                this.toggleLocationCheckboxes(false);
+            } else {
+                document.getElementById('ad-location-all').checked = false;
+                this.toggleLocationCheckboxes(false);
+                locations.forEach(locId => {
+                    const checkbox = document.querySelector(`.ad-location-checkbox[value="${locId}"]`);
+                    if (checkbox) checkbox.checked = true;
+                });
+            }
+            
             document.getElementById('ad-form').dataset.mode = 'edit';
             document.getElementById('ad-form').dataset.adId = adId;
             
@@ -1078,13 +1145,28 @@ class AdminFeatures {
             const mode = form.dataset.mode;
             const adId = form.dataset.adId;
             
+            // Get selected locations
+            const allLocationsChecked = document.getElementById('ad-location-all').checked;
+            let locations = [];
+            if (allLocationsChecked) {
+                locations = ['all'];
+            } else {
+                const selectedCheckboxes = document.querySelectorAll('.ad-location-checkbox:checked');
+                locations = Array.from(selectedCheckboxes).map(cb => cb.value);
+                if (locations.length === 0) {
+                    alert('Please select at least one location or "All Locations"');
+                    return;
+                }
+            }
+            
             const adData = {
                 title: document.getElementById('ad-title').value.trim(),
                 description: document.getElementById('ad-description').value.trim(),
                 imageUrl: document.getElementById('ad-image-url').value.trim(),
                 displayOrder: parseInt(document.getElementById('ad-display-order').value) || 1,
                 clickUrl: document.getElementById('ad-click-url').value.trim(),
-                isActive: document.getElementById('ad-is-active').checked
+                isActive: document.getElementById('ad-is-active').checked,
+                locations: locations
             };
 
             // Validate required fields
@@ -1273,6 +1355,83 @@ class AdminFeatures {
 
     sendMessageToUser(userId) { // This function now correctly accepts userId
         this.openSendMessageModal(userId);
+    }
+
+    openSendMessageToAllModal() {
+        // Clear form
+        document.getElementById('send-message-all-form').reset();
+        document.getElementById('message-all-recipient').value = 'All Users';
+        
+        // Hide progress bar
+        document.getElementById('send-all-progress').style.display = 'none';
+        
+        // Show modal
+        this.showModal('send-message-all-modal');
+    }
+
+    async sendMessageToAllUsers() {
+        try {
+            const messageData = {
+                subject: document.getElementById('message-all-subject').value,
+                content: document.getElementById('message-all-content').value,
+                type: document.getElementById('message-all-type').value
+            };
+
+            // Validate
+            if (!messageData.subject.trim() || !messageData.content.trim()) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            // Confirm before sending
+            const confirmMessage = `Are you sure you want to send this message to ALL users in the system?\n\nSubject: ${messageData.subject}\n\nThis action cannot be undone.`;
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            // Show progress bar
+            const progressDiv = document.getElementById('send-all-progress');
+            progressDiv.style.display = 'block';
+            
+            // Show loading
+            const submitBtn = document.getElementById('send-all-submit-btn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+            submitBtn.disabled = true;
+
+            // Progress callback
+            const updateProgress = (progress, successCount, failCount, totalUsers) => {
+                document.getElementById('progress-percent').textContent = `${progress}%`;
+                document.getElementById('progress-bar').style.width = `${progress}%`;
+                document.getElementById('progress-stats').textContent = `${successCount + failCount} / ${totalUsers} users`;
+                document.getElementById('progress-success').textContent = `✓ ${successCount} sent`;
+                document.getElementById('progress-failed').textContent = `✗ ${failCount} failed`;
+            };
+
+            // Send message to all users
+            const result = await FirebaseService.sendMessageToAllUsers(messageData, updateProgress);
+            
+            if (result.success) {
+                // Success
+                alert(`Message sent successfully!\n\nTotal users: ${result.totalUsers}\nSuccessfully sent: ${result.successCount}\nFailed: ${result.failCount}`);
+                this.closeModal('send-message-all-modal');
+            } else {
+                alert(result.error || 'Failed to send message to all users.');
+            }
+            
+        } catch (error) {
+            console.error('Error sending message to all users:', error);
+            alert('Failed to send message to all users. Please try again.');
+        } finally {
+            // Reset button
+            const submitBtn = document.getElementById('send-all-submit-btn');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-bullhorn"></i> Send to All Users';
+                submitBtn.disabled = false;
+            }
+            // Hide progress bar
+            document.getElementById('send-all-progress').style.display = 'none';
+        }
     }
 
     contactReporter() {

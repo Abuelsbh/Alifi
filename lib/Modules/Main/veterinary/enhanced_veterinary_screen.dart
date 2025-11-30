@@ -1,14 +1,17 @@
 import 'dart:async';
+import 'package:alifi/Utilities/text_style_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../Widgets/bottom_navbar_widget.dart';
-import '../../../Widgets/main_navigation_screen.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../Widgets/custom_card.dart';
 import '../../../Models/chat_model.dart';
+import '../lost_found/user_chat_screen.dart';
 import 'enhanced_chat_screen.dart';
+import 'real_time_chat_screen.dart';
+import '../../../Widgets/home_header_widget.dart';
 
 class EnhancedVeterinaryScreen extends StatefulWidget {
   static const String routeName = '/EnhancedVeterinaryScreen';
@@ -26,17 +29,47 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
   List<Map<String, dynamic>> _veterinarians = [];
   List<Map<String, dynamic>> _filteredVeterinarians = [];
   List<ChatModel> _chats = [];
+  List<ChatModel> _userChats = [];
+  List<ChatModel> _userToUserChats = [];
   bool _isLoading = true;
+
+  // User data
+  String _userName = 'User';
+  String? _userProfileImage;
 
   // Stream subscriptions
   StreamSubscription? _veterinariansSubscription;
   StreamSubscription? _chatsSubscription;
+  StreamSubscription<List<ChatModel>>? _userChatsSub;
+  StreamSubscription<List<ChatModel>>? _userToUserChatsSub;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadUserData();
     _loadData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      if (AuthService.isAuthenticated && AuthService.userId != null) {
+        final userProfile = await AuthService.getUserProfile(AuthService.userId!);
+        if (userProfile != null) {
+          setState(() {
+            _userName = userProfile['username'] ?? userProfile['name'] ?? 'User';
+            _userProfileImage = userProfile['profileImageUrl'];
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+    }
+  }
+
+  Future<void> _loadLocation() async {
+    // This method can be used to reload location if needed
+    // Currently just a placeholder for the callback
   }
 
   @override
@@ -59,70 +92,76 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
   }
 
   Future<void> _loadData() async {
-    // Cancel existing subscriptions
+    _chats.clear();
     await _cancelSubscriptions();
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      // Clear all caches to ensure fresh data
       ChatService.clearAllCaches();
 
-      // Load veterinarians with real-time stream
+      // veterinarians stream
       _veterinariansSubscription = ChatService.getVeterinariansStream().listen((vets) {
-        if (mounted) {
-          setState(() {
-            _veterinarians = vets;
-            _filteredVeterinarians = vets;
-            _isLoading = false;
-          });
-
-          // Log for debugging
-          print('Loaded ${vets.length} veterinarians');
-          if (vets.isNotEmpty) {
-            print('First vet: ${vets.first['name']} - ID: ${vets.first['id']}');
-          }
-        }
-      }, onError: (error) {
-        print('Error in veterinarians stream: $error');
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        if (!mounted) return;
+        setState(() {
+          _veterinarians = vets;
+          _filteredVeterinarians = vets;
+          _isLoading = false;
+        });
       });
 
-      // Load user chats if authenticated
       if (AuthService.isAuthenticated) {
         final userId = AuthService.userId!;
-        _chatsSubscription = ChatService.getUserChatsStream(userId).listen((chats) {
-          if (mounted) {
-            setState(() {
-              _chats = chats;
-            });
-            print('Loaded ${chats.length} chats');
-          }
-        }, onError: (error) {
-          print('Error in chats stream: $error');
+
+        // Stream 1
+        _userChatsSub = ChatService.getUserChatsStream(userId).listen((chats) {
+          if (!mounted) return;
+          _mergeChats(chats, _userToUserChats);
+          _userChats = chats;
+        });
+
+        // Stream 2
+        _userToUserChatsSub = ChatService.getUserToUserChatsStream(userId).listen((chats) {
+          if (!mounted) return;
+          _mergeChats(_userChats, chats);
+          _userToUserChats = chats;
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-      print('Error loading veterinary data: $e');
+      if (mounted) setState(() => _isLoading = false);
+      print("Error: $e");
     }
   }
+
+  void _mergeChats(List<ChatModel> c1, List<ChatModel> c2) {
+    final ids = <String>{};
+    final merged = <ChatModel>[];
+
+    for (var chat in [...c1, ...c2]) {
+      if (!ids.contains(chat.id)) {
+        ids.add(chat.id);
+        merged.add(chat);
+      }
+    }
+
+    // Sort by lastMessageAt descending (newest first)
+    merged.sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
+
+    setState(() {
+      _chats = merged;
+    });
+  }
+
 
   Future<void> _cancelSubscriptions() async {
     await _veterinariansSubscription?.cancel();
     await _chatsSubscription?.cancel();
+    await _userChatsSub?.cancel();
+    await _userToUserChatsSub?.cancel();
     _veterinariansSubscription = null;
     _chatsSubscription = null;
+    _userChatsSub = null;
+    _userToUserChatsSub = null;
   }
 
   void _filterVeterinarians(String query) {
@@ -192,53 +231,42 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
         selected: SelectedBottomNavBar.veterinary,
       ),
       //bottomNavigationBar: MainNavigationScreen(initialSelected: SelectedBottomNavBar.veterinary),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: AppTheme.primaryGreen,
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text('الاستشارات البيطرية'),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        actions: [
-          IconButton(
-            icon: _isLoading
-              ? SizedBox(
-                  width: 20.w,
-                  height: 20.w,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppTheme.primaryGreen,
-                  ),
-                )
-              : Icon(
-                  Icons.refresh,
-                  color: AppTheme.primaryGreen,
-                ),
-            onPressed: _isLoading ? null : _loadData,
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppTheme.primaryGreen,
-          labelColor: AppTheme.primaryGreen,
-          unselectedLabelColor: Colors.grey,
-          tabs: const [
-            Tab(text: 'الأطباء المتاحين'),
-            Tab(text: 'محادثاتي'),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header Section
+            HomeHeaderWidget(
+              userName: _userName,
+              userProfileImage: _userProfileImage,
+              onLocationChanged: _loadLocation,
+            ),
+            
+
+            
+            // TabBar
+            TabBar(
+              controller: _tabController,
+              indicatorColor: AppTheme.primaryGreen,
+              labelColor: AppTheme.primaryGreen,
+              unselectedLabelColor: Colors.grey,
+              tabs: const [
+                Tab(text: 'الأطباء المتاحين'),
+                Tab(text: 'محادثاتي'),
+              ],
+            ),
+            
+            // Tab Content
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildVeterinariansTab(),
+                  _buildChatsTab(),
+                ],
+              ),
+            ),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildVeterinariansTab(),
-          _buildChatsTab(),
-        ],
       ),
     );
   }
@@ -363,7 +391,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
             ),
           )
         : ListView.builder(
-            padding: EdgeInsets.all(16.w),
+            padding: EdgeInsets.all(8.w),
             itemCount: _chats.length,
             itemBuilder: (context, index) {
               final chat = _chats[index];
@@ -500,116 +528,196 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
     );
   }
 
+  bool _isVeterinaryChat(ChatModel chat) {
+    // Check if chat is in veterinary_chats by checking if it's in _userChats
+    return _userChats.any((c) => c.id == chat.id);
+  }
+
   Widget _buildChatCard(ChatModel chat) {
+    final userId = AuthService.userId;
+    final unreadCount = userId != null ? chat.unreadCount[userId] ?? 0 : 0;
+    final isUnread = unreadCount > 0;
+    final isVeterinaryChat = _isVeterinaryChat(chat);
+    final participantName = _getParticipantName(chat);
+    final otherUserId = _getOtherUserId(chat);
+    
     return CustomCard(
       onTap: () {
-        // Navigate to chat screen
+        // Use unified chat screen for all chats
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => EnhancedChatScreen(
+            builder: (context) => UserChatScreen(
               chatId: chat.id,
-              veterinarianId: _getVetIdFromChat(chat),
-              veterinarianName: _getVetNameFromChat(chat),
+              otherUserId: otherUserId ?? '',
+              otherUserName: participantName,
+              isVeterinaryChat: isVeterinaryChat,
             ),
           ),
         );
       },
-      child: Padding(
-        padding: EdgeInsets.all(16.w),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 25.r,
-              backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
-              child: Icon(
-                Icons.person,
-                size: 25.sp,
-                color: AppTheme.primaryGreen,
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _getVetNameFromChat(chat), // Will be enhanced with real vet name
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    chat.lastMessage,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                            Text(
-              '${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            // Unread count placeholder
-            Container(
-              padding: EdgeInsets.all(6.w),
-              decoration: const BoxDecoration(
-                color: AppTheme.primaryOrange,
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                '1',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.bold,
+      child: Row(
+        children: [
+          // Avatar with type indicator
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 28.r,
+                backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+                child: Icon(
+                  isVeterinaryChat ? Icons.medical_services : Icons.person,
+                  size: 28.sp,
+                  color: AppTheme.primaryGreen,
                 ),
               ),
-            ),
+              // Type badge
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  padding: EdgeInsets.all(4.w),
+                  decoration: BoxDecoration(
+                    color: isVeterinaryChat ? AppTheme.primaryGreen : AppTheme.primaryOrange,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: Icon(
+                    isVeterinaryChat ? Icons.medical_services : Icons.person,
+                    size: 10.sp,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        participantName,
+                        style: TextStyleHelper.of(context).s16RegTextStyle.copyWith(
+                          fontWeight: isUnread ? FontWeight.w700 : FontWeight.w600,
+                          color: AppTheme.primaryGreen,
+                        ),
+                      ),
+                    ),
+                    // Chat type label
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                      decoration: BoxDecoration(
+                        color: isVeterinaryChat 
+                            ? AppTheme.primaryGreen.withOpacity(0.1)
+                            : AppTheme.primaryOrange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                      child: Text(
+                        isVeterinaryChat ? 'طبيب' : 'مستخدم',
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          color: isVeterinaryChat ? AppTheme.primaryGreen : AppTheme.primaryOrange,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  chat.lastMessage,
+                  style: TextStyleHelper.of(context).s14RegTextStyle.copyWith(
+                    color: isUnread ? Colors.black87 : Colors.grey[600],
+                    fontWeight: isUnread ? FontWeight.w500 : FontWeight.normal,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
-          ],
-        ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _formatTime(chat.lastMessageAt),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: isUnread ? AppTheme.primaryGreen : Colors.grey[600],
+                  fontWeight: isUnread ? FontWeight.w500 : FontWeight.normal,
+                ),
+              ),
+              SizedBox(height: 4.h),
+              if (isUnread)
+                Container(
+                  padding: EdgeInsets.all(6.w),
+                  decoration: const BoxDecoration(
+                    color: AppTheme.primaryOrange,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '$unreadCount',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  String _getVetNameFromChat(ChatModel chat) {
+  String _getParticipantName(ChatModel chat) {
     final userId = AuthService.userId;
-    if (userId == null) return 'طبيب بيطري';
-
-    // Get the other participant's name (not the current user)
+    if (userId == null) return 'مستخدم';
+    
     for (final participantId in chat.participants) {
       if (participantId != userId) {
-        return chat.participantNames[participantId] ?? 'طبيب بيطري';
+        return chat.participantNames[participantId] ?? 'مستخدم';
       }
     }
-
-    return 'طبيب بيطري';
+    
+    return 'مستخدم';
   }
 
-
-  String _getVetIdFromChat(ChatModel chat) {
+  String? _getOtherUserId(ChatModel chat) {
     final userId = AuthService.userId;
-    if (userId == null) return '';
-
-    // Get the other participant's ID (not the current user)
+    if (userId == null) return null;
+    
     for (final participantId in chat.participants) {
       if (participantId != userId) {
         return participantId;
       }
     }
-
-    return '';
+    
+    return null;
   }
+
+  String _formatTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inDays > 0) {
+      if (difference.inDays == 1) {
+        return 'أمس';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays} أيام';
+      } else {
+        return '${dateTime.day}/${dateTime.month}';
+      }
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}س';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}د';
+    } else {
+      return 'الآن';
+    }
+  }
+
 } 

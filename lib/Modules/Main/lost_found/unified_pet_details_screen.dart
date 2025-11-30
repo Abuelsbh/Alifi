@@ -10,6 +10,11 @@ import '../../../Widgets/custom_card.dart';
 import '../../../Widgets/custom_button.dart';
 import '../../../Widgets/translated_text.dart';
 import '../../../Widgets/translated_custom_button.dart';
+import '../../../core/services/chat_service.dart';
+import '../../../core/services/auth_service.dart';
+import '../../../Utilities/dialog_helper.dart';
+import '../../../Widgets/login_widget.dart';
+import 'user_chat_screen.dart';
 
 enum PetDetailsType {
   report,
@@ -1341,8 +1346,149 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
     );
   }
 
+  String? _getOwnerUserId() {
+    switch (widget.type) {
+      case PetDetailsType.report:
+        return widget.report!['userId'] as String?;
+      case PetDetailsType.adoption:
+        return widget.adoptionPet!.userId;
+      case PetDetailsType.breeding:
+        return widget.breedingPet!.userId;
+    }
+  }
+
+  bool _isCurrentUserOwner() {
+    if (!AuthService.isAuthenticated) return false;
+    final currentUserId = AuthService.userId;
+    final ownerUserId = _getOwnerUserId();
+    return currentUserId != null && ownerUserId != null && currentUserId == ownerUserId;
+  }
+
+  String? _getPetReportId() {
+    switch (widget.type) {
+      case PetDetailsType.report:
+        return widget.report!['id'] as String?;
+      case PetDetailsType.adoption:
+        return widget.adoptionPet?.id;
+      case PetDetailsType.breeding:
+        return widget.breedingPet?.id;
+    }
+  }
+
+  String? _getPetReportType() {
+    switch (widget.type) {
+      case PetDetailsType.report:
+        return widget.report!['type'] as String?; // 'lost' or 'found'
+      case PetDetailsType.adoption:
+        return 'adoption';
+      case PetDetailsType.breeding:
+        return 'breeding';
+    }
+  }
+
+  Future<void> _startChatWithOwner() async {
+    if (!AuthService.isAuthenticated) {
+      DialogHelper.custom(context: context).customDialog(
+        dialogWidget: const LoginWidget(),
+      );
+      return;
+    }
+
+    final ownerUserId = _getOwnerUserId();
+    if (ownerUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('لا يمكن العثور على صاحب الإعلان')),
+      );
+      return;
+    }
+
+    final currentUserId = AuthService.userId!;
+    if (currentUserId == ownerUserId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('لا يمكنك التواصل مع نفسك')),
+      );
+      return;
+    }
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Container(
+            padding: EdgeInsets.all(20.w),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: AppTheme.primaryGreen),
+                SizedBox(height: 16.h),
+                const Text('جاري فتح المحادثة...'),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Get owner name for initial message
+      String ownerName = 'صاحب الإعلان';
+      try {
+        final ownerDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(ownerUserId)
+            .get();
+        if (ownerDoc.exists) {
+          ownerName = ownerDoc.data()?['name'] ?? 
+                     ownerDoc.data()?['username'] ?? 
+                     'صاحب الإعلان';
+        }
+      } catch (e) {
+        print('Could not fetch owner name: $e');
+      }
+
+      final petReportId = _getPetReportId();
+      final petReportType = _getPetReportType();
+
+      final chatId = await ChatService.createChatWithUser(
+        userId: currentUserId,
+        otherUserId: ownerUserId,
+        initialMessage: 'مرحباً، أريد التواصل معك بخصوص ${_petName}',
+        petReportId: petReportId,
+        petReportType: petReportType,
+      );
+
+      Navigator.pop(context); // Close loading dialog
+
+      // Navigate to chat
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => UserChatScreen(
+            chatId: chatId,
+            otherUserId: ownerUserId,
+            otherUserName: ownerName,
+          ),
+        ),
+      );
+    } catch (e) {
+      Navigator.pop(context); // Close loading dialog
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطأ في فتح المحادثة: $e'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+    }
+  }
+
   Widget _buildActionButtons() {
     String contactPhone = '';
+    final isOwner = _isCurrentUserOwner();
 
     switch (widget.type) {
       case PetDetailsType.report:
@@ -1359,6 +1505,21 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
 
     return Column(
       children: [
+        // Chat button - only show if user is not the owner
+        if (!isOwner) ...[
+          SizedBox(
+            width: double.infinity,
+            child: CustomButton(
+              text: 'تواصل مع صاحب الإعلان',
+              onPressed: _startChatWithOwner,
+              backgroundColor: AppTheme.primaryGreen,
+              textColor: Colors.white,
+              icon: Icons.chat_bubble,
+              height: 56.h,
+            ),
+          ),
+          SizedBox(height: 12.h),
+        ],
         SizedBox(
           width: double.infinity,
           child: CustomButton(

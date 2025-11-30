@@ -21,6 +21,8 @@ class ChatModel extends Equatable {
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? petReportId;
+  final String? petReportType; // 'lost', 'found', 'adoption', 'breeding'
 
   const ChatModel({
     required this.id,
@@ -33,6 +35,8 @@ class ChatModel extends Equatable {
     this.isActive = true,
     required this.createdAt,
     required this.updatedAt,
+    this.petReportId,
+    this.petReportType,
   });
 
   factory ChatModel.fromFirestore(DocumentSnapshot doc) {
@@ -49,6 +53,8 @@ class ChatModel extends Equatable {
       isActive: data['isActive'] ?? true,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      petReportId: data['petReportId'] as String?,
+      petReportType: data['petReportType'] as String?,
     );
   }
 
@@ -63,6 +69,8 @@ class ChatModel extends Equatable {
       'isActive': isActive,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
+      if (petReportId != null) 'petReportId': petReportId,
+      if (petReportType != null) 'petReportType': petReportType,
     };
   }
 
@@ -84,6 +92,8 @@ class ChatModel extends Equatable {
       updatedAt: json['updatedAt'] != null 
           ? DateTime.parse(json['updatedAt']) 
           : DateTime.now(),
+      petReportId: json['petReportId'] as String?,
+      petReportType: json['petReportType'] as String?,
     );
   }
 
@@ -99,6 +109,8 @@ class ChatModel extends Equatable {
       'isActive': isActive,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      if (petReportId != null) 'petReportId': petReportId,
+      if (petReportType != null) 'petReportType': petReportType,
     };
   }
 
@@ -113,6 +125,8 @@ class ChatModel extends Equatable {
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? petReportId,
+    String? petReportType,
   }) {
     return ChatModel(
       id: id ?? this.id,
@@ -125,6 +139,8 @@ class ChatModel extends Equatable {
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      petReportId: petReportId ?? this.petReportId,
+      petReportType: petReportType ?? this.petReportType,
     );
   }
 
@@ -140,6 +156,8 @@ class ChatModel extends Equatable {
         isActive,
         createdAt,
         updatedAt,
+        petReportId,
+        petReportType,
       ];
 }
 

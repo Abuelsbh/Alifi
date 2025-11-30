@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../firebase/firebase_config.dart';
+import 'location_service.dart';
 
 class Advertisement {
   final String id;
@@ -10,6 +11,7 @@ class Advertisement {
   final int displayOrder;
   final bool isActive;
   final String? clickUrl;
+  final List<String>? locations; // List of location IDs, null/empty means "all"
   final int views;
   final int clickCount;
   final DateTime createdAt;
@@ -23,6 +25,7 @@ class Advertisement {
     required this.displayOrder,
     required this.isActive,
     this.clickUrl,
+    this.locations,
     required this.views,
     required this.clickCount,
     required this.createdAt,
@@ -39,6 +42,9 @@ class Advertisement {
       displayOrder: data['displayOrder'] ?? 1,
       isActive: data['isActive'] ?? true,
       clickUrl: data['clickUrl']?.toString().trim().isEmpty == true ? null : data['clickUrl'],
+      locations: data['locations'] != null 
+          ? List<String>.from(data['locations'])
+          : null,
       views: data['views'] ?? 0,
       clickCount: data['clickCount'] ?? 0,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -54,6 +60,7 @@ class Advertisement {
       'displayOrder': displayOrder,
       'isActive': isActive,
       'clickUrl': clickUrl,
+      'locations': locations ?? ['all'], // Default to 'all' if not specified
       'views': views,
       'clickCount': clickCount,
       'createdAt': Timestamp.fromDate(createdAt),
@@ -75,8 +82,13 @@ class AdvertisementService {
         .limit(10)
         .snapshots()
         .map((snapshot) {
+      final userLocationId = LocationService.getUserLocation();
       return snapshot.docs
           .map((doc) => Advertisement.fromFirestore(doc))
+          .where((ad) {
+            // Filter by location
+            return LocationService.shouldShowForLocation(ad.locations, userLocationId);
+          })
           .toList();
     });
   }
@@ -94,14 +106,21 @@ class AdvertisementService {
 
       print('📊 Found ${snapshot.docs.length} advertisements');
       
+      final userLocationId = LocationService.getUserLocation();
+      print('📍 User location: $userLocationId');
+      
       final ads = snapshot.docs
           .map((doc) {
             print('📄 Processing ad: ${doc.id}');
             return Advertisement.fromFirestore(doc);
           })
+          .where((ad) {
+            // Filter by location
+            return LocationService.shouldShowForLocation(ad.locations, userLocationId);
+          })
           .toList();
       
-      print('✅ Successfully loaded ${ads.length} advertisements');
+      print('✅ Successfully loaded ${ads.length} advertisements (filtered by location)');
       return ads;
     } catch (e) {
       print('❌ Error fetching active advertisements: $e');

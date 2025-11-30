@@ -72,6 +72,10 @@
                     <i class="fas fa-ad"></i>
                     <span>Advertisements</span>
                 </a>
+                <a href="#" class="nav-item" data-page="locations">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>Locations</span>
+                </a>
 
                 <!-- New Admin Management Nav Item -->
                 <a href="#" class="nav-item" data-page="admins">
@@ -244,6 +248,10 @@
                     <div class="page-header">
                         <h2>Users Management</h2>
                         <div class="header-actions">
+                            <button id="send-message-all-btn" class="btn btn-primary">
+                                <i class="fas fa-bullhorn"></i>
+                                Send Message to All Users
+                            </button>
                             <button id="export-users-btn" class="btn btn-secondary">
                                 <i class="fas fa-download"></i>
                                 Export Users
@@ -335,6 +343,14 @@
                                     document.getElementById('ad-form').reset();
                                     document.getElementById('ad-form').dataset.mode = 'add';
                                     delete document.getElementById('ad-form').dataset.adId;
+                                    
+                                    // Load locations
+                                    if (window.adminFeatures) {
+                                        window.adminFeatures.loadAdLocations().then(() => {
+                                            document.getElementById('ad-location-all').checked = true;
+                                            window.adminFeatures.toggleLocationCheckboxes(false);
+                                        });
+                                    }
                                 } else {
                                     alert('Modal not found');
                                 }
@@ -364,6 +380,42 @@
                         <div class="ads-grid" id="ads-grid">
                             <!-- Advertisements will be loaded here -->
                         </div>
+                    </div>
+                </div>
+
+                <!-- Locations Page -->
+                <div id="locations-page" class="page">
+                    <div class="page-header">
+                        <h2>Locations Management</h2>
+                        <button id="add-location-btn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i>
+                            Add Location
+                        </button>
+                    </div>
+
+                    <div class="search-section">
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="location-search" placeholder="Search locations...">
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Display Order</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="locations-table-body">
+                                <!-- Locations will be loaded here -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -632,6 +684,62 @@
         </div>
     </div>
 
+    <!-- Send Message to All Users Modal -->
+    <div id="send-message-all-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Send Message to All Users</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="send-message-all-form">
+                <div class="form-group">
+                    <label for="message-all-recipient">Recipients</label>
+                    <input type="text" id="message-all-recipient" value="All Users" readonly>
+                    <small style="color: #666; display: block; margin-top: 5px;">This message will be sent to all users in the system</small>
+                </div>
+                <div class="form-group">
+                    <label for="message-all-subject">Subject *</label>
+                    <input type="text" id="message-all-subject" required placeholder="Message subject...">
+                </div>
+                <div class="form-group">
+                    <label for="message-all-type">Message Type</label>
+                    <select id="message-all-type">
+                        <option value="info">Information</option>
+                        <option value="warning">Warning</option>
+                        <option value="success">Success</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="message-all-content">Message Content *</label>
+                    <textarea id="message-all-content" rows="6" required placeholder="Type your message here..."></textarea>
+                </div>
+                <div id="send-all-progress" style="display: none; margin: 15px 0;">
+                    <div style="background: #f0f0f0; border-radius: 4px; padding: 10px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>Progress: <strong id="progress-percent">0%</strong></span>
+                            <span id="progress-stats">0 / 0 users</span>
+                        </div>
+                        <div style="background: #ddd; border-radius: 4px; height: 20px; overflow: hidden;">
+                            <div id="progress-bar" style="background: #4CAF50; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                    <div style="color: #666; font-size: 14px;">
+                        <span id="progress-success" style="color: #4CAF50;">✓ 0 sent</span> | 
+                        <span id="progress-failed" style="color: #f44336;">✗ 0 failed</span>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="send-all-submit-btn">
+                        <i class="fas fa-bullhorn"></i>
+                        Send to All Users
+                    </button>
+                    <button type="button" id="cancel-message-all-btn" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Add/Edit Pet Store Modal -->
     <div id="store-modal" class="modal">
         <div class="modal-content">
@@ -786,83 +894,7 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-                        <form id="ad-form" onsubmit="
-                event.preventDefault();
-                
-                // Get form data
-                const title = document.getElementById('ad-title').value.trim();
-                const description = document.getElementById('ad-description').value.trim();
-                const imageUrl = document.getElementById('ad-image-url').value.trim();
-                const displayOrder = parseInt(document.getElementById('ad-display-order').value) || 1;
-                const clickUrl = document.getElementById('ad-click-url').value.trim();
-                const isActive = document.getElementById('ad-is-active').checked;
-                
-                // Validate
-                if (!imageUrl) {
-                    alert('Image URL is required');
-                    return;
-                }
-                
-                // Show loading
-                const submitBtn = document.querySelector('#ad-form button[type=submit]');
-                const originalText = submitBtn.innerHTML;
-                submitBtn.innerHTML = 'Saving...';
-                submitBtn.disabled = true;
-                
-                // Create ad data
-                const adData = {
-                    title: title,
-                    description: description,
-                    imageUrl: imageUrl,
-                    displayOrder: displayOrder,
-                    clickUrl: clickUrl,
-                    isActive: isActive
-                };
-                
-                // Save using Firebase directly
-                console.log('Form submitted with data:', adData);
-                console.log('FirebaseService available:', !!window.FirebaseService);
-                if (window.FirebaseService) {
-                    const mode = document.getElementById('ad-form').dataset.mode;
-                    const adId = document.getElementById('ad-form').dataset.adId;
-                    
-                    // Use async function properly
-                    (async () => {
-                        try {
-                            let result;
-                            if (mode === 'edit' && adId) {
-                                result = await FirebaseService.updateAd(adId, adData);
-                            } else {
-                                result = await FirebaseService.createAd(adData);
-                            }
-                            
-                            if (result.success) {
-                                alert('Advertisement saved successfully!');
-                                document.getElementById('ad-modal').classList.remove('show');
-                                document.body.style.overflow = 'auto';
-                                
-                                // Reload ads if adminFeatures is available
-                                if (window.adminFeatures) {
-                                    window.adminFeatures.loadAds();
-                                }
-                            } else {
-                                alert(result.error || 'Failed to save advertisement');
-                            }
-                        } catch (error) {
-                            console.error('Error saving ad:', error);
-                            alert('Error saving advertisement: ' + error.message);
-                        } finally {
-                            // Reset button
-                            submitBtn.innerHTML = originalText;
-                            submitBtn.disabled = false;
-                        }
-                    })();
-                } else {
-                    alert('Firebase service not available');
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                }
-            ">
+            <form id="ad-form">
                 <div class="form-group">
                     <label for="ad-title">Title (Optional)</label>
                     <input type="text" id="ad-title" placeholder="Advertisement title...">
@@ -889,6 +921,31 @@
                     <label for="ad-click-url">Click URL (Optional)</label>
                     <input type="url" id="ad-click-url" placeholder="https://example.com">
                     <small>URL to redirect when user clicks the ad</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Locations *</label>
+                    <div id="ad-locations-container" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 12px;">
+                        <div style="margin-bottom: 8px;">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="ad-location-all" checked onchange="
+                                    const allChecked = document.getElementById('ad-location-all').checked;
+                                    const locationCheckboxes = document.querySelectorAll('.ad-location-checkbox');
+                                    locationCheckboxes.forEach(cb => {
+                                        cb.disabled = allChecked;
+                                        if (allChecked) cb.checked = false;
+                                    });
+                                ">
+                                <span class="checkmark"></span>
+                                All Locations (عرض في جميع المناطق)
+                            </label>
+                        </div>
+                        <div id="ad-locations-list" style="margin-left: 20px;">
+                            <!-- Locations will be loaded here -->
+                            <p style="color: #999; font-style: italic;">Loading locations...</p>
+                        </div>
+                    </div>
+                    <small>Select which locations this advertisement should be shown in</small>
                 </div>
                 
                 <div class="form-group">
@@ -935,7 +992,41 @@
         </div>
     </div>
 
-
+    <!-- Add/Edit Location Modal -->
+    <div id="location-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="location-modal-title">Add Location</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="location-form">
+                <div class="form-group">
+                    <label for="location-name">Name *</label>
+                    <input type="text" id="location-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="location-description">Description</label>
+                    <textarea id="location-description" rows="3" placeholder="Optional description..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="location-display-order">Display Order</label>
+                    <input type="number" id="location-display-order" min="0" value="0">
+                    <small>Order in which locations will appear (lower = first)</small>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="location-is-active" checked>
+                        <span class="checkmark"></span>
+                        Active (show in mobile app)
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-location-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="save-location-btn">Save Location</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script>
         // Ensure adminFeatures is available globally

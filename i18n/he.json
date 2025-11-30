@@ -217,7 +217,13 @@
     "email_subject": "פנייה לגבי אימוץ {0}",
     "email_body": "שלום,\n\nאני מעוניין לאמץ את {0} ומעוניין לקבל מידע נוסף.\n\nתודה",
     "adoption_requirements": "דרישות אימוץ",
-    "adoption_process": "תהליך אימוץ"
+    "adoption_process": "תהליך אימוץ",
+    "offering_adoption": "אני רוצה שמישהו יאמץ את החיה שלי",
+    "seeking_adoption": "אני רוצה לאמץ חיה",
+    "no_seeking_pets": "לא נמצאו בקשות אימוץ",
+    "no_seeking_pets_subtitle": "אין בקשות אימוץ כרגע",
+    "no_offering_pets": "אין חיות זמינות לאימוץ",
+    "no_offering_pets_subtitle": "בדוק שוב מאוחר יותר או הוסף חיה לאימוץ"
   },
   "breeding": {
     "title": "חיות להזדווגות",
@@ -438,6 +444,15 @@
     "hours_ago": "לפני {0} שעות",
     "minutes_ago": "לפני {0} דקות",
     "just_now": "עכשיו"
+  },
+  "location": {
+    "title": "מיקום",
+    "explore_service_area": "גלה את אזור השירות שלנו",
+    "select_location": "בחר מיקום",
+    "current_location": "מיקום נוכחי",
+    "no_locations": "אין מיקומים זמינים",
+    "save_error": "שמירת המיקום נכשלה",
+    "change_location": "שנה מיקום"
   },
   "languages": {
     "english": "English",

@@ -1,196 +1,238 @@
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../firebase/firebase_config.dart';
+import '../../Models/location_model.dart';
+import '../../Utilities/shared_preferences.dart';
 
 class LocationService {
-  // Check location permissions
-  Future<bool> checkLocationPermission() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return false;
-    }
+  static final FirebaseFirestore _firestore = FirebaseConfig.firestore;
+  static const String _collection = 'locations';
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return false;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      return false;
-    }
-
-    return true;
+  // Get all active locations
+  static Stream<List<LocationModel>> getActiveLocationsStream() {
+    return _firestore
+        .collection(_collection)
+        .where('isActive', isEqualTo: true)
+        .orderBy('displayOrder', descending: false)
+        .orderBy('name', descending: false)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => LocationModel.fromFirestore(doc))
+          .toList();
+    });
   }
 
-  // Get current location
-  Future<Position?> getCurrentLocation() async {
+  // Get all active locations (one-time fetch)
+  static Future<List<LocationModel>> getActiveLocations() async {
     try {
-      bool hasPermission = await checkLocationPermission();
-      if (!hasPermission) {
-        return null;
-      }
-
-      return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-    } catch (e) {
-      print('Error getting current location: $e');
-      return null;
-    }
-  }
-
-  // Get location from coordinates
-  Future<String> getAddressFromCoordinates(double latitude, double longitude) async {
-    try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(latitude, longitude);
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-        return '${place.street}, ${place.locality}, ${place.administrativeArea}';
-      }
-      return 'Unknown location';
-    } catch (e) {
-      print('Error getting address from coordinates: $e');
-      return 'Unknown location';
-    }
-  }
-
-  // Get coordinates from address
-  Future<Position?> getCoordinatesFromAddress(String address) async {
-    try {
-      List<Location> locations = await locationFromAddress(address);
-      if (locations.isNotEmpty) {
-        return Position(
-          latitude: locations.first.latitude,
-          longitude: locations.first.longitude,
-          timestamp: DateTime.now(),
-          accuracy: 0,
-          altitude: 0,
-          heading: 0,
-          speed: 0,
-          speedAccuracy: 0,
-          altitudeAccuracy: 0,
-          headingAccuracy: 0,
-        );
-      }
-      return null;
-    } catch (e) {
-      print('Error getting coordinates from address: $e');
-      return null;
-    }
-  }
-
-  // Convert Position to GeoPoint
-  GeoPoint positionToGeoPoint(Position position) {
-    return GeoPoint(position.latitude, position.longitude);
-  }
-
-  // Calculate distance between two points
-  double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    return Geolocator.distanceBetween(lat1, lon1, lat2, lon2);
-  }
-
-  // Calculate distance in kilometers
-  double calculateDistanceInKm(double lat1, double lon1, double lat2, double lon2) {
-    return Geolocator.distanceBetween(lat1, lon1, lat2, lon2) / 1000;
-  }
-
-  // Format distance for display
-  String formatDistance(double distanceInMeters) {
-    if (distanceInMeters < 1000) {
-      return '${distanceInMeters.round()} m';
-    } else {
-      double distanceInKm = distanceInMeters / 1000;
-      return '${distanceInKm.toStringAsFixed(1)} km';
-    }
-  }
-
-  // Get location permission status
-  Future<LocationPermission> getLocationPermissionStatus() async {
-    return await Geolocator.checkPermission();
-  }
-
-  // Request location permission
-  Future<LocationPermission> requestLocationPermission() async {
-    return await Geolocator.requestPermission();
-  }
-
-  // Check if location services are enabled
-  Future<bool> isLocationServiceEnabled() async {
-    return await Geolocator.isLocationServiceEnabled();
-  }
-
-  // Get last known position
-  Future<Position?> getLastKnownPosition() async {
-    try {
-      return await Geolocator.getLastKnownPosition();
-    } catch (e) {
-      print('Error getting last known position: $e');
-      return null;
-    }
-  }
-
-  // Get location updates stream
-  Stream<Position> getLocationUpdates({
-    LocationAccuracy desiredAccuracy = LocationAccuracy.high,
-    int distanceFilter = 10,
-  }) {
-    return Geolocator.getPositionStream(
-      locationSettings: LocationSettings(
-        accuracy: desiredAccuracy,
-        distanceFilter: distanceFilter,
-      ),
-    );
-  }
-
-  // Validate coordinates
-  bool isValidCoordinates(double latitude, double longitude) {
-    return latitude >= -90 && latitude <= 90 && 
-           longitude >= -180 && longitude <= 180;
-  }
-
-  // Get approximate location (city level)
-  Future<String> getApproximateLocation(double latitude, double longitude) async {
-    try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(latitude, longitude);
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-        if (place.locality != null && place.locality!.isNotEmpty) {
-          return place.locality!;
-        } else if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) {
-          return place.administrativeArea!;
-        } else if (place.country != null && place.country!.isNotEmpty) {
-          return place.country!;
+      QuerySnapshot snapshot;
+      
+      // Try with orderBy first
+      try {
+        snapshot = await _firestore
+            .collection(_collection)
+            .where('isActive', isEqualTo: true)
+            .orderBy('displayOrder', descending: false)
+            .orderBy('name', descending: false)
+            .get();
+      } catch (e) {
+        // Fallback: try with just where clause
+        print('⚠️ OrderBy failed, trying simple query: $e');
+        try {
+          snapshot = await _firestore
+              .collection(_collection)
+              .where('isActive', isEqualTo: true)
+              .get();
+        } catch (e2) {
+          // Fallback: get all and filter manually
+          print('⚠️ Where query failed, getting all: $e2');
+          snapshot = await _firestore.collection(_collection).get();
         }
       }
-      return 'Unknown location';
+
+      final locations = snapshot.docs
+          .map((doc) => LocationModel.fromFirestore(doc))
+          .where((location) => location.isActive)
+          .toList();
+      
+      // Sort manually if needed
+      locations.sort((a, b) {
+        if (a.displayOrder != b.displayOrder) {
+          return a.displayOrder.compareTo(b.displayOrder);
+        }
+        return a.name.compareTo(b.name);
+      });
+      
+      print('✅ Loaded ${locations.length} active locations');
+      return locations;
     } catch (e) {
-      print('Error getting approximate location: $e');
-      return 'Unknown location';
+      print('❌ Error fetching active locations: $e');
+      return [];
     }
   }
 
-  // Get detailed address components
-  Future<Map<String, String>> getAddressComponents(double latitude, double longitude) async {
+  // Get all locations (for admin)
+  static Future<List<LocationModel>> getAllLocations() async {
     try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(latitude, longitude);
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-        return {
-          'street': place.street ?? '',
-          'locality': place.locality ?? '',
-          'administrativeArea': place.administrativeArea ?? '',
-          'country': place.country ?? '',
-          'postalCode': place.postalCode ?? '',
-          'subLocality': place.subLocality ?? '',
-        };
-      }
-      return {};
+      final snapshot = await _firestore
+          .collection(_collection)
+          .orderBy('displayOrder', descending: false)
+          .orderBy('name', descending: false)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => LocationModel.fromFirestore(doc))
+          .toList();
     } catch (e) {
-      print('Error getting address components: $e');
-      return {};
+      print('Error fetching all locations: $e');
+      return [];
     }
   }
-} 
+
+  // Get location by ID
+  static Future<LocationModel?> getLocationById(String locationId) async {
+    try {
+      final doc = await _firestore.collection(_collection).doc(locationId).get();
+      if (doc.exists) {
+        return LocationModel.fromFirestore(doc);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching location by ID: $e');
+      return null;
+    }
+  }
+
+  // Create location (admin only)
+  static Future<String?> createLocation(LocationModel location) async {
+    try {
+      final docRef = await _firestore
+          .collection(_collection)
+          .add(location.toFirestore());
+      return docRef.id;
+    } catch (e) {
+      print('Error creating location: $e');
+      return null;
+    }
+  }
+
+  // Update location (admin only)
+  static Future<bool> updateLocation(String id, LocationModel location) async {
+    try {
+      await _firestore
+          .collection(_collection)
+          .doc(id)
+          .update(location.toFirestore());
+      return true;
+    } catch (e) {
+      print('Error updating location: $e');
+      return false;
+    }
+  }
+
+  // Delete location (admin only)
+  static Future<bool> deleteLocation(String id) async {
+    try {
+      await _firestore.collection(_collection).doc(id).delete();
+      return true;
+    } catch (e) {
+      print('Error deleting location: $e');
+      return false;
+    }
+  }
+
+  // Toggle location active status (admin only)
+  static Future<bool> toggleLocationStatus(String id, bool isActive) async {
+    try {
+      await _firestore.collection(_collection).doc(id).update({
+        'isActive': isActive,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) {
+      print('Error toggling location status: $e');
+      return false;
+    }
+  }
+
+  // Cache user's selected location
+  static Future<bool> saveUserLocation(String locationId) async {
+    try {
+      await SharedPref.setUserLocation(locationId: locationId);
+      // Verify it was saved
+      final saved = SharedPref.getUserLocation();
+      if (saved != locationId) {
+        print('⚠️ Warning: Location was not saved correctly. Expected: $locationId, Got: $saved');
+        return false;
+      }
+      print('✅ Location saved successfully: $locationId');
+      return true;
+    } catch (e) {
+      print('❌ Error saving user location: $e');
+      return false;
+    }
+  }
+
+  // Get user's selected location from cache
+  static String? getUserLocation() {
+    try {
+      return SharedPref.getUserLocation();
+    } catch (e) {
+      print('❌ Error getting user location: $e');
+      return null;
+    }
+  }
+
+  // Get user's selected location model
+  static Future<LocationModel?> getUserLocationModel() async {
+    try {
+      final locationId = getUserLocation();
+      if (locationId != null) {
+        return await getLocationById(locationId);
+      }
+      return null;
+    } catch (e) {
+      print('Error getting user location model: $e');
+      return null;
+    }
+  }
+
+  // Clear user's selected location
+  static Future<bool> clearUserLocation() async {
+    try {
+      await SharedPref.clearUserLocation();
+      return true;
+    } catch (e) {
+      print('Error clearing user location: $e');
+      return false;
+    }
+  }
+
+  // Check if location should be visible to user
+  // Returns true if:
+  // - locations array contains "all" 
+  // - locations array contains the user's selected location
+  // - locations array is empty or null (for backward compatibility)
+  static bool shouldShowForLocation(
+    List<dynamic>? locations,
+    String? userLocationId,
+  ) {
+    if (locations == null || locations.isEmpty) {
+      // Backward compatibility: if no locations specified, show to all
+      return true;
+    }
+
+    // If "all" is in the list, show to everyone
+    if (locations.contains('all')) {
+      return true;
+    }
+
+    // If user has no location selected, don't show
+    if (userLocationId == null) {
+      return false;
+    }
+
+    // Check if user's location is in the list
+    return locations.contains(userLocationId);
+  }
+}

@@ -1,0 +1,579 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/Theme/app_theme.dart';
+import '../../../core/services/chat_service.dart';
+import '../../../core/services/auth_service.dart';
+import '../../../Models/chat_model.dart';
+import '../../../Widgets/custom_card.dart';
+import '../veterinary/real_time_chat_screen.dart';
+import 'user_chat_screen.dart';
+
+class UnifiedChatListScreen extends StatefulWidget {
+  const UnifiedChatListScreen({super.key});
+
+  @override
+  State<UnifiedChatListScreen> createState() => _UnifiedChatListScreenState();
+}
+
+class _UnifiedChatListScreenState extends State<UnifiedChatListScreen>
+    with TickerProviderStateMixin {
+  List<ChatModel> _veterinaryChats = [];
+  List<ChatModel> _userChats = [];
+  bool _isLoading = true;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+  
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  StreamSubscription<List<ChatModel>>? _veterinaryChatsSubscription;
+  StreamSubscription<List<ChatModel>>? _userChatsSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAnimations();
+    _loadChats();
+  }
+
+  void _initializeAnimations() {
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+    
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _animationController.dispose();
+    _veterinaryChatsSubscription?.cancel();
+    _userChatsSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _loadChats() {
+    if (!AuthService.isAuthenticated) {
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
+    final userId = AuthService.userId!;
+
+    // Load veterinary chats
+    _veterinaryChatsSubscription?.cancel();
+    _veterinaryChatsSubscription = ChatService.getUserChatsStream(userId).listen((chats) {
+      if (mounted) {
+        setState(() {
+          _veterinaryChats = chats;
+          _updateLoadingState();
+        });
+      }
+    }, onError: (error) {
+      print('Error loading veterinary chats: $error');
+      if (mounted) {
+        setState(() {
+          _updateLoadingState();
+        });
+      }
+    });
+
+    // Load user-to-user chats
+    _userChatsSubscription?.cancel();
+    _userChatsSubscription = ChatService.getUserToUserChatsStream(userId).listen((chats) {
+      if (mounted) {
+        setState(() {
+          _userChats = chats;
+          _updateLoadingState();
+        });
+      }
+    }, onError: (error) {
+      print('Error loading user chats: $error');
+      if (mounted) {
+        setState(() {
+          _updateLoadingState();
+        });
+      }
+    });
+  }
+
+  void _updateLoadingState() {
+    // Only set loading to false after both streams have loaded at least once
+    if (_veterinaryChats.isNotEmpty || _userChats.isNotEmpty || 
+        (_veterinaryChats.isEmpty && _userChats.isEmpty)) {
+      _isLoading = false;
+    }
+  }
+
+  List<ChatModel> get _allChats {
+    final all = <ChatModel>[..._veterinaryChats, ..._userChats];
+    // Sort by lastMessageAt descending
+    all.sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
+    return all;
+  }
+
+  List<ChatModel> get _filteredChats {
+    if (_searchQuery.isEmpty) return _allChats;
+    
+    return _allChats.where((chat) {
+      final lastMessage = chat.lastMessage.toLowerCase();
+      final participantName = _getParticipantName(chat).toLowerCase();
+      final searchLower = _searchQuery.toLowerCase();
+      
+      return lastMessage.contains(searchLower) || participantName.contains(searchLower);
+    }).toList();
+  }
+
+  String _getChatType(ChatModel chat) {
+    // Check if it's a veterinary chat by checking if any participant is a veterinarian
+    // For now, we'll check if it exists in veterinary_chats collection
+    // A simpler approach: check if chat is in _veterinaryChats list
+    if (_veterinaryChats.any((c) => c.id == chat.id)) {
+      return 'veterinary';
+    }
+    return 'user';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        title: const Text(
+          'المحادثات',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.search, color: AppTheme.primaryGreen),
+            onPressed: _toggleSearch,
+          ),
+        ],
+      ),
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Column(
+          children: [
+            if (_searchQuery.isNotEmpty || _searchController.text.isNotEmpty)
+              _buildSearchBar(),
+
+            Expanded(
+              child: _isLoading
+                  ? _buildLoadingIndicator()
+                  : !AuthService.isAuthenticated
+                      ? _buildLoginPrompt()
+                      : _filteredChats.isEmpty
+                          ? _buildEmptyState()
+                          : _buildChatsList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      margin: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: _onSearchChanged,
+        decoration: InputDecoration(
+          hintText: 'البحث في المحادثات...',
+          prefixIcon: Icon(Icons.search, color: AppTheme.primaryGreen),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    _onSearchChanged('');
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingIndicator() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(color: AppTheme.primaryGreen),
+          SizedBox(height: 16.h),
+          Text(
+            'جاري تحميل المحادثات...',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoginPrompt() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(20.w),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGreen.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.login,
+              size: 40.sp,
+              color: AppTheme.primaryGreen,
+            ),
+          ),
+          SizedBox(height: 16.h),
+          Text(
+            'يرجى تسجيل الدخول',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'قم بتسجيل الدخول لعرض محادثاتك',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(20.w),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGreen.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.chat_bubble_outline,
+              size: 40.sp,
+              color: AppTheme.primaryGreen,
+            ),
+          ),
+          SizedBox(height: 16.h),
+          Text(
+            'لا توجد محادثات',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'ابدأ محادثة جديدة',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChatsList() {
+    return ListView.builder(
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      itemCount: _filteredChats.length,
+      itemBuilder: (context, index) {
+        final chat = _filteredChats[index];
+        return _buildChatTile(chat, index);
+      },
+    );
+  }
+
+  Widget _buildChatTile(ChatModel chat, int index) {
+    final userId = AuthService.userId;
+    final unreadCount = userId != null ? chat.unreadCount[userId] ?? 0 : 0;
+    final isUnread = unreadCount > 0;
+    final participantName = _getParticipantName(chat);
+    final chatType = _getChatType(chat);
+    final isVeterinaryChat = chatType == 'veterinary';
+    
+    return AnimatedContainer(
+      duration: Duration(milliseconds: 300 + (index * 100)),
+      curve: Curves.easeOutCubic,
+      margin: EdgeInsets.only(bottom: 12.h),
+      child: CustomCard(
+        onTap: () => _openChat(chat, chatType),
+        child: Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Row(
+            children: [
+              // Avatar with type indicator
+              Stack(
+                children: [
+                  FutureBuilder<DocumentSnapshot>(
+                    future: _getOtherUserId(chat) != null 
+                        ? (isVeterinaryChat
+                            ? FirebaseFirestore.instance
+                                .collection('veterinarians')
+                                .doc(_getOtherUserId(chat))
+                                .get()
+                            : FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(_getOtherUserId(chat))
+                                .get())
+                        : null,
+                    builder: (context, snapshot) {
+                      String? profilePhoto;
+                      bool isOnline = false;
+                      
+                      if (snapshot.hasData && snapshot.data!.exists) {
+                        final data = snapshot.data!.data() as Map<String, dynamic>?;
+                        if (data != null) {
+                          profilePhoto = isVeterinaryChat
+                              ? data['profilePhoto'] as String?
+                              : (data['profileImageUrl'] as String?) ?? (data['profilePhoto'] as String?);
+                          // isOnline is not used but kept for future use
+                          // ignore: unused_local_variable
+                          final isOnline = data['isOnline'] as bool? ?? false;
+                        }
+                      }
+                      
+                      return CircleAvatar(
+                        radius: 25.r,
+                        backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+                        backgroundImage: profilePhoto != null && profilePhoto.isNotEmpty
+                            ? NetworkImage(profilePhoto)
+                            : null,
+                        child: profilePhoto == null || profilePhoto.isEmpty
+                            ? Icon(
+                                isVeterinaryChat ? Icons.medical_services : Icons.person,
+                                size: 25.sp,
+                                color: AppTheme.primaryGreen,
+                              )
+                            : null,
+                      );
+                    },
+                  ),
+                  // Type badge
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: EdgeInsets.all(4.w),
+                      decoration: BoxDecoration(
+                        color: isVeterinaryChat ? AppTheme.primaryGreen : AppTheme.primaryOrange,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: Icon(
+                        isVeterinaryChat ? Icons.medical_services : Icons.person,
+                        size: 10.sp,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              
+              SizedBox(width: 12.w),
+              
+              // Chat info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            participantName,
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: isUnread ? FontWeight.w600 : FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        // Chat type label
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                          decoration: BoxDecoration(
+                            color: isVeterinaryChat 
+                                ? AppTheme.primaryGreen.withOpacity(0.1)
+                                : AppTheme.primaryOrange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4.r),
+                          ),
+                          child: Text(
+                            isVeterinaryChat ? 'طبيب' : 'مستخدم',
+                            style: TextStyle(
+                              fontSize: 10.sp,
+                              color: isVeterinaryChat ? AppTheme.primaryGreen : AppTheme.primaryOrange,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          _formatTime(chat.lastMessageAt),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: isUnread ? AppTheme.primaryGreen : Colors.grey[600],
+                            fontWeight: isUnread ? FontWeight.w500 : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 4.h),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            chat.lastMessage,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isUnread ? Colors.black87 : Colors.grey[600],
+                              fontWeight: isUnread ? FontWeight.w500 : FontWeight.normal,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isUnread) ...[
+                          SizedBox(width: 8.w),
+                          Container(
+                            padding: EdgeInsets.all(6.w),
+                            decoration: const BoxDecoration(
+                              color: AppTheme.primaryOrange,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '$unreadCount',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getParticipantName(ChatModel chat) {
+    final userId = AuthService.userId;
+    if (userId == null) return 'مستخدم';
+    
+    for (final participantId in chat.participants) {
+      if (participantId != userId) {
+        return chat.participantNames[participantId] ?? 'مستخدم';
+      }
+    }
+    
+    return 'مستخدم';
+  }
+
+  String? _getOtherUserId(ChatModel chat) {
+    final userId = AuthService.userId;
+    if (userId == null) return null;
+    
+    for (final participantId in chat.participants) {
+      if (participantId != userId) {
+        return participantId;
+      }
+    }
+    
+    return null;
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      if (_searchController.text.isEmpty && _searchQuery.isEmpty) {
+        _searchController.text = ' ';
+      } else {
+        _searchController.clear();
+        _searchQuery = '';
+      }
+    });
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query.trim();
+    });
+  }
+
+  void _openChat(ChatModel chat, String chatType) {
+    final participantName = _getParticipantName(chat);
+    final otherUserId = _getOtherUserId(chat);
+    final isVeterinaryChat = chatType == 'veterinary';
+    
+    // Use unified chat screen for all chats
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UserChatScreen(
+          chatId: chat.id,
+          otherUserId: otherUserId ?? '',
+          otherUserName: participantName,
+          isVeterinaryChat: isVeterinaryChat,
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inDays > 0) {
+      if (difference.inDays == 1) {
+        return 'أمس';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays} أيام';
+      } else {
+        return '${dateTime.day}/${dateTime.month}';
+      }
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}س';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}د';
+    } else {
+      return 'الآن';
+    }
+  }
+}
+

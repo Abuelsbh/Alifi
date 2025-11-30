@@ -7,7 +7,7 @@ import '../../../core/services/chat_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../Models/chat_model.dart';
 import '../../../Widgets/custom_card.dart';
-import 'real_time_chat_screen.dart';
+import '../lost_found/user_chat_screen.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -491,14 +491,16 @@ class _ChatListScreenState extends State<ChatListScreen>
 
   void _openChat(ChatModel chat) {
     final vetName = _getVetNameFromChat(chat);
+    final vetId = _getVetIdFromChat(chat);
     
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => RealTimeChatScreen(
+        builder: (context) => UserChatScreen(
           chatId: chat.id,
-          vetName: vetName,
-          vetImage: _getVetImageFromChat(chat),
+          otherUserId: vetId ?? '',
+          otherUserName: vetName,
+          isVeterinaryChat: true,
         ),
       ),
     );
@@ -778,10 +780,11 @@ class _ChatListScreenState extends State<ChatListScreen>
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => RealTimeChatScreen(
+          builder: (context) => UserChatScreen(
             chatId: chatId,
-            vetName: vet['name'] ?? 'طبيب بيطري',
-            vetImage: vet['profilePhoto'],
+            otherUserId: vet['id'] ?? '',
+            otherUserName: vet['name'] ?? 'طبيب بيطري',
+            isVeterinaryChat: true,
           ),
         ),
       );
