@@ -1,5 +1,3 @@
-import 'package:alifi/Modules/add_animal/Widgets/add_animal_second_step.dart';
-import 'package:alifi/Modules/add_animal/Widgets/add_animal_third_step.dart';
 import 'package:alifi/Modules/add_animal/Widgets/add_animal_fourth_step.dart';
 import 'package:alifi/Modules/add_animal/add_animal_controller.dart';
 import 'package:alifi/Utilities/theme_helper.dart';
@@ -61,26 +59,14 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
                 EasyStep(
                   customStep: con.activeStep > 0
                     ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
-                    : Icon(Icons.photo_camera, color: ThemeClass.of(context).primaryColor, size: 20),
-                  title: Provider.of<AppLanguage>(context, listen: false).translate('add_animal.step_titles.pictures'),
-                ),
-                EasyStep(
-                  customStep: con.activeStep > 1
-                    ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
                     : Icon(Icons.pets, color: ThemeClass.of(context).primaryColor, size: 20),
                   title: Provider.of<AppLanguage>(context, listen: false).translate('add_animal.step_titles.pet_details'),
                 ),
                 EasyStep(
-                  customStep: con.activeStep > 2
+                  customStep: con.activeStep > 1
                     ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
-                    : Icon(Icons.info, color: ThemeClass.of(context).primaryColor, size: 20),
-                  title: Provider.of<AppLanguage>(context, listen: false).translate('add_animal.step_titles.contact_info'),
-                ),
-                EasyStep(
-                  customStep: con.activeStep > 3
-                      ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
-                      : Icon(Icons.info, color: ThemeClass.of(context).primaryColor, size: 20),
-                  title: Provider.of<AppLanguage>(context, listen: false).translate('add_animal.step_titles.more_info'),
+                    : Icon(Icons.photo_camera, color: ThemeClass.of(context).primaryColor, size: 20),
+                  title: Provider.of<AppLanguage>(context, listen: false).translate('add_animal.step_titles.pictures'),
                 ),
               ],
               onStepReached: (step) {
@@ -91,7 +77,7 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
             ),
             SliverToBoxAdapter(child: Gap(16.h),),
             SliverToBoxAdapter(
-              child: con.activeStep == 0? AddAnimalFourthStep(
+              child: con.activeStep == 0? AddAnimalFirstStep(
                 con: con,
                 onNext: () {
                   setState(() {
@@ -99,33 +85,9 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
                   });
                 },
                 onBack: null, // First step, no back button
-              ) : con.activeStep == 1? AddAnimalFirstStep(
+              ) : AddAnimalFourthStep(
                 con: con,
-                onNext: () {
-                  setState(() {
-                    con.activeStep++;
-                  });
-                },
-                onBack: () {
-                  setState(() {
-                    con.activeStep--;
-                  });
-                },
-              ) : con.activeStep == 2? AddAnimalSecondStep(
-                con: con,
-                onNext: () {
-                  setState(() {
-                    con.activeStep++;
-                  });
-                },
-                onBack: () {
-                  setState(() {
-                    con.activeStep--;
-                  });
-                },
-              ) : AddAnimalThirdStep(
-                con: con,
-                onDone: () async {
+                onNext: () async {
                   await _handleFormSubmission();
                 },
                 onBack: () {
@@ -157,16 +119,6 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
       
       if (con.typeController.text.trim().isEmpty) {
         _showErrorDialog('يرجى إدخال نوع الحيوان');
-        return;
-      }
-      
-      if (con.contactNameController.text.trim().isEmpty) {
-        _showErrorDialog('يرجى إدخال اسم جهة الاتصال');
-        return;
-      }
-      
-      if (con.phoneController.text.trim().isEmpty) {
-        _showErrorDialog('يرجى إدخال رقم الهاتف');
         return;
       }
       

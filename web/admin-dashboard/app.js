@@ -9,6 +9,13 @@ let unsubscribeStores = null;
 let currentEditingVet = null;
 let currentEditingStore = null;
 
+// Admin management (Added)
+const addAdminBtn = document.getElementById('add-admin-btn');
+const addAdminModal = document.getElementById('add-admin-modal');
+const addAdminForm = document.getElementById('add-admin-form');
+const adminSearch = document.getElementById('admin-search');
+const adminsTableBody = document.getElementById('admins-table-body');
+
 // DOM elements
 const loadingScreen = document.getElementById('loading-screen');
 const loginContainer = document.getElementById('login-container');
@@ -63,12 +70,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     try {
         // Check authentication state
-        FirebaseService.onAuthStateChanged((user) => {
+        FirebaseService.onAuthStateChanged(async (user) => {
             if (user) {
                 console.log('✅ User authenticated:', user.email);
-                currentUser = user;
-                showDashboard();
-                loadDashboardData();
+                // Check for admin status from Firestore instead of custom claims
+                const isAdmin = await FirebaseService.checkAdminStatus(user.uid);
+                if (isAdmin) {
+                    currentUser = user;
+                    showDashboard();
+                    loadDashboardData();
+                } else {
+                    console.warn('❌ Non-admin user attempted login:', user.email);
+                    await FirebaseService.signOut(); // Force logout non-admin
+                    showNotification('Access Denied: Only administrators can log in.', 'error');
+                    showLogin();
+                }
             } else {
                 console.log('❌ User not authenticated');
                 showLogin();
@@ -81,6 +97,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Initialize event listeners
     initializeEventListeners();
+
+    // Ensure Admins page and modal are within main content
+    const mainContent = document.querySelector('main.content');
+    const adminsPage = document.getElementById('admins-page');
+    const addAdminModal = document.getElementById('add-admin-modal');
+
+    if (mainContent && adminsPage && adminsPage.parentNode !== mainContent) {
+        adminsPage.parentNode.removeChild(adminsPage);
+        mainContent.appendChild(adminsPage);
+    }
+    if (mainContent && addAdminModal && addAdminModal.parentNode !== mainContent) {
+        addAdminModal.parentNode.removeChild(addAdminModal);
+        mainContent.appendChild(addAdminModal);
+    }
 });
 
 // Event listeners
@@ -110,6 +140,30 @@ function initializeEventListeners() {
         addStoreBtn.addEventListener('click', () => openStoreModal());
     }
     
+    // Add Admin button (Added)
+    if (addAdminBtn) {
+        addAdminBtn.addEventListener('click', () => adminFeatures.openAddAdminModal());
+    }
+
+    // Admin form submission (Added)
+    if (addAdminForm) {
+        addAdminForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            adminFeatures.handleAddAdminSubmit();
+        });
+    }
+
+    // Cancel Add Admin button (Added)
+    const cancelAddAdminBtn = document.getElementById('cancel-add-admin-btn');
+    if (cancelAddAdminBtn) {
+        cancelAddAdminBtn.addEventListener('click', () => adminFeatures.closeModal('add-admin-modal'));
+    }
+
+    // Search for Admins (Added)
+    if (adminSearch) {
+        adminSearch.addEventListener('input', (e) => adminFeatures.filterAdmins(e.target.value));
+    }
+
     // Modal close buttons
     document.querySelectorAll('.modal-close, #cancel-btn, #cancel-store-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -119,6 +173,7 @@ function initializeEventListeners() {
             if (document.getElementById('user-modal')) adminFeatures.closeModal('user-modal');
             if (document.getElementById('report-modal')) adminFeatures.closeModal('report-modal');
             if (document.getElementById('send-message-modal')) adminFeatures.closeModal('send-message-modal');
+            if (document.getElementById('add-admin-modal')) adminFeatures.closeModal('add-admin-modal'); // Added
         });
     });
     
@@ -220,6 +275,13 @@ function initializeEventListeners() {
             if (e.target === sendMessageModal) adminFeatures.closeModal('send-message-modal');
         });
     }
+
+    // Add Admin modal close outside (Added)
+    if (addAdminModal) {
+        addAdminModal.addEventListener('click', (e) => {
+            if (e.target === addAdminModal) adminFeatures.closeModal('add-admin-modal');
+        });
+    }
 }
 
 // Authentication functions
@@ -298,6 +360,9 @@ function showDashboard() {
     if (currentUser) {
         userName.textContent = currentUser.displayName || currentUser.email;
     }
+    
+    // Default to overview page on dashboard load
+    navigateToPage('overview');
 }
 
 function navigateToPage(pageName) {
@@ -319,6 +384,7 @@ function navigateToPage(pageName) {
         users: 'Users Management',
         reports: 'Pet Reports Management', // Changed 'Pet Reports' to 'Pet Reports Management' for consistency
         advertisements: 'Advertisements Management',
+        admins: 'Admins Management', // Added for Admins page
         settings: 'Settings'
     };
     
@@ -348,6 +414,12 @@ function navigateToPage(pageName) {
             window.adminFeatures.loadAds();
         } else {
             console.error('adminFeatures not available when navigating to advertisements');
+        }
+    } else if (pageName === 'admins') { // Added for Admins page
+        if (window.adminFeatures) {
+            window.adminFeatures.loadAdmins();
+        } else {
+            console.error('adminFeatures not available when navigating to admins');
         }
     } else if (pageName === 'settings') {
         if (window.adminFeatures) {

@@ -1693,3 +1693,44 @@ body {
         justify-content: center;
     }
 }
+
+/* Admin Role Badges */
+.role-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.role-super_admin {
+    background-color: #dc3545;
+    color: white;
+}
+
+.role-admin {
+    background-color: #007bff;
+    color: white;
+}
+
+.role-moderator {
+    background-color: #28a745;
+    color: white;
+}
+
+/* Role Selection Styling */
+#admin-role {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    background-color: white;
+}
+
+#admin-role:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}

@@ -3,6 +3,7 @@ import 'package:alifi/Utilities/theme_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/services/pet_stores_service.dart';
 import '../../../core/Language/app_languages.dart';
 import '../../../core/Theme/app_theme.dart';
@@ -354,10 +355,23 @@ class _PetStoresScreenState extends State<PetStoresScreen> {
                 width: double.infinity,
                 color: AppTheme.primaryGreen.withOpacity(0.1),
                 child: store['imageUrl'] != null && store['imageUrl'].isNotEmpty
-                    ? Image.network(
-                        store['imageUrl'],
+                    ? CachedNetworkImage(
+                        imageUrl: store['imageUrl'],
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
+                        memCacheWidth: 400,
+                        memCacheHeight: 320,
+                        maxWidthDiskCache: 800,
+                        maxHeightDiskCache: 600,
+                        placeholder: (context, url) => Container(
+                          color: AppTheme.primaryGreen.withOpacity(0.1),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppTheme.primaryGreen,
+                            ),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) {
                           return _buildPlaceholderImage(store);
                         },
                       )

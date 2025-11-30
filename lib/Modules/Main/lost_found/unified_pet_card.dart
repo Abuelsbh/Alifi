@@ -1,10 +1,11 @@
 import 'package:alifi/Utilities/text_style_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../Utilities/theme_helper.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../Widgets/custom_card.dart';
-import 'pet_report_details_screen.dart';
+import 'unified_pet_details_screen.dart';
 
 class UnifiedPetCard extends StatelessWidget {
   final Map<String, dynamic> pet;
@@ -32,7 +33,10 @@ class UnifiedPetCard extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => PetReportDetailsScreen(report: pet),
+            builder: (context) => UnifiedPetDetailsScreen(
+              type: PetDetailsType.report,
+              report: pet,
+            ),
           ),
         );
       },
@@ -61,13 +65,13 @@ class UnifiedPetCard extends StatelessWidget {
                   children: [
                     Text(
                       petName,
-                      style: TextStyleHelper.of(context).s22RegTextStyle.copyWith(
+                      style: TextStyleHelper.of(context).s18RegTextStyle.copyWith(
                         color: ThemeClass.of(context).backGroundColor,
                       ),
                     ),
                     Text(
                       petType,
-                      style: TextStyleHelper.of(context).s12RegTextStyle.copyWith(
+                      style: TextStyleHelper.of(context).s10RegTextStyle.copyWith(
                         color: ThemeClass.of(context).backGroundColor,
                       ),
                     ),
@@ -105,10 +109,25 @@ class UnifiedPetCard extends StatelessWidget {
                   bottomRight: Radius.circular(24.r),
                   topRight: Radius.circular(24.r),
                 ),
-                child: Image.network(
-                  imageUrls.first.toString(),
+                child: CachedNetworkImage(
+                  imageUrl: imageUrls.first.toString(),
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Icon(
+                  memCacheWidth: 121.w.toInt(),
+                  memCacheHeight: 83.h.toInt(),
+                  maxWidthDiskCache: 500,
+                  maxHeightDiskCache: 500,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey[300],
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: reportType == 'lost'
+                            ? AppTheme.primaryGreen
+                            : AppTheme.success,
+                      ),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Icon(
                     Icons.pets,
                     size: 40.sp,
                     color: reportType == 'lost'

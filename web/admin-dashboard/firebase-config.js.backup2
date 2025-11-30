@@ -502,30 +502,23 @@ const FirebaseService = {
     // Admins Management Functions (New Section)
     async getAdmins() {
         try {
+            // In a real application, fetching users by custom claims should be done server-side
+            // For client-side demo, we'll fetch all users and filter by custom claim locally (less efficient)
             const usersSnapshot = await db.collection('users').get();
-            const roles = this.getAdminRoles();
             const admins = [];
-            
             for (const doc of usersSnapshot.docs) {
                 const userData = doc.data();
+                // Check for custom claim (this client-side check is illustrative, rely on backend for robust auth)
                 if (userData.customClaims && userData.customClaims.admin === true) {
-                    const role = userData.customClaims.role || 'admin';
-                    const roleInfo = roles[role] || roles['admin'];
-                    
                     admins.push({
                         id: doc.id,
-                        uid: doc.id,
+                        uid: doc.id, // Assuming doc.id is the UID
                         name: userData.name || userData.email,
                         email: userData.email,
-                        role: role,
-                        roleName: roleInfo.name,
-                        roleDescription: roleInfo.description,
-                        permissions: userData.customClaims.permissions || {},
                         lastSignInTime: userData.lastSignInTime?.toDate() || null
                     });
                 }
             }
-            
             return admins;
         } catch (error) {
             console.error('Error fetching admins:', error);
@@ -538,95 +531,26 @@ const FirebaseService = {
         // This should be done via a Firebase Cloud Function or other secure backend service
         // using the Firebase Admin SDK.
         try {
-            // First, check if user exists in Firestore
-            const usersQuery = await db.collection('users').where('email', '==', email).get();
-            
-            if (!usersQuery.empty) {
-                // User exists in Firestore, just update their admin status
-                const userDoc = usersQuery.docs[0];
-                const uid = userDoc.id;
-                
-                await db.collection('users').doc(uid).update({
-                    name: displayName,
-                    customClaims: { admin: true },
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                return { success: true, uid: uid, message: 'Admin privileges added to existing user' };
-            } else {
-                // User doesn't exist, create new account
-                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                const uid = userCredential.user.uid;
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            const uid = userCredential.user.uid;
 
-                // Set custom claim (insecure client-side example)
-                // For a secure implementation, call a Cloud Function here:
-                // await firebase.functions().httpsCallable('addAdminRole')({ email: email });
-                await userCredential.user.getIdToken(true); // Refresh token to get new claims
-                // This part where custom claims are directly set client-side is a placeholder and WILL NOT WORK
-                // You need a backend call to set custom claims. This mock is for UI integration.
-                await db.collection('users').doc(uid).set({
-                    email: email,
-                    name: displayName,
-                    customClaims: { admin: true },
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    lastSignInTime: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
-                
-                return { success: true, uid: uid };
-            }
+            // Set custom claim (insecure client-side example)
+            // For a secure implementation, call a Cloud Function here:
+            // await firebase.functions().httpsCallable('addAdminRole')({ email: email });
+            await userCredential.user.getIdToken(true); // Refresh token to get new claims
+            // This part where custom claims are directly set client-side is a placeholder and WILL NOT WORK
+            // You need a backend call to set custom claims. This mock is for UI integration.
+            await db.collection('users').doc(uid).set({
+                email: email,
+                name: displayName,
+                customClaims: { admin: true },
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastSignInTime: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            
+            return { success: true, uid: uid };
         } catch (error) {
             console.error('Error creating admin:', error);
-            
-            // If email already exists in Firebase Auth, try to add admin privileges
-            if (error.code === 'auth/email-already-in-use') {
-                try {
-                    // Try to add admin privileges to existing user
-                    const privilegeResult = await this.addAdminPrivileges(email, displayName);
-                    if (privilegeResult.success) {
-                        return { success: true, uid: privilegeResult.uid, message: 'Admin privileges added to existing user' };
-                    } else {
-                        return { 
-                            success: false, 
-                            error: 'Email already exists in Firebase Auth but not in Firestore. Please contact support.',
-                            code: 'auth-exists-not-firestore'
-                        };
-                    }
-                } catch (privilegeError) {
-                    return { 
-                        success: false, 
-                        error: 'Email already exists but could not add admin privileges. Please contact support.',
-                        code: 'privilege-error'
-                    };
-                }
-            }
-            
-            return { success: false, error: error.message };
-        }
-    },
-
-    // Add admin privileges to existing user
-    async addAdminPrivileges(email, displayName) {
-        try {
-            // First, check if user exists in Firestore
-            const usersQuery = await db.collection('users').where('email', '==', email).get();
-            
-            if (!usersQuery.empty) {
-                // User exists in Firestore, update their admin status
-                const userDoc = usersQuery.docs[0];
-                const uid = userDoc.id;
-                
-                await db.collection('users').doc(uid).update({
-                    name: displayName,
-                    customClaims: { admin: true },
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                return { success: true, uid: uid, message: 'Admin privileges added to existing user' };
-            } else {
-                return { success: false, error: 'User with this email does not exist. Please create a new account.' };
-            }
-        } catch (error) {
-            console.error('Error adding admin privileges:', error);
             return { success: false, error: error.message };
         }
     },
@@ -673,18 +597,14 @@ const FirebaseService = {
                 
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    // IMPORTANT: Use doc.id as the document ID (Firestore auto-generated ID)
-                    // The 'id' field in data might be a timestamp, but we need the actual Firestore document ID
-                    // Put ...data first, then override 'id' with doc.id to ensure correct ID
-                    const reportData = {
-                        ...data,
-                        id: doc.id, // Override any 'id' field from data with the actual Firestore doc.id
+                    reports.push({
+                        id: doc.id,
                         collection: collectionName,
                         type: collectionName.replace('_pets', ''),
+                        ...data,
                         createdAt: data.createdAt?.toDate() || new Date(),
                         updatedAt: data.updatedAt?.toDate() || null
-                    };
-                    reports.push(reportData);
+                    });
                 });
             }
             
@@ -699,11 +619,6 @@ const FirebaseService = {
 
     async getReportById(reportId, collection) {
         try {
-            if (!reportId || !collection) {
-                console.error('Missing reportId or collection:', { reportId, collection });
-                return null;
-            }
-            
             const doc = await db.collection(collection).doc(reportId).get();
             if (doc.exists) {
                 const data = doc.data();
@@ -715,39 +630,25 @@ const FirebaseService = {
                     createdAt: data.createdAt?.toDate() || new Date(),
                     updatedAt: data.updatedAt?.toDate() || null
                 };
-            } else {
-                console.error('Report document does not exist:', { reportId, collection });
-                return null;
             }
+            return null;
         } catch (error) {
             console.error('Error fetching report:', error);
-            console.error('Error details:', { reportId, collection, error: error.message });
             return null;
         }
     },
 
     async approveReport(reportId, collection) {
         try {
-            console.log('Approving report:', { reportId, collection });
-            const updateData = {
-                approvalStatus: 'approved',
+            await db.collection(collection).doc(reportId).update({
+                status: 'approved',
                 approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            console.log('Update data:', updateData);
-            
-            await db.collection(collection).doc(reportId).update(updateData);
-            
-            // Verify the update
-            const updatedDoc = await db.collection(collection).doc(reportId).get();
-            const updatedData = updatedDoc.data();
-            console.log('Report approved successfully. Updated data:', updatedData);
-            console.log('approvalStatus after update:', updatedData?.approvalStatus);
-            
+            });
+            console.log('Report approved successfully');
             return { success: true };
         } catch (error) {
             console.error('Error approving report:', error);
-            console.error('Error details:', { reportId, collection, error: error.message, stack: error.stack });
             return { success: false, error: error.message };
         }
     },
@@ -755,7 +656,7 @@ const FirebaseService = {
     async rejectReport(reportId, collection) {
         try {
             await db.collection(collection).doc(reportId).update({
-                approvalStatus: 'rejected',
+                status: 'rejected',
                 rejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
@@ -1048,206 +949,6 @@ const FirebaseService = {
             });
         } catch (error) {
             console.error('Error incrementing ad click:', error);
-        }
-    },
-
-    // Admin Roles and Permissions System
-    getAdminRoles() {
-        return {
-            'super_admin': {
-                name: 'Super Admin',
-                description: 'صلاحيات كاملة - يمكنه إدارة كل شيء',
-                permissions: {
-                    manage_users: true,
-                    manage_veterinarians: true,
-                    manage_stores: true,
-                    manage_advertisements: true,
-                    manage_reports: true,
-                    manage_admins: true,
-                    manage_settings: true,
-                    view_analytics: true
-                }
-            },
-            'admin': {
-                name: 'Admin',
-                description: 'مدير - صلاحيات إدارية محدودة',
-                permissions: {
-                    manage_users: true,
-                    manage_veterinarians: true,
-                    manage_stores: true,
-                    manage_advertisements: true,
-                    manage_reports: true,
-                    manage_admins: false,
-                    manage_settings: false,
-                    view_analytics: true
-                }
-            },
-            'moderator': {
-                name: 'Moderator',
-                description: 'مراجع - صلاحيات مراجعة فقط',
-                permissions: {
-                    manage_users: false,
-                    manage_veterinarians: false,
-                    manage_stores: false,
-                    manage_advertisements: true,
-                    manage_reports: false,
-                    manage_admins: false,
-                    manage_settings: false,
-                    view_analytics: false
-                }
-            }
-        };
-    },
-
-    // Create admin with specific role
-    async createAdminWithRole(email, password, displayName, role = 'admin') {
-        try {
-            // Validate role
-            const roles = this.getAdminRoles();
-            if (!roles[role]) {
-                return { success: false, error: 'Invalid admin role' };
-            }
-
-            // First, check if user exists in Firestore
-            const usersQuery = await db.collection('users').where('email', '==', email).get();
-            
-            if (!usersQuery.empty) {
-                // User exists in Firestore, just update their admin status
-                const userDoc = usersQuery.docs[0];
-                const uid = userDoc.id;
-                
-                await db.collection('users').doc(uid).update({
-                    name: displayName,
-                    customClaims: { 
-                        admin: true,
-                        role: role,
-                        permissions: roles[role].permissions
-                    },
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                return { success: true, uid: uid, message: `Admin privileges added to existing user with role: ${roles[role].name}` };
-            } else {
-                // User doesn't exist, create new account
-                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                const uid = userCredential.user.uid;
-
-                await userCredential.user.getIdToken(true);
-                
-                await db.collection('users').doc(uid).set({
-                    email: email,
-                    name: displayName,
-                    customClaims: { 
-                        admin: true,
-                        role: role,
-                        permissions: roles[role].permissions
-                    },
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    lastSignInTime: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
-                
-                return { success: true, uid: uid, message: `Admin created successfully with role: ${roles[role].name}` };
-            }
-        } catch (error) {
-            console.error('Error creating admin with role:', error);
-            
-            if (error.code === 'auth/email-already-in-use') {
-                try {
-                    const privilegeResult = await this.addAdminPrivileges(email, displayName, role);
-                    if (privilegeResult.success) {
-                        return { success: true, uid: privilegeResult.uid, message: `Admin privileges added to existing user with role: ${roles[role].name}` };
-                    }
-                } catch (privilegeError) {
-                    return { 
-                        success: false, 
-                        error: 'Email already exists but could not add admin privileges. Please contact support.',
-                        code: 'privilege-error'
-                    };
-                }
-            }
-            
-            return { success: false, error: error.message };
-        }
-    },
-
-    // Add admin privileges with role
-    async addAdminPrivileges(email, displayName, role = 'admin') {
-        try {
-            const roles = this.getAdminRoles();
-            if (!roles[role]) {
-                return { success: false, error: 'Invalid admin role' };
-            }
-
-            const usersQuery = await db.collection('users').where('email', '==', email).get();
-            
-            if (!usersQuery.empty) {
-                const userDoc = usersQuery.docs[0];
-                const uid = userDoc.id;
-                
-                await db.collection('users').doc(uid).update({
-                    name: displayName,
-                    customClaims: { 
-                        admin: true,
-                        role: role,
-                        permissions: roles[role].permissions
-                    },
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                return { success: true, uid: uid, message: `Admin privileges added with role: ${roles[role].name}` };
-            } else {
-                return { success: false, error: 'User with this email does not exist. Please create a new account.' };
-            }
-        } catch (error) {
-            console.error('Error adding admin privileges:', error);
-            return { success: false, error: error.message };
-        }
-    },
-
-    // Check if current user has specific permission
-    async checkPermission(permission) {
-        try {
-            const currentUser = auth.currentUser;
-            if (!currentUser) return false;
-
-            const userDoc = await db.collection('users').doc(currentUser.uid).get();
-            if (!userDoc.exists) return false;
-
-            const userData = userDoc.data();
-            if (!userData.customClaims || !userData.customClaims.admin) return false;
-
-            // Super admin has all permissions
-            if (userData.customClaims.role === 'super_admin') return true;
-
-            // Check specific permission
-            return userData.customClaims.permissions && userData.customClaims.permissions[permission] === true;
-        } catch (error) {
-            console.error('Error checking permission:', error);
-            return false;
-        }
-    },
-
-    // Get current user's role and permissions
-    async getCurrentUserRole() {
-        try {
-            const currentUser = auth.currentUser;
-            if (!currentUser) return null;
-
-            const userDoc = await db.collection('users').doc(currentUser.uid).get();
-            if (!userDoc.exists) return null;
-
-            const userData = userDoc.data();
-            if (!userData.customClaims || !userData.customClaims.admin) return null;
-
-            return {
-                role: userData.customClaims.role || 'admin',
-                permissions: userData.customClaims.permissions || {},
-                name: userData.name,
-                email: userData.email
-            };
-        } catch (error) {
-            console.error('Error getting current user role:', error);
-            return null;
         }
     }
 };

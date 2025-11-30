@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../Utilities/dialog_helper.dart';
 import '../../../Utilities/text_style_helper.dart';
 import '../../../Utilities/theme_helper.dart';
@@ -12,7 +13,7 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/services/pet_reports_service.dart';
 import '../../add_animal/add_animal_screen.dart';
 import '../home/home_screen.dart';
-import 'breeding_pet_details_screen.dart';
+import 'unified_pet_details_screen.dart';
 
 class BreedingPetsScreen extends StatefulWidget {
   const BreedingPetsScreen({super.key});
@@ -206,7 +207,10 @@ class _BreedingPetsScreenState extends State<BreedingPetsScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => BreedingPetDetailsScreen(pet: pet),
+            builder: (context) => UnifiedPetDetailsScreen(
+              type: PetDetailsType.breeding,
+              breedingPet: pet,
+            ),
           ),
         );
       },
@@ -310,10 +314,23 @@ class _BreedingPetsScreenState extends State<BreedingPetsScreen> {
                   bottomRight: Radius.circular(24.r),
                   topRight: Radius.circular(24.r),
                 ),
-                child: Image.network(
-                  imageUrls.first,
+                child: CachedNetworkImage(
+                  imageUrl: imageUrls.first,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Icon(
+                  memCacheWidth: 121.w.toInt(),
+                  memCacheHeight: 83.h.toInt(),
+                  maxWidthDiskCache: 500,
+                  maxHeightDiskCache: 500,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey[300],
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppTheme.primaryGreen,
+                      ),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Icon(
                     Icons.pets,
                     size: 40.sp,
                     color: AppTheme.primaryGreen,

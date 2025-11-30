@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/services/pet_stores_service.dart';
 import '../../../core/Language/app_languages.dart';
 import '../../../core/Theme/app_theme.dart';
@@ -31,10 +32,22 @@ class StoreDetailsScreen extends StatelessWidget {
             foregroundColor: Colors.white,
             flexibleSpace: FlexibleSpaceBar(
               background: store['imageUrl'] != null && store['imageUrl'].isNotEmpty
-                  ? Image.network(
-                      store['imageUrl'],
+                  ? CachedNetworkImage(
+                      imageUrl: store['imageUrl'],
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
+                      memCacheWidth: 800,
+                      memCacheHeight: 500,
+                      maxWidthDiskCache: 1920,
+                      maxHeightDiskCache: 1080,
+                      placeholder: (context, url) => Container(
+                        color: AppTheme.primaryGreen.withOpacity(0.1),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) {
                         return _buildPlaceholderImage();
                       },
                     )

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../Widgets/custom_card.dart';
 import '../../../Widgets/custom_button.dart';
@@ -113,9 +114,26 @@ class _PetDetailsScreenState extends State<PetDetailsScreen>
             ),
           ),
           child: widget.pet['imageUrl'] != null
-              ? Image.network(
-                  widget.pet['imageUrl'],
+              ? CachedNetworkImage(
+                  imageUrl: widget.pet['imageUrl'],
                   fit: BoxFit.cover,
+                  memCacheWidth: 400,
+                  memCacheHeight: 400,
+                  maxWidthDiskCache: 800,
+                  maxHeightDiskCache: 800,
+                  placeholder: (context, url) => Container(
+                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Icon(
+                    Icons.pets,
+                    size: 80.sp,
+                    color: Colors.white.withOpacity(0.3),
+                  ),
                 )
               : Icon(
                   Icons.pets,

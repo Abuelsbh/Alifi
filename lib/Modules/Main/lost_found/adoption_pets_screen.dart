@@ -2,6 +2,7 @@ import 'package:alifi/Modules/Main/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../Utilities/dialog_helper.dart';
 import '../../../Utilities/theme_helper.dart';
 import '../../../Widgets/login_widget.dart';
@@ -12,7 +13,7 @@ import '../../../Widgets/translated_text.dart';
 import '../../../Widgets/custom_card.dart';
 import '../../../Widgets/translated_custom_button.dart';
 import '../profile/simple_profile_screen.dart';
-import 'adoption_pet_details_screen.dart';
+import 'unified_pet_details_screen.dart';
 import '../../add_animal/add_animal_screen.dart';
 import 'lost_found_screen.dart';
 
@@ -48,10 +49,18 @@ class _AdoptionPetsScreenState extends State<AdoptionPetsScreen> {
           .get();
 
       // Filter and sort manually
+      final isAdmin = AuthService.isAdmin;
       final activeDocs = querySnapshot.docs.where((doc) {
         try {
           final data = doc.data() as Map<String, dynamic>;
-          return data['isActive'] == true;
+          if (data['isActive'] != true) return false;
+          // Admin can see all, regular users only see approved
+          if (!isAdmin) {
+            final approvalStatus = data['approvalStatus'];
+            // Only show approved reports - no null or pending
+            return approvalStatus == 'approved';
+          }
+          return true; // Admin sees all (pending + approved)
         } catch (e) {
           print('Error filtering doc ${doc.id}: $e');
           return false; // Skip documents with invalid data
@@ -305,7 +314,10 @@ class _AdoptionPetsScreenState extends State<AdoptionPetsScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => AdoptionPetDetailsScreen(pet: pet),
+            builder: (context) => UnifiedPetDetailsScreen(
+              type: PetDetailsType.adoption,
+              adoptionPet: pet,
+            ),
           ),
         );
       },
@@ -387,10 +399,23 @@ class _AdoptionPetsScreenState extends State<AdoptionPetsScreen> {
                   bottomRight: Radius.circular(24.r),
                   topRight: Radius.circular(24.r),
                 ),
-                child: Image.network(
-                  imageUrls.first,
+                child: CachedNetworkImage(
+                  imageUrl: imageUrls.first,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Icon(
+                  memCacheWidth: 121.w.toInt(),
+                  memCacheHeight: 83.h.toInt(),
+                  maxWidthDiskCache: 500,
+                  maxHeightDiskCache: 500,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey[300],
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppTheme.primaryGreen,
+                      ),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Icon(
                     Icons.pets,
                     size: 40.sp,
                     color: AppTheme.primaryGreen,

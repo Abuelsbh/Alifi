@@ -183,15 +183,20 @@ class _LostPetsTabState extends State<LostPetsTab> {
                   ? _buildEmptyState()
                   : ListView.builder(
                       padding: EdgeInsets.symmetric(horizontal: 8.w),
+                      addAutomaticKeepAlives: true,
+                      addRepaintBoundaries: true,
                       itemCount: _filteredPets.length,
                       itemBuilder: (context, index) {
                         final pet = _filteredPets[index];
-                        return Padding(
-                          padding: EdgeInsets.only(bottom: 4.h),
-                          child: UnifiedPetCard(
-                            color: index%2 == 0 ? ThemeClass.of(context).secondaryColor : ThemeClass.of(context).primaryColor,
-                            pet: pet,
-                            reportType: 'lost',
+                        return RepaintBoundary(
+                          key: ValueKey('lost_pet_${pet['id'] ?? index}'),
+                          child: Padding(
+                            padding: EdgeInsets.only(bottom: 4.h),
+                            child: UnifiedPetCard(
+                              color: index%2 == 0 ? ThemeClass.of(context).secondaryColor : ThemeClass.of(context).primaryColor,
+                              pet: pet,
+                              reportType: 'lost',
+                            ),
                           ),
                         );
                       },

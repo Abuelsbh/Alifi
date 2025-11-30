@@ -2,6 +2,7 @@ import 'package:alifi/Utilities/theme_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../core/Theme/app_theme.dart';
 import '../Models/chat_model.dart';
 
@@ -196,42 +197,39 @@ class _MessageBubbleState extends State<MessageBubble>
               maxWidth: 200.w,
               maxHeight: 200.h,
             ),
-            child: Image.network(
-              widget.message.mediaUrl ?? '',
+            child: CachedNetworkImage(
+              imageUrl: widget.message.mediaUrl ?? '',
               fit: BoxFit.cover,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return Container(
-                  height: 150.h,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                              : null,
-                          color: AppTheme.primaryGreen,
+              memCacheWidth: 200,
+              memCacheHeight: 200,
+              maxWidthDiskCache: 800,
+              maxHeightDiskCache: 800,
+              placeholder: (context, url) => Container(
+                height: 150.h,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        color: AppTheme.primaryGreen,
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        'جاري التحميل...',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12.sp,
                         ),
-                        SizedBox(height: 8.h),
-                        Text(
-                          'جاري التحميل...',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12.sp,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                );
-              },
-              errorBuilder: (context, error, stackTrace) {
+                ),
+              ),
+              errorWidget: (context, url, error) {
                 return Container(
                   height: 150.h,
                   decoration: BoxDecoration(
@@ -289,10 +287,26 @@ class _MessageBubbleState extends State<MessageBubble>
             child: Stack(
               alignment: Alignment.center,
               children: [
-                Image.network(
-                  widget.message.mediaUrl ?? '',
+                CachedNetworkImage(
+                  imageUrl: widget.message.mediaUrl ?? '',
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
+                  memCacheWidth: 200,
+                  memCacheHeight: 200,
+                  maxWidthDiskCache: 800,
+                  maxHeightDiskCache: 800,
+                  placeholder: (context, url) => Container(
+                    height: 150.h,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: AppTheme.primaryGreen,
+                      ),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) {
                     return Container(
                       height: 150.h,
                       decoration: BoxDecoration(

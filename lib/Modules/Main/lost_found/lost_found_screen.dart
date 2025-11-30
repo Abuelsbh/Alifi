@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../Utilities/dialog_helper.dart';
-import '../../../Widgets/login_widget.dart';
 import '../../../core/Theme/app_theme.dart';
-import '../../../Models/pet_report_model.dart';
-import '../../../Widgets/translated_custom_button.dart';
 import '../../../Widgets/translated_text.dart';
-import '../../../core/services/auth_service.dart';
 import 'lost_pets_tab.dart';
 import 'found_pets_tab.dart';
-import '../../add_animal/add_animal_screen.dart';
+import 'post_report_screen.dart';
 
 class LostFoundScreen extends StatefulWidget {
   const LostFoundScreen({super.key});
@@ -32,6 +27,53 @@ class _LostFoundScreenState extends State<LostFoundScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Widget _buildCustomFloatingActionButton() {
+    return GestureDetector(
+      onTap: () => _navigateToPostReport(context),
+      child: SizedBox(
+        width: 120.w,
+        height: 120.h,
+        child: Stack(
+          alignment: Alignment.bottomRight,
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                width: 56.w,
+                height: 56.h,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryGreen,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white,
+                    width: 2.5.w,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.add,
+                    color: Colors.white,
+                    size: 30.sp,
+                    weight: 700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -72,7 +114,7 @@ class _LostFoundScreenState extends State<LostFoundScreen>
         actions: [
           IconButton(
             onPressed: () {
-              _showPostOptions(context);
+              _navigateToPostReport(context);
             },
             icon: Icon(
               Icons.add,
@@ -82,6 +124,8 @@ class _LostFoundScreenState extends State<LostFoundScreen>
           ),
         ],
       ),
+      
+      floatingActionButton: _buildCustomFloatingActionButton(),
       body: TabBarView(
         controller: _tabController,
         children: const [
@@ -92,105 +136,11 @@ class _LostFoundScreenState extends State<LostFoundScreen>
     );
   }
 
-  void _showPostOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20.r),
-            topRight: Radius.circular(20.r),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: EdgeInsets.only(top: 12.h),
-              width: 40.w,
-              height: 4.h,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2.r),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(24.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TranslatedText(
-                    'lost_found.post_report',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 24.h),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TranslatedCustomButton(
-                          textKey: 'lost_found.lost_pet',
-                          icon: Icons.search,
-                          type: ButtonType.primary,
-                          onPressed: () {
-                            Navigator.pop(context);
-                            if (AuthService.isAuthenticated) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const AddAnimalScreen(
-                                    reportType: ReportType.lost,
-                                    title: 'إضافة حيوان مفقود',
-                                  ),
-                                ),
-                              );
-                            } else {
-                              DialogHelper.custom(context: context).customDialog(
-                                dialogWidget: const LoginWidget(),
-                              );
-                            }
-
-                          },
-                        ),
-                      ),
-                      SizedBox(width: 16.w),
-                      Expanded(
-                        child: TranslatedCustomButton(
-                          textKey: 'lost_found.found_pet',
-                          icon: Icons.favorite,
-                          type: ButtonType.primary,
-                          onPressed: () {
-                            Navigator.pop(context);
-                            if (AuthService.isAuthenticated) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const AddAnimalScreen(
-                                    reportType: ReportType.found,
-                                    title: 'إضافة حيوان موجود',
-                                  ),
-                                ),
-                              );
-                            } else {
-                              DialogHelper.custom(context: context).customDialog(
-                                dialogWidget: const LoginWidget(),
-                              );
-                            }
-
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 16.h),
-                ],
-              ),
-            ),
-          ],
-        ),
+  void _navigateToPostReport(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const PostReportScreen(),
       ),
     );
   }

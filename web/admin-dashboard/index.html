@@ -73,6 +73,12 @@
                     <span>Advertisements</span>
                 </a>
 
+                <!-- New Admin Management Nav Item -->
+                <a href="#" class="nav-item" data-page="admins">
+                    <i class="fas fa-user-shield"></i>
+                    <span>Admins</span>
+                </a>
+
                 <a href="#" class="nav-item" data-page="settings">
                     <i class="fas fa-cog"></i>
                     <span>Settings</span>
@@ -456,6 +462,78 @@
                                 Reset to Default
                             </button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- New Admins Management Page -->
+                <div id="admins-page" class="page">
+                    <div class="page-header">
+                        <h2>Admins Management</h2>
+                        <button id="add-admin-btn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i>
+                            Add New Admin
+                        </button>
+                    </div>
+
+                    <div class="search-section">
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="admin-search" placeholder="Search admins...">
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Admin Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>UID</th>
+                                    <th>Last Login</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admins-table-body">
+                                <!-- Admins will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Add/Edit Admin Modal -->
+                <div id="add-admin-modal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="admin-modal-title">Add New Admin</h3>
+                            <button class="modal-close">&times;</button>
+                        </div>
+                        <form id="add-admin-form">
+                            <div class="form-group">
+                                <label for="admin-name">Name *</label>
+                                <input type="text" id="admin-name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="admin-email">Email *</label>
+                                <input type="email" id="admin-email" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="admin-password">Password *</label>
+                                <input type="password" id="admin-password" minlength="6" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="admin-role">Admin Role *</label>
+                                <select id="admin-role" required>
+                                    <option value="moderator">Moderator - صلاحيات مراجعة فقط</option>
+                                    <option value="admin" selected>Admin - صلاحيات إدارية محدودة</option>
+                                    <option value="super_admin">Super Admin - صلاحيات كاملة</option>
+                                </select>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" id="cancel-add-admin-btn">Cancel</button>
+                                <button type="submit" class="btn btn-primary" id="save-admin-btn">Add Admin</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </main>

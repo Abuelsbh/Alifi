@@ -199,6 +199,12 @@ class AddAnimalController extends StateXController {
         throw Exception('At least one image is required');
       }
 
+      // Get user profile for contact info
+      final userProfile = await AuthService.getUserProfile(user.uid);
+      final userName = userProfile?['username'] ?? userProfile?['name'] ?? AuthService.userDisplayName ?? '';
+      final userPhone = userProfile?['phoneNumber'] ?? userProfile?['phone'] ?? '';
+      final userEmail = userProfile?['email'] ?? AuthService.userEmail ?? '';
+
       // Convert image paths to File objects
       final List<File> imageFiles = selectedImages.map((path) => File(path)).toList();
 
@@ -215,11 +221,11 @@ class AddAnimalController extends StateXController {
         'description': commentsController.text.trim(),
         'distinguishingMarks': distinctiveMarksController.text.trim(),
         'medicalStatus': medicalStatus,
-        'contactName': contactNameController.text.trim(),
-        'contactPhone': phoneController.text.trim(),
-        'contactEmail': emailController.text.trim(),
-        'address': addressController.text.trim(),
-        'locationLink': locationLinkController.text.trim(),
+        'contactName': userName,
+        'contactPhone': userPhone,
+        'contactEmail': userEmail,
+        'address': '',
+        'locationLink': '',
         'coordinates': null, // Could be added later with location service
         'area': '', // Could be extracted from address
         'landmark': '', // Could be extracted from address

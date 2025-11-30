@@ -12,6 +12,7 @@ import '../Modules/Auth/register_screen.dart';
 import '../Modules/Auth/demo_mode_screen.dart';
 import '../Modules/Auth/simple_register_test.dart';
 import '../Modules/Admin/admin_dashboard_screen.dart';
+import '../Modules/Main/lost_found/post_report_screen.dart';
 
 BuildContext? get currentContext_ =>
     GoRouterConfig.router.routerDelegate.navigatorKey.currentContext;
@@ -82,6 +83,17 @@ class GoRouterConfig{
           return getCustomTransitionPage(
             state: state,
             child: const LostFoundScreen(),
+          );
+        },
+        routes: const <RouteBase>[],
+      ),
+      GoRoute(
+        path: PostReportScreen.routeName,
+        name: 'postReport',
+        pageBuilder: (_, GoRouterState state) {
+          return getCustomTransitionPage(
+            state: state,
+            child: const PostReportScreen(),
           );
         },
         routes: const <RouteBase>[],

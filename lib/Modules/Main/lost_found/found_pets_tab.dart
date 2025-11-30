@@ -215,14 +215,20 @@ class _FoundPetsTabState extends State<FoundPetsTab> {
   Widget _buildPetsList() {
     return ListView.builder(
       padding: EdgeInsets.symmetric(horizontal: 8.w),
+      addAutomaticKeepAlives: true,
+      addRepaintBoundaries: true,
       itemCount: _filteredPets.length,
       itemBuilder: (context, index) {
-        return Padding(
-          padding: EdgeInsets.only(bottom: 4.h),
-          child: UnifiedPetCard(
-            color: index%2 == 0 ? ThemeClass.of(context).secondaryColor : ThemeClass.of(context).primaryColor,
-            pet: _filteredPets[index],
-            reportType: 'found',
+        final pet = _filteredPets[index];
+        return RepaintBoundary(
+          key: ValueKey('found_pet_${pet['id'] ?? index}'),
+          child: Padding(
+            padding: EdgeInsets.only(bottom: 4.h),
+            child: UnifiedPetCard(
+              color: index%2 == 0 ? ThemeClass.of(context).secondaryColor : ThemeClass.of(context).primaryColor,
+              pet: pet,
+              reportType: 'found',
+            ),
           ),
         );
       },

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../Widgets/custom_card.dart';
@@ -289,10 +290,23 @@ class _MyPetsScreenState extends State<MyPetsScreen>
                 child: pet['imageUrl'] != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(30.r),
-                        child: Image.network(
-                          pet['imageUrl'],
+                        child: CachedNetworkImage(
+                          imageUrl: pet['imageUrl'],
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
+                          memCacheWidth: 100,
+                          memCacheHeight: 100,
+                          maxWidthDiskCache: 300,
+                          maxHeightDiskCache: 300,
+                          placeholder: (context, url) => Container(
+                            color: AppTheme.primaryGreen.withOpacity(0.1),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppTheme.primaryGreen,
+                              ),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) {
                             return _buildPetIcon(pet['type']);
                           },
                         ),

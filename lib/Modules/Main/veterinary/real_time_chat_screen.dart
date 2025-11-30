@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:io';
 import 'dart:async';
 import '../../../core/Theme/app_theme.dart';
@@ -425,23 +426,28 @@ class _RealTimeChatScreenState extends State<RealTimeChatScreen>
         controller: _scrollController,
         reverse: true,
         padding: EdgeInsets.all(16.w),
+        addAutomaticKeepAlives: true,
+        addRepaintBoundaries: true,
         itemCount: _messages.length,
         itemBuilder: (context, index) {
           final message = _messages[index];
           final isMe = message.senderId == AuthService.userId;
           final showDateHeader = _shouldShowDateHeader(index);
           
-          return Column(
-            children: [
-              if (showDateHeader) _buildDateHeader(message.timestamp),
-              MessageBubble(
-                message: message,
-                isMe: isMe,
-                onTap: () => _handleMessageTap(message),
-                onLongPress: () => _handleMessageLongPress(message),
-              ),
-              SizedBox(height: 8.h),
-            ],
+          return RepaintBoundary(
+            key: ValueKey('message_${message.id ?? index}'),
+            child: Column(
+              children: [
+                if (showDateHeader) _buildDateHeader(message.timestamp),
+                MessageBubble(
+                  message: message,
+                  isMe: isMe,
+                  onTap: () => _handleMessageTap(message),
+                  onLongPress: () => _handleMessageLongPress(message),
+                ),
+                SizedBox(height: 8.h),
+              ],
+            ),
           );
         },
       ),
@@ -613,10 +619,15 @@ class _RealTimeChatScreenState extends State<RealTimeChatScreen>
           ),
           body: Center(
             child: InteractiveViewer(
-              child: Image.network(
-                imageUrl,
+              child: CachedNetworkImage(
+                imageUrl: imageUrl,
                 fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
+                maxWidthDiskCache: 2048,
+                maxHeightDiskCache: 2048,
+                placeholder: (context, url) => const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
+                errorWidget: (context, url, error) {
                   return Icon(
                     Icons.error,
                     color: Colors.white,

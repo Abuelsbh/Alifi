@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'dart:math';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import '../firebase/firebase_config.dart';
 import '../../Models/pet_report_model.dart';
+import 'auth_service.dart';
 
 
 class PetReportsService {
@@ -110,15 +112,50 @@ class PetReportsService {
         .snapshots()
         .map((snapshot) {
           print('📱 Real-time update: ${snapshot.docs.length} lost pets received');
+          final isAdmin = AuthService.isAdmin;
+          final userEmail = AuthService.userEmail ?? 'no email';
+          print('👤 User check - Is Admin: $isAdmin, Email: $userEmail');
           return snapshot.docs
               .where((doc) {
                 final data = doc.data() as Map<String, dynamic>;
-                return data['isActive'] == true;
+                if (data['isActive'] != true) {
+                  print('❌ Pet ${doc.id} is not active');
+                  return false;
+                }
+                // Admin can see all, regular users only see approved
+                if (!isAdmin) {
+                  final approvalStatus = data['approvalStatus'];
+                  print('📋 Lost pet ${doc.id} approvalStatus: "$approvalStatus" (type: ${approvalStatus.runtimeType})');
+                  // Only show approved reports - reject null, pending, and rejected
+                  final isApproved = approvalStatus == 'approved';
+                  if (!isApproved) {
+                    print('❌ REJECTING lost pet ${doc.id} - status: "$approvalStatus" (not approved)');
+                  } else {
+                    print('✅ APPROVING lost pet ${doc.id} - status: "$approvalStatus"');
+                  }
+                  return isApproved;
+                }
+                print('✅ Admin: showing pet ${doc.id}');
+                return true; // Admin sees all (pending + approved)
               })
-              .map((doc) => {
-                'id': doc.id,
-                ...doc.data() as Map<String, dynamic>,
+              .map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                // Final safety check: ensure only approved reports for non-admins
+                final isAdmin = AuthService.isAdmin;
+                if (!isAdmin) {
+                  final approvalStatus = data['approvalStatus'];
+                  if (approvalStatus != 'approved') {
+                    print('⚠️ FINAL CHECK: Lost pet ${doc.id} has status "$approvalStatus" - REMOVING');
+                    return null;
+                  }
+                }
+                return {
+                  'id': doc.id,
+                  ...data,
+                };
               })
+              .where((pet) => pet != null)
+              .cast<Map<String, dynamic>>()
               .toList();
         });
   }
@@ -221,15 +258,49 @@ class PetReportsService {
         .snapshots()
         .map((snapshot) {
           print('📱 Real-time update: ${snapshot.docs.length} found pets received');
+          final isAdmin = AuthService.isAdmin;
+          final userEmail = AuthService.userEmail ?? 'no email';
+          print('👤 User check - Is Admin: $isAdmin, Email: $userEmail');
           return snapshot.docs
               .where((doc) {
                 final data = doc.data() as Map<String, dynamic>;
-                return data['isActive'] == true;
+                if (data['isActive'] != true) {
+                  print('❌ Found pet ${doc.id} is not active');
+                  return false;
+                }
+                // Admin can see all, regular users only see approved
+                if (!isAdmin) {
+                  final approvalStatus = data['approvalStatus'];
+                  print('📋 Found pet ${doc.id} approvalStatus: "$approvalStatus" (type: ${approvalStatus.runtimeType})');
+                  // Only show approved reports - reject null, pending, and rejected
+                  final isApproved = approvalStatus == 'approved';
+                  if (!isApproved) {
+                    print('❌ REJECTING found pet ${doc.id} - status: "$approvalStatus" (not approved)');
+                  } else {
+                    print('✅ APPROVING found pet ${doc.id} - status: "$approvalStatus"');
+                  }
+                  return isApproved;
+                }
+                print('✅ Admin: showing found pet ${doc.id}');
+                return true; // Admin sees all (pending + approved)
               })
-              .map((doc) => {
-                'id': doc.id,
-                ...doc.data() as Map<String, dynamic>,
+              .map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                // Double check: ensure only approved reports for non-admins
+                if (!isAdmin) {
+                  final approvalStatus = data['approvalStatus'];
+                  if (approvalStatus != 'approved') {
+                    print('⚠️ WARNING: Found pet ${doc.id} passed filter but status is "$approvalStatus" - removing it');
+                    return null; // This will be filtered out
+                  }
+                }
+                return {
+                  'id': doc.id,
+                  ...data,
+                };
               })
+              .where((pet) => pet != null)
+              .cast<Map<String, dynamic>>()
               .toList();
         });
   }
@@ -302,11 +373,22 @@ class PetReportsService {
     return query
         .snapshots()
         .map((snapshot) {
+          final isAdmin = AuthService.isAdmin;
           final results = snapshot.docs
               .where((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 // Filter for active pets
                 if (data['isActive'] != true) return false;
+                // Admin can see all, regular users only see approved
+                if (!isAdmin) {
+                  final approvalStatus = data['approvalStatus'];
+                  // Only show approved reports - reject null, pending, and rejected
+                  if (approvalStatus != 'approved') {
+                    print('❌ REJECTING ${type} pet ${doc.id} in search - status: "$approvalStatus" (not approved)');
+                    return false;
+                  }
+                  print('✅ APPROVING ${type} pet ${doc.id} in search - status: "$approvalStatus"');
+                }
                 
                 // Filter by pet type
                 if (petType != null && petType.isNotEmpty) {
@@ -367,6 +449,7 @@ class PetReportsService {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'isActive': true,
+        'approvalStatus': 'pending', // New: requires admin approval
         'status': 'lost',
         'type': 'lost_pet',
         'viewCount': 0,
@@ -436,6 +519,7 @@ class PetReportsService {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'isActive': true,
+        'approvalStatus': 'pending', // New: requires admin approval
         'status': 'found',
         'type': 'found_pet',
         'viewCount': 0,
@@ -506,6 +590,7 @@ class PetReportsService {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'isActive': true,
+        'approvalStatus': 'pending', // New: requires admin approval
         'status': 'adoption',
         'type': 'adoption_pet',
         'viewCount': 0,
@@ -580,9 +665,24 @@ class PetReportsService {
           print('📱 Real-time update: ${snapshot.docs.length} adoption pets received');
           
           // Filter and sort manually in app
+          final isAdmin = AuthService.isAdmin;
+          final userEmail = AuthService.userEmail ?? 'no email';
+          print('👤 User check - Is Admin: $isAdmin, Email: $userEmail');
           final docs = snapshot.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
-            return data['isActive'] == true;
+            if (data['isActive'] != true) return false;
+            // Admin can see all, regular users only see approved
+            if (!isAdmin) {
+              final approvalStatus = data['approvalStatus'];
+              // Only show approved reports - reject null, pending, and rejected
+              if (approvalStatus != 'approved') {
+                print('❌ REJECTING adoption pet ${doc.id} - status: "$approvalStatus" (not approved)');
+                return false;
+              }
+              print('✅ APPROVING adoption pet ${doc.id} - status: "$approvalStatus"');
+              return true;
+            }
+            return true; // Admin sees all (pending + approved)
           }).toList();
           
           // Sort by createdAt manually
@@ -595,10 +695,25 @@ class PetReportsService {
           });
           
           return docs
-              .map((doc) => {
-                'id': doc.id,
-                ...doc.data() as Map<String, dynamic>,
+              .map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                // Final safety check: ensure only approved reports for non-admins
+                final currentIsAdmin = AuthService.isAdmin;
+                if (!currentIsAdmin) {
+                  final approvalStatus = data['approvalStatus'];
+                  if (approvalStatus != 'approved') {
+                    print('⚠️ FINAL CHECK: Adoption pet ${doc.id} has status "$approvalStatus" - REMOVING');
+                    return null; // This will be filtered out
+                  }
+                  print('✅ FINAL CHECK: Adoption pet ${doc.id} is approved - KEEPING');
+                }
+                return {
+                  'id': doc.id,
+                  ...data,
+                };
               })
+              .where((pet) => pet != null)
+              .cast<Map<String, dynamic>>()
               .toList();
         });
   }
@@ -666,6 +781,152 @@ class PetReportsService {
     } catch (e) {
       throw Exception('Failed to delete report: $e');
     }
+  }
+
+  // Approve report (Admin only)
+  static Future<void> approveReport({
+    required String reportId,
+    required String collection,
+  }) async {
+    try {
+      print('🔍 Approving report in service:');
+      print('   reportId: $reportId');
+      print('   collection: $collection');
+      
+      // Verify document exists first
+      final docRef = _firestore.collection(collection).doc(reportId);
+      final docSnapshot = await docRef.get();
+      
+      if (!docSnapshot.exists) {
+        print('❌ Document does not exist: $collection/$reportId');
+        throw Exception('Document not found: $collection/$reportId');
+      }
+      
+      await docRef.update({
+        'approvalStatus': 'approved',
+        'approvedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      print('✅ Report approved successfully: $reportId');
+    } catch (e) {
+      print('❌ Error approving report: $e');
+      throw Exception('Failed to approve report: $e');
+    }
+  }
+
+  // Reject report (Admin only)
+  static Future<void> rejectReport({
+    required String reportId,
+    required String collection,
+  }) async {
+    try {
+      print('🔍 Rejecting report in service:');
+      print('   reportId: $reportId');
+      print('   collection: $collection');
+      
+      // Verify document exists first
+      final docRef = _firestore.collection(collection).doc(reportId);
+      final docSnapshot = await docRef.get();
+      
+      if (!docSnapshot.exists) {
+        print('❌ Document does not exist: $collection/$reportId');
+        throw Exception('Document not found: $collection/$reportId');
+      }
+      
+      await docRef.update({
+        'approvalStatus': 'rejected',
+        'rejectedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      print('✅ Report rejected successfully: $reportId');
+    } catch (e) {
+      print('❌ Error rejecting report: $e');
+      throw Exception('Failed to reject report: $e');
+    }
+  }
+
+  // Get all reports for admin (including pending)
+  static Stream<List<Map<String, dynamic>>> getAllReportsForAdmin() {
+    print('📱 Starting admin reports stream');
+    
+    final collections = ['lost_pets', 'found_pets', 'adoption_pets', 'breeding_pets'];
+    
+    // Create a stream for each collection
+    final streams = collections.map((collectionName) {
+      return _firestore
+          .collection(collectionName)
+          .limit(50)
+          .snapshots()
+          .map((snapshot) {
+            return snapshot.docs
+                .where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return data['isActive'] == true;
+                })
+                .map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  // IMPORTANT: Put ...data first, then override with doc.id and collection
+                  // This ensures we use the actual Firestore document ID, not the 'id' field from data
+                  return {
+                    ...data,
+                    'id': doc.id, // Override any 'id' field from data with actual Firestore doc.id
+                    'collection': collectionName, // Override any 'collection' field from data
+                    'type': collectionName.replaceAll('_pets', ''),
+                  };
+                })
+                .toList();
+          });
+    });
+
+    // Use a timer-based approach to combine streams
+    StreamController<List<Map<String, dynamic>>>? controller;
+    Timer? timer;
+    final subscriptions = <StreamSubscription>[];
+
+    controller = StreamController<List<Map<String, dynamic>>>(
+      onListen: () {
+        final allReports = <Map<String, dynamic>>[];
+        
+        // Subscribe to all streams
+        for (var i = 0; i < streams.length; i++) {
+          final subscription = streams.elementAt(i).listen(
+            (reports) {
+              // Update reports for this collection
+              allReports.removeWhere((r) => r['collection'] == collections[i]);
+              allReports.addAll(reports);
+              
+              // Sort by creation date
+              allReports.sort((a, b) {
+                try {
+                  final aTime = (a['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+                  final bTime = (b['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+                  return bTime.compareTo(aTime);
+                } catch (e) {
+                  return 0;
+                }
+              });
+              
+              if (controller != null && !controller!.isClosed) {
+                controller!.add(List.from(allReports));
+              }
+            },
+            onError: (error) {
+              print('❌ Error in admin reports stream: $error');
+            },
+          );
+          subscriptions.add(subscription);
+        }
+      },
+      onCancel: () {
+        timer?.cancel();
+        for (var subscription in subscriptions) {
+          subscription.cancel();
+        }
+        controller?.close();
+      },
+    );
+
+    return controller.stream;
   }
 
   // Mark report as resolved
@@ -1086,6 +1347,7 @@ class PetReportsService {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'isActive': true,
+        'approvalStatus': 'pending', // New: requires admin approval
         'status': 'breeding',
         'type': 'breeding_pet',
         'viewCount': 0,
@@ -1154,10 +1416,25 @@ class PetReportsService {
         print('📊 Received ${snapshot.docs.length} breeding pets documents');
         
         // Filter and sort manually to avoid Firebase index issues
+        final isAdmin = AuthService.isAdmin;
+        final userEmail = AuthService.userEmail ?? 'no email';
+        print('👤 User check - Is Admin: $isAdmin, Email: $userEmail');
         final activeDocs = snapshot.docs.where((doc) {
           try {
             final data = doc.data();
-            return data['isActive'] == true;
+            if (data['isActive'] != true) return false;
+            // Admin can see all, regular users only see approved
+            if (!isAdmin) {
+              final approvalStatus = data['approvalStatus'];
+              // Only show approved reports - reject null, pending, and rejected
+              if (approvalStatus != 'approved') {
+                print('❌ REJECTING breeding pet ${doc.id} - status: "$approvalStatus" (not approved)');
+                return false;
+              }
+              print('✅ APPROVING breeding pet ${doc.id} - status: "$approvalStatus"');
+              return true;
+            }
+            return true; // Admin sees all (pending + approved)
           } catch (e) {
             print('Error filtering breeding pet doc ${doc.id}: $e');
             return false;
@@ -1182,6 +1459,16 @@ class PetReportsService {
         final pets = <BreedingPetModel>[];
         for (final doc in activeDocs) {
           try {
+            // Final safety check: ensure only approved reports for non-admins
+            final isAdmin = AuthService.isAdmin;
+            if (!isAdmin) {
+              final data = doc.data();
+              final approvalStatus = data['approvalStatus'];
+              if (approvalStatus != 'approved') {
+                print('⚠️ FINAL CHECK: Breeding pet ${doc.id} has status "$approvalStatus" - SKIPPING');
+                continue; // Skip this pet
+              }
+            }
             final pet = BreedingPetModel.fromFirestore(doc);
             pets.add(pet);
           } catch (e) {

@@ -281,6 +281,17 @@ class AuthService {
   // Check if email is verified
   static bool get isEmailVerified => currentUser?.emailVerified ?? false;
 
+  // Check if current user is admin
+  static bool get isAdmin {
+    if (FirebaseConfig.isDemoMode) {
+      return false;
+    }
+    final email = userEmail ?? '';
+    return email.contains('admin') || 
+           email == 'doctor@gmail.com' || 
+           email == 'admin@alifi.com';
+  }
+
   // Send email verification
   static Future<void> sendEmailVerification() async {
     try {

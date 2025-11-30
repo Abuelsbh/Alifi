@@ -56,15 +56,50 @@ Future<void> main() async {
   );
 }
 
-class AlifiApp extends StatelessWidget {
+class AlifiApp extends StatefulWidget {
   const AlifiApp({super.key});
 
   @override
+  State<AlifiApp> createState() => _AlifiAppState();
+}
+
+class _AlifiAppState extends State<AlifiApp> {
+  bool _isInitialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _initializeApp();
+    }
+  }
+
+  Future<void> _initializeApp() async {
+    final appLan = Provider.of<AppLanguage>(context, listen: false);
+    final appTheme = Provider.of<ThemeProvider>(context, listen: false);
+    
+    await appLan.fetchLocale();
+    appTheme.fetchTheme();
+    
+    if (mounted) {
+      setState(() {
+        _isInitialized = true;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      return const MaterialApp(
+        home: Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
     final appLan = Provider.of<AppLanguage>(context);
     final appTheme = Provider.of<ThemeProvider>(context);
-    appLan.fetchLocale();
-    appTheme.fetchTheme();
 
     return LayoutBuilder(
       builder: (context, constraints) {

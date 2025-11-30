@@ -5,6 +5,7 @@ class AdminFeatures {
         this.currentReports = [];
         this.currentSettings = {};
         this.currentAds = [];
+        this.currentAdmins = []; // Added for admins data
         this.currentViewingUser = null; // Added for tracking the currently viewed user
         this.currentViewingReport = null; // Added for tracking the currently viewed report
         this.init();
@@ -59,6 +60,11 @@ class AdminFeatures {
 
         document.getElementById('export-reports-btn')?.addEventListener('click', () => {
             this.exportReports();
+        });
+
+        // Admins page events (Added)
+        document.getElementById('admin-search')?.addEventListener('input', (e) => {
+            this.filterAdmins(e.target.value);
         });
 
         // Modal events
@@ -126,6 +132,161 @@ class AdminFeatures {
                 }
             });
         });
+    }
+
+    // Admins Management (New Section)
+    async loadAdmins() {
+        try {
+            this.showLoading('admins-table-body');
+            const admins = await FirebaseService.getAdmins();
+            this.currentAdmins = admins;
+            this.displayAdmins(this.currentAdmins);
+        } catch (error) {
+            console.error('Error loading admins:', error);
+            this.showError('admins-table-body', 'Failed to load administrators');
+        }
+    }
+
+    displayAdmins(admins) {
+        const tbody = document.getElementById('admins-table-body');
+        if (!tbody) return;
+
+        if (admins.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center">
+                        <div class="empty-state">
+                            <i class="fas fa-user-shield"></i>
+                            <h3>No Admins Found</h3>
+                            <p>Add your first administrator to manage the dashboard.</p>
+                            <button class="btn btn-primary" onclick="window.adminFeatures.openAddAdminModal()">
+                                <i class="fas fa-plus"></i>
+                                Add New Admin
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = admins.map(admin => `
+            <tr>
+                <td>
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <i class="fas fa-user-shield"></i>
+                        </div>
+                        <div class="user-details">
+                            <div class="user-name">${admin.name || 'Unknown Admin'}</div>
+                            <div class="user-id">#${admin.id.substring(0, 8)}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>${admin.email || 'N/A'}</td>
+                <td>
+                    <span class="role-badge role-${admin.role}">
+                        ${admin.roleName}
+                    </span>
+                </td>
+                <td>${admin.uid}</td>
+                <td>${admin.lastSignInTime ? this.formatDate(admin.lastSignInTime) : 'Never'}</td>
+                <td>
+                    <button class="btn-small btn-danger" onclick="window.adminFeatures.confirmDeleteAdmin('${admin.uid}', '${admin.name || admin.email}')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    filterAdmins(searchTerm) {
+        const filteredAdmins = this.currentAdmins.filter(admin => {
+            const name = (admin.name || admin.email || '').toLowerCase();
+            const email = (admin.email || '').toLowerCase();
+            const uid = (admin.uid || '').toLowerCase();
+            const search = searchTerm.toLowerCase();
+            
+            return name.includes(search) || email.includes(search) || uid.includes(search);
+        });
+        this.displayAdmins(filteredAdmins);
+    }
+
+    openAddAdminModal() {
+        document.getElementById('admin-modal-title').textContent = 'Add New Admin';
+        document.getElementById('add-admin-form').reset();
+        this.showModal('add-admin-modal');
+    }
+
+    async handleAddAdminSubmit() {
+        const name = document.getElementById('admin-name').value.trim();
+        const email = document.getElementById('admin-email').value.trim();
+        const password = document.getElementById('admin-password').value;
+        const role = document.getElementById('admin-role').value;
+
+        if (!name || !email || !password || !role) {
+            alert('Please fill in all fields.');
+            return;
+        }
+
+        const saveBtn = document.getElementById('save-admin-btn');
+        saveBtn.classList.add('loading');
+        saveBtn.disabled = true;
+
+        try {
+            const result = await FirebaseService.createAdminWithRole(email, password, name, role);
+            if (result.success) {
+                alert(`Admin added successfully with role: ${result.message}`);
+                this.closeModal('add-admin-modal');
+                this.loadAdmins(); // Refresh the list
+            } else {
+                // Check if it's an email exists error
+                if (result.code === 'email-exists') {
+                    const userChoice = confirm(`${result.error}\n\nWould you like to add admin privileges to the existing user instead?`);
+                    if (userChoice) {
+                        // Try to add admin privileges to existing user
+                        const privilegeResult = await FirebaseService.addAdminPrivileges(email, name, role);
+                        if (privilegeResult.success) {
+                            alert(`Admin privileges added successfully with role: ${privilegeResult.message}`);
+                            this.closeModal('add-admin-modal');
+                            this.loadAdmins(); // Refresh the list
+                        } else {
+                            alert(privilegeResult.error || 'Failed to add admin privileges.');
+                        }
+                    }
+                } else {
+                    alert(result.error || 'Failed to add admin.');
+                }
+            }
+        } catch (error) {
+            console.error('Error adding admin:', error);
+            alert('Failed to add admin: ' + error.message);
+        } finally {
+            saveBtn.classList.remove('loading');
+            saveBtn.disabled = false;
+        }
+    }
+
+    confirmDeleteAdmin(uid, name) {
+        if (confirm(`Are you sure you want to delete admin \"${name}\"? This action cannot be undone and will remove their admin privileges.`)) {
+            this.deleteAdmin(uid);
+        }
+    }
+
+    async deleteAdmin(uid) {
+        try {
+            // Remove admin claim and delete user from authentication
+            const result = await FirebaseService.removeAdmin(uid);
+            if (result.success) {
+                alert('Admin deleted successfully!');
+                this.loadAdmins(); // Refresh the list
+            } else {
+                alert(result.error || 'Failed to delete admin.');
+            }
+        } catch (error) {
+            console.error('Error deleting admin:', error);
+            alert('Failed to delete admin: ' + error.message);
+        }
     }
 
     // Users Management
@@ -354,8 +515,14 @@ class AdminFeatures {
             return;
         }
 
-        grid.innerHTML = reports.map(report => `
-            <div class="report-card" onclick="window.adminFeatures.showReportDetails('${report.id}', '${report.collection}')">
+        grid.innerHTML = reports.map(report => {
+            // Ensure we use the correct document ID
+            const reportId = report.id || report.docId;
+            const collection = report.collection;
+            console.log('Displaying report:', { reportId, collection, fullReport: report });
+            
+            return `
+            <div class="report-card" onclick="window.adminFeatures.showReportDetails('${reportId}', '${collection}')">
                 ${report.isUrgent ? '<div class="urgent-badge">URGENT</div>' : ''}
                 <div class="report-header">
                     <span class="report-type ${report.type}">${report.type.toUpperCase()}</span>
@@ -376,29 +543,45 @@ class AdminFeatures {
                     </div>
                 </div>
                 <div class="report-actions">
-                    <button class="btn-small btn-success" onclick="event.stopPropagation(); window.adminFeatures.approveReport('${report.id}', '${report.collection}')">
+                    <button class="btn-small btn-success" onclick="event.stopPropagation(); window.adminFeatures.approveReport('${reportId}', '${collection}')">
                         <i class="fas fa-check"></i> Approve
                     </button>
-                    <button class="btn-small btn-danger" onclick="event.stopPropagation(); window.adminFeatures.rejectReport('${report.id}', '${report.collection}')">
+                    <button class="btn-small btn-danger" onclick="event.stopPropagation(); window.adminFeatures.rejectReport('${reportId}', '${collection}')">
                         <i class="fas fa-times"></i> Reject
                     </button>
-                    <button class="btn-small btn-info" onclick="event.stopPropagation(); window.adminFeatures.showReportDetails('${report.id}', '${report.collection}')">
+                    <button class="btn-small btn-info" onclick="event.stopPropagation(); window.adminFeatures.showReportDetails('${reportId}', '${collection}')">
                         <i class="fas fa-eye"></i> Details
                     </button>
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
     }
 
     async showReportDetails(reportId, collection) {
         try {
-            const report = await FirebaseService.getReportById(reportId, collection);
-            if (!report) {
-                alert('Report not found');
+            console.log('Fetching report details:', { reportId, collection });
+            if (!reportId || !collection) {
+                alert('Missing report ID or collection');
                 return;
             }
+            
+            const report = await FirebaseService.getReportById(reportId, collection);
+            if (!report) {
+                console.error('Report not found:', { reportId, collection });
+                alert('Report not found. Please check the console for details.');
+                return;
+            }
+            
+            console.log('Report loaded successfully:', report);
 
-            this.currentViewingReport = report; // Store the report being viewed
+            // Store the report being viewed with explicit id and collection
+            this.currentViewingReport = {
+                id: reportId,
+                collection: collection,
+                ...report
+            };
+            console.log('Stored currentViewingReport:', this.currentViewingReport);
 
             const modal = document.getElementById('report-modal');
             const reportDetails = document.getElementById('report-details');
@@ -437,12 +620,12 @@ class AdminFeatures {
                     
                     <div class="report-meta">
                         <p><strong>Submitted:</strong> ${this.formatDate(report.createdAt)}</p>
-                        <p><strong>Status:</strong> <span class="status-badge ${report.status || 'pending'}">${(report.status || 'pending').toUpperCase()}</span></p>
+                        <p><strong>Approval Status:</strong> <span class="status-badge ${report.approvalStatus || 'pending'}">${(report.approvalStatus || 'pending').toUpperCase()}</span></p>
+                        ${report.status ? `<p><strong>Report Status:</strong> <span class="status-badge ${report.status}">${report.status.toUpperCase()}</span></p>` : ''}
                     </div>
                 </div>
             `;
-
-            // Store current report data for actions
+            
             if (modal) {
                 modal.dataset.reportId = reportId;
                 modal.dataset.collection = collection;
@@ -459,19 +642,29 @@ class AdminFeatures {
         const targetReportId = reportId || this.currentViewingReport?.id;
         const targetCollection = collection || this.currentViewingReport?.collection;
 
+        console.log('approveReport called with:', { reportId, collection, targetReportId, targetCollection });
+
         if (!targetReportId || !targetCollection) {
             console.error('No report ID or collection provided for approving report.');
+            alert('Error: Missing report ID or collection');
             return;
         }
 
         try {
-            await FirebaseService.approveReport(targetReportId, targetCollection);
-            alert('Report approved successfully');
-            this.closeModal('report-modal');
-            this.loadReports(); // Refresh the list
+            console.log('Calling FirebaseService.approveReport...');
+            const result = await FirebaseService.approveReport(targetReportId, targetCollection);
+            console.log('Approve result:', result);
+            
+            if (result.success) {
+                alert('Report approved successfully');
+                this.closeModal('report-modal');
+                this.loadReports(); // Refresh the list
+            } else {
+                alert('Failed to approve report: ' + (result.error || 'Unknown error'));
+            }
         } catch (error) {
             console.error('Error approving report:', error);
-            alert('Failed to approve report');
+            alert('Failed to approve report: ' + error.message);
         }
     }
 

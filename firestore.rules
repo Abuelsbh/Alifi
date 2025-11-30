@@ -51,6 +51,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Admins collection - For Firebase Authentication, not Firestore data directly
+    // This rule assumes you might store some admin-specific metadata in a Firestore collection
+    // However, the primary admin status is controlled by custom claims.
+    match /admins/{document} {
+        allow read: if isAdmin(); // Only admins can see the list of admins
+        allow create, delete: if isAdmin(); // Only admins can add/remove other admins
+    }
+
     // Report Collections (lost_pets, found_pets, adoption_pets, breeding_pets)
     // Public users can only read approved reports
     // Authenticated users can create new reports

@@ -80,6 +80,8 @@
     "edit_profile": "تعديل الملف الشخصي",
     "change_password": "تغيير كلمة المرور",
     "account_settings": "إعدادات الحساب",
+    "account": "الحساب",
+    "services": "الخدمات",
     "image_updated": "تم تحديث صورة الملف الشخصي بنجاح",
     "image_error": "خطأ في تحديث صورة الملف الشخصي"
   },

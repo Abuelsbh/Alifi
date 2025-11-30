@@ -9,6 +9,7 @@ import 'package:alifi/generated/assets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../Utilities/bottom_sheet_helper.dart';
 import '../../../Utilities/dialog_helper.dart';
 import '../../../Utilities/strings.dart';
@@ -32,6 +33,7 @@ import '../../../Models/pet_report_model.dart';
 import '../profile/notifications_screen.dart';
 import '../../../Widgets/advertisement_widget.dart';
 import '../../../core/services/advertisement_service.dart';
+import '../../Admin/admin_reports_screen.dart';
 
 class HomeScreen extends StatefulWidget {
 
@@ -289,13 +291,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _floatingController.dispose();
     _shimmerController.dispose();
 
-    // Cancel all subscriptions to prevent memory leaks
     _cancelSubscriptions();
 
     super.dispose();
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -356,20 +355,46 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
 
                     child: ClipOval(
-                  child: _userProfileImage != null ? Image.network(_userProfileImage!, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) { return Container( color: Colors.grey[200], child: Icon( Icons.person, color: Colors.grey[600], size: 25.sp, ), ); },) : Image.asset(
-                    'assets/images/profile_placeholder.png',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey[200],
-                        child: Icon(
-                          Icons.person,
-                          color: Colors.grey[600],
-                          size: 25.sp,
+                  child: _userProfileImage != null 
+                      ? CachedNetworkImage(
+                          imageUrl: _userProfileImage!,
+                          fit: BoxFit.cover,
+                          memCacheWidth: 100,
+                          memCacheHeight: 100,
+                          maxWidthDiskCache: 200,
+                          maxHeightDiskCache: 200,
+                          placeholder: (context, url) => Container(
+                            color: Colors.grey[200],
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: Colors.grey[200],
+                            child: Icon(
+                              Icons.person,
+                              color: Colors.grey[600],
+                              size: 25.sp,
+                            ),
+                          ),
+                        )
+                      : Image.asset(
+                          'assets/images/profile_placeholder.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[200],
+                              child: Icon(
+                                Icons.person,
+                                color: Colors.grey[600],
+                                size: 25.sp,
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ),
               ),
               SizedBox(width: 15.w),
@@ -393,20 +418,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           // Right side - Icons
           Row(
             children: [
-              // Bell Icon with notification badge
+              // Bell Icon with notification badge (or Admin Reports for admins)
               StreamBuilder<int>(
                 stream: NotificationService.getUnreadMessagesCountFromNotifications(),
                 builder: (context, snapshot) {
                   final unreadCount = snapshot.data ?? 0;
+                  final isAdmin = AuthService.isAdmin;
                   
                   return GestureDetector(
                 onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const NotificationsScreen(),
-                        ),
-                      );
+                      if (isAdmin) {
+                        // Navigate to Admin Reports Screen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AdminReportsScreen(),
+                          ),
+                        );
+                      } else {
+                        // Navigate to Notifications Screen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const NotificationsScreen(),
+                          ),
+                        );
+                      }
                     },
                     child: Stack(
                       children: [
@@ -418,8 +455,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.notifications_outlined,
-                            color: unreadCount > 0 ? AppTheme.primaryOrange : Colors.grey[600],
+                    isAdmin ? Icons.admin_panel_settings : Icons.notifications_outlined,
+                            color: isAdmin 
+                                ? AppTheme.primaryGreen 
+                                : (unreadCount > 0 ? AppTheme.primaryOrange : Colors.grey[600]),
                     size: 20.sp,
                   ),
                 ),
@@ -552,13 +591,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             height: 247.h,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
+              addAutomaticKeepAlives: true,
+              addRepaintBoundaries: true,
               itemCount: 4,
               itemBuilder: (context, index) {
-                return Container(
-                  width: 234.w,
-                  margin: EdgeInsets.only(right: 15.w),
-                  child: _buildServiceCard(
-                    _getServiceData(index),
+                return RepaintBoundary(
+                  key: ValueKey('service_card_$index'),
+                  child: Container(
+                    width: 234.w,
+                    margin: EdgeInsets.only(right: 15.w),
+                    child: _buildServiceCard(
+                      _getServiceData(index),
+                    ),
                   ),
                 );
               },

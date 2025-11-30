@@ -80,6 +80,8 @@
     "edit_profile": "Edit Profile",
     "change_password": "Change Password",
     "account_settings": "Account Settings",
+    "account": "Account",
+    "services": "Services",
     "image_updated": "Profile image updated successfully",
     "image_error": "Error updating profile image"
   },
