@@ -269,10 +269,10 @@ class StoreDetailsScreen extends StatelessWidget {
             ),
 
           // Working Hours
-          if (store['workingHours'] != null && store['workingHours'].isNotEmpty)
+          if (_hasWorkingHours(store['workingHours']))
             _buildContactItem(
               icon: Icons.access_time,
-              title: store['workingHours'],
+              title: _formatWorkingHours(store['workingHours']),
               onTap: null,
             ),
         ],
@@ -525,5 +525,71 @@ class StoreDetailsScreen extends StatelessWidget {
     if (await canLaunchUrl(mapUri)) {
       await launchUrl(mapUri, mode: LaunchMode.externalApplication);
     }
+  }
+  
+  // Helper function to format working hours
+  String _formatWorkingHours(dynamic workingHours) {
+    if (workingHours == null) return '';
+    
+    // Legacy format: string
+    if (workingHours is String) {
+      return workingHours;
+    }
+    
+    // New format: Map with days
+    if (workingHours is Map) {
+      final dayNames = {
+        'saturday': 'Sat',
+        'sunday': 'Sun',
+        'monday': 'Mon',
+        'tuesday': 'Tue',
+        'wednesday': 'Wed',
+        'thursday': 'Thu',
+        'friday': 'Fri',
+      };
+      
+      final days = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+      final formattedDays = <String>[];
+      
+      for (final day in days) {
+        final dayData = workingHours[day];
+        if (dayData is Map) {
+          if (dayData['closed'] == true) {
+            formattedDays.add('${dayNames[day]}: Closed');
+          } else if (dayData['hours'] != null && dayData['hours'].toString().isNotEmpty) {
+            formattedDays.add('${dayNames[day]}: ${dayData['hours']}');
+          }
+        }
+      }
+      
+      if (formattedDays.isEmpty) return '';
+      return formattedDays.join('\n');
+    }
+    
+    return '';
+  }
+  
+  // Helper function to check if working hours exist
+  bool _hasWorkingHours(dynamic workingHours) {
+    if (workingHours == null) return false;
+    
+    if (workingHours is String) {
+      return workingHours.isNotEmpty;
+    }
+    
+    if (workingHours is Map) {
+      final days = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+      for (final day in days) {
+        final dayData = workingHours[day];
+        if (dayData is Map) {
+          if (dayData['closed'] == true || 
+              (dayData['hours'] != null && dayData['hours'].toString().isNotEmpty)) {
+            return true;
+          }
+        }
+      }
+    }
+    
+    return false;
   }
 } 

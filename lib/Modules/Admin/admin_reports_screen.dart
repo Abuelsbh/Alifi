@@ -44,6 +44,13 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
         title: const Text('إدارة التقارير'),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_sweep),
+            tooltip: 'حذف جميع التقارير',
+            onPressed: () => _deleteAllReports(),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -553,6 +560,62 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
         }
       } catch (e) {
         if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('خطأ في الحذف: $e'),
+              backgroundColor: AppTheme.error,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _deleteAllReports() async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تأكيد الحذف'),
+        content: const Text('هل أنت متأكد من حذف جميع التقارير؟\n\nهذا الإجراء لا يمكن التراجع عنه وسيتم حذف جميع التقارير النشطة.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('إلغاء'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('حذف الكل', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        // Show loading dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+
+        await PetReportsService.deleteAllReports();
+
+        if (mounted) {
+          Navigator.pop(context); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم حذف جميع التقارير بنجاح'),
+              backgroundColor: AppTheme.success,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.pop(context); // Close loading dialog
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('خطأ في الحذف: $e'),

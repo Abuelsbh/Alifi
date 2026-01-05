@@ -368,6 +368,11 @@ class AdminFeatures {
                                 onclick="event.stopPropagation(); window.adminFeatures.toggleUserBan('${user.id}')">
                             <i class="fas fa-${user.status === 'banned' ? 'user-check' : 'ban'}"></i>
                         </button>
+                        <button class="btn-small btn-danger" 
+                                onclick="event.stopPropagation(); window.adminFeatures.deleteUser('${user.id}', '${(user.name || user.username || 'User').replace(/'/g, "\\'")}')"
+                                title="Delete User Permanently">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -465,6 +470,33 @@ class AdminFeatures {
         } catch (error) {
             console.error('Error toggling user ban:', error);
             alert('Failed to update user status');
+        }
+    }
+
+    async deleteUser(userId, userName) {
+        if (!userId) {
+            console.error('No user ID provided for deletion.');
+            return;
+        }
+
+        const confirmed = confirm(`هل أنت متأكد من حذف المستخدم "${userName}" نهائياً؟\n\nهذا الإجراء لا يمكن التراجع عنه.\n\nAre you sure you want to permanently delete user "${userName}"?\n\nThis action cannot be undone.`);
+        
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            const result = await FirebaseService.deleteUser(userId);
+            if (result.success) {
+                alert('تم حذف المستخدم بنجاح\nUser deleted successfully');
+                this.closeModal('user-modal');
+                this.loadUsers(); // Refresh the list
+            } else {
+                alert('فشل حذف المستخدم: ' + (result.error || 'Unknown error') + '\nFailed to delete user: ' + (result.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            alert('فشل حذف المستخدم: ' + error.message + '\nFailed to delete user: ' + error.message);
         }
     }
 
@@ -704,6 +736,36 @@ class AdminFeatures {
         } catch (error) {
             console.error('Error rejecting report:', error);
             alert('Failed to reject report');
+        }
+    }
+
+    async deleteAllReports() {
+        const confirmed = confirm('هل أنت متأكد من حذف جميع التقارير؟\n\nهذا الإجراء لا يمكن التراجع عنه وسيتم حذف جميع التقارير النشطة.\n\nAre you sure you want to delete all reports?\n\nThis action cannot be undone and will delete all active reports.');
+        
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            // Show loading
+            const grid = document.getElementById('reports-grid');
+            if (grid) {
+                grid.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>Deleting reports...</h3></div>';
+            }
+
+            const result = await FirebaseService.deleteAllReports();
+            
+            if (result.success) {
+                alert(`تم حذف ${result.deletedCount || 0} تقرير بنجاح\nSuccessfully deleted ${result.deletedCount || 0} reports`);
+                this.loadReports(); // Refresh the list
+            } else {
+                alert('فشل حذف التقارير: ' + (result.error || 'Unknown error') + '\nFailed to delete reports: ' + (result.error || 'Unknown error'));
+                this.loadReports(); // Refresh anyway to show current state
+            }
+        } catch (error) {
+            console.error('Error deleting all reports:', error);
+            alert('فشل حذف التقارير: ' + error.message + '\nFailed to delete reports: ' + error.message);
+            this.loadReports(); // Refresh anyway to show current state
         }
     }
 
@@ -1056,6 +1118,16 @@ class AdminFeatures {
         document.getElementById('ad-form').dataset.mode = 'add';
         delete document.getElementById('ad-form').dataset.adId;
         
+        // Reset image preview
+        const imagePreview = document.getElementById('ad-image-preview');
+        if (imagePreview) {
+            imagePreview.style.display = 'none';
+        }
+        const imageInput = document.getElementById('ad-image-url');
+        if (imageInput) {
+            imageInput.required = true; // Required when adding
+        }
+        
         // Load locations and set default to "all"
         await this.loadAdLocations();
         document.getElementById('ad-location-all').checked = true;
@@ -1104,13 +1176,28 @@ class AdminFeatures {
                 return;
             }
 
+            const imageInput = document.getElementById('ad-image-url');
+            const imagePreview = document.getElementById('ad-image-preview');
+            const imagePreviewImg = document.getElementById('ad-image-preview-img');
+
             document.getElementById('ad-modal-title').textContent = 'Edit Advertisement';
             document.getElementById('ad-title').value = ad.title || '';
             document.getElementById('ad-description').value = ad.description || '';
-            document.getElementById('ad-image-url').value = ad.imageUrl || '';
             document.getElementById('ad-display-order').value = ad.displayOrder || 1;
             document.getElementById('ad-click-url').value = ad.clickUrl || '';
             document.getElementById('ad-is-active').checked = ad.isActive !== false;
+            
+            // Show existing image preview
+            if (ad.imageUrl) {
+                imagePreviewImg.src = ad.imageUrl;
+                imagePreview.style.display = 'block';
+            } else {
+                imagePreview.style.display = 'none';
+            }
+            
+            // Clear file input (user can select new image if needed)
+            imageInput.value = '';
+            imageInput.required = false; // Not required when editing
             
             // Load locations and set selected ones
             await this.loadAdLocations();
@@ -1159,10 +1246,44 @@ class AdminFeatures {
                 }
             }
             
+            const imageInput = document.getElementById('ad-image-url');
+            let imageUrl = '';
+            
+            // Get existing image URL if editing
+            if (mode === 'edit' && adId) {
+                const existingAd = this.currentAds.find(a => a.id === adId);
+                if (existingAd) {
+                    imageUrl = existingAd.imageUrl || '';
+                }
+            }
+            
+            // Upload image if a new file is selected
+            if (imageInput.files && imageInput.files.length > 0) {
+                const file = imageInput.files[0];
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading image...';
+                submitBtn.disabled = true;
+                
+                const uploadResult = await FirebaseService.uploadImage(file, 'advertisements');
+                if (uploadResult.success) {
+                    imageUrl = uploadResult.url;
+                } else {
+                    alert('Failed to upload image: ' + uploadResult.error);
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                    return;
+                }
+            } else if (mode !== 'edit' && !imageUrl) {
+                // New ad must have an image
+                alert('Please select an image for the advertisement');
+                return;
+            }
+            
             const adData = {
                 title: document.getElementById('ad-title').value.trim(),
                 description: document.getElementById('ad-description').value.trim(),
-                imageUrl: document.getElementById('ad-image-url').value.trim(),
+                imageUrl: imageUrl,
                 displayOrder: parseInt(document.getElementById('ad-display-order').value) || 1,
                 clickUrl: document.getElementById('ad-click-url').value.trim(),
                 isActive: document.getElementById('ad-is-active').checked,
@@ -1171,7 +1292,7 @@ class AdminFeatures {
 
             // Validate required fields
             if (!adData.imageUrl) {
-                alert('Image URL is required');
+                alert('Image is required');
                 return;
             }
 

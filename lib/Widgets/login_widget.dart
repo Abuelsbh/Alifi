@@ -262,7 +262,7 @@ class _LoginWidgetState extends State<LoginWidget> {
             },
             child: TranslatedText(
               'auth.signup',
-                style: TextStyleHelper.of(context).s10RegTextStyle.copyWith(color: ThemeClass.of(context).primaryColor)
+                style: TextStyleHelper.of(context).s14RegTextStyle.copyWith(color: ThemeClass.of(context).primaryColor)
             ),
           ),
 

@@ -9,21 +9,51 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-
-// Initialize Firebase services
-const auth = firebase.auth();
-const db = firebase.firestore();
+let auth, db, storage;
+try {
+    if (typeof firebase === 'undefined') {
+        console.error('❌ Firebase SDK not loaded! Please check your internet connection.');
+        throw new Error('Firebase SDK not loaded');
+    }
+    
+    firebase.initializeApp(firebaseConfig);
+    console.log('✅ Firebase initialized successfully');
+    
+    // Initialize Firebase services
+    auth = firebase.auth();
+    db = firebase.firestore();
+    storage = firebase.storage();
+    console.log('✅ Firebase services initialized');
+} catch (error) {
+    console.error('❌ Error initializing Firebase:', error);
+    alert('Error loading Firebase. Please check your internet connection and refresh the page.');
+}
 
 // Firebase helper functions
 const FirebaseService = {
     // Authentication
     async signIn(email, password) {
         try {
+            console.log('🔐 Attempting to sign in with email:', email);
             const result = await auth.signInWithEmailAndPassword(email, password);
+            console.log('✅ Sign in successful');
             return { success: true, user: result.user };
         } catch (error) {
-            return { success: false, error: error.message };
+            console.error('❌ Sign in error:', error.code, error.message);
+            let errorMessage = error.message;
+            // Provide user-friendly error messages
+            if (error.code === 'auth/user-not-found') {
+                errorMessage = 'User not found. Please check your email address.';
+            } else if (error.code === 'auth/wrong-password') {
+                errorMessage = 'Incorrect password. Please try again.';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage = 'Invalid email address format.';
+            } else if (error.code === 'auth/too-many-requests') {
+                errorMessage = 'Too many failed login attempts. Please try again later.';
+            } else if (error.code === 'auth/network-request-failed') {
+                errorMessage = 'Network error. Please check your internet connection.';
+            }
+            return { success: false, error: errorMessage, code: error.code };
         }
     },
 
@@ -49,14 +79,41 @@ const FirebaseService = {
     // Check if user is admin from Firestore
     async checkAdminStatus(userId) {
         try {
+            console.log('🔍 Checking admin status for user:', userId);
             const userDoc = await db.collection('users').doc(userId).get();
-            if (userDoc.exists) {
-                const userData = userDoc.data();
-                return userData.customClaims && userData.customClaims.admin === true;
+            
+            if (!userDoc.exists) {
+                console.warn('⚠️ User document not found in Firestore');
+                // Fallback: check if email is admin@alifi.com
+                const currentUser = auth.currentUser;
+                if (currentUser && currentUser.email === 'admin@alifi.com') {
+                    console.log('✅ Admin email detected, allowing access');
+                    return true;
+                }
+                return false;
             }
-            return false;
+            
+            const userData = userDoc.data();
+            console.log('📄 User data:', userData);
+            
+            // Check multiple possible admin indicators
+            const isAdmin = 
+                (userData.customClaims && userData.customClaims.admin === true) ||
+                (userData.isAdmin === true) ||
+                (userData.role === 'admin') ||
+                (userData.userType === 'admin') ||
+                (auth.currentUser && auth.currentUser.email === 'admin@alifi.com');
+            
+            console.log('✅ Admin status result:', isAdmin);
+            return isAdmin;
         } catch (error) {
-            console.error('Error checking admin status:', error);
+            console.error('❌ Error checking admin status:', error);
+            // Fallback: allow if email is admin@alifi.com
+            const currentUser = auth.currentUser;
+            if (currentUser && currentUser.email === 'admin@alifi.com') {
+                console.log('✅ Fallback: Admin email detected, allowing access');
+                return true;
+            }
             return false;
         }
     },
@@ -70,10 +127,14 @@ const FirebaseService = {
             
             const vets = [];
             snapshot.forEach(doc => {
-                vets.push({
-                    id: doc.id,
-                    ...doc.data()
-                });
+                const data = doc.data();
+                // Filter out deleted veterinarians
+                if (!data.isDeleted) {
+                    vets.push({
+                        id: doc.id,
+                        ...data
+                    });
+                }
             });
             
             return { success: true, data: vets };
@@ -90,18 +151,23 @@ const FirebaseService = {
             .onSnapshot(snapshot => {
                 const vets = [];
                 snapshot.forEach(doc => {
-                    vets.push({
-                        id: doc.id,
-                        ...doc.data()
-                    });
+                    const data = doc.data();
+                    // Filter out deleted veterinarians
+                    if (!data.isDeleted) {
+                        vets.push({
+                            id: doc.id,
+                            ...data
+                        });
+                    }
                 });
                 callback(vets);
             });
     },
 
-    async createVeterinarian(vetData) {
+    async createVeterinarian(vetData, adminEmail = null, adminPassword = null) {
         try {
             // Create user account first
+            // Note: This will automatically sign in as the new user
             const userCredential = await auth.createUserWithEmailAndPassword(
                 vetData.email, 
                 vetData.password
@@ -133,6 +199,24 @@ const FirebaseService = {
             await userCredential.user.updateProfile({
                 displayName: vetData.name
             });
+
+            // Immediately sign out the newly created veterinarian user
+            await auth.signOut();
+            
+            // Wait a moment for the sign out to complete
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            // If admin credentials are provided, sign back in as admin immediately
+            if (adminEmail && adminPassword) {
+                try {
+                    await auth.signInWithEmailAndPassword(adminEmail, adminPassword);
+                    // Wait a moment for the sign in to complete
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                } catch (signInError) {
+                    console.error('Error signing back in as admin:', signInError);
+                    // Return success anyway - the vet was created
+                }
+            }
 
             return { success: true, id: uid };
         } catch (error) {
@@ -176,7 +260,12 @@ const FirebaseService = {
 
     async deleteVeterinarian(vetId) {
         try {
-            await db.collection('veterinarians').doc(vetId).delete();
+            // Instead of deleting, mark as deleted with flag
+            await db.collection('veterinarians').doc(vetId).update({
+                isDeleted: true,
+                deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
             return { success: true };
         } catch (error) {
             console.error('Error deleting veterinarian:', error);
@@ -198,14 +287,21 @@ const FirebaseService = {
                 totalChats: 0
             };
 
-            // Get veterinarians count
+            // Get veterinarians count (excluding deleted)
             const vetsSnapshot = await db.collection('veterinarians').get();
-            stats.totalVets = vetsSnapshot.size;
+            stats.totalVets = vetsSnapshot.docs.filter(doc => {
+                const data = doc.data();
+                return !data.isDeleted;
+            }).length;
 
-            // Get users count and active users
+            // Get users count and active users (excluding deleted)
             const usersSnapshot = await db.collection('users').get();
-            stats.totalUsers = usersSnapshot.size;
-            stats.activeUsers = usersSnapshot.docs.filter(doc => {
+            const nonDeletedUsers = usersSnapshot.docs.filter(doc => {
+                const data = doc.data();
+                return !data.isDeleted;
+            });
+            stats.totalUsers = nonDeletedUsers.length;
+            stats.activeUsers = nonDeletedUsers.filter(doc => {
                 const data = doc.data();
                 return data.status !== 'banned';
             }).length;
@@ -308,11 +404,12 @@ const FirebaseService = {
                 address: storeData.address,
                 city: storeData.city,
                 website: storeData.website || '',
-                workingHours: storeData.workingHours || '',
+                workingHours: storeData.workingHours || {},
                 deliveryAvailable: storeData.deliveryAvailable === 'true',
                 description: storeData.description || '',
                 imageUrl: storeData.imageUrl || '',
                 rating: parseFloat(storeData.rating) || 4.0,
+                locations: storeData.locations && storeData.locations.length > 0 ? storeData.locations : ['all'],
                 isActive: true,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -336,11 +433,12 @@ const FirebaseService = {
                 address: storeData.address,
                 city: storeData.city,
                 website: storeData.website || '',
-                workingHours: storeData.workingHours || '',
+                workingHours: storeData.workingHours || {},
                 deliveryAvailable: storeData.deliveryAvailable === 'true',
                 description: storeData.description || '',
                 imageUrl: storeData.imageUrl || '',
                 rating: parseFloat(storeData.rating) || 4.0,
+                locations: storeData.locations && storeData.locations.length > 0 ? storeData.locations : ['all'],
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
@@ -435,12 +533,15 @@ const FirebaseService = {
             const users = [];
             snapshot.forEach(doc => {
                 const data = doc.data();
-                users.push({
-                    id: doc.id,
-                    ...data,
-                    createdAt: data.createdAt?.toDate() || new Date(),
-                    lastActive: data.lastActive?.toDate() || null
-                });
+                // Filter out deleted users
+                if (!data.isDeleted) {
+                    users.push({
+                        id: doc.id,
+                        ...data,
+                        createdAt: data.createdAt?.toDate() || new Date(),
+                        lastActive: data.lastActive?.toDate() || null
+                    });
+                }
             });
             
             return users;
@@ -495,6 +596,22 @@ const FirebaseService = {
             return { success: true };
         } catch (error) {
             console.error('Error unbanning user:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async deleteUser(userId) {
+        try {
+            // Instead of deleting, mark as deleted with flag
+            await db.collection('users').doc(userId).update({
+                isDeleted: true,
+                deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log('User marked as deleted successfully');
+            return { success: true };
+        } catch (error) {
+            console.error('Error deleting user:', error);
             return { success: false, error: error.message };
         }
     },
@@ -763,6 +880,71 @@ const FirebaseService = {
             return { success: true };
         } catch (error) {
             console.error('Error rejecting report:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async deleteReport(reportId, collection) {
+        try {
+            await db.collection(collection).doc(reportId).update({
+                isActive: false,
+                deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log('Report deleted successfully');
+            return { success: true };
+        } catch (error) {
+            console.error('Error deleting report:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async deleteAllReports() {
+        try {
+            console.log('Deleting all reports...');
+            const collections = ['lost_pets', 'found_pets', 'adoption_pets', 'breeding_pets'];
+            let totalDeleted = 0;
+            const batchLimit = 500; // Firestore batch limit
+
+            for (const collectionName of collections) {
+                let hasMore = true;
+                
+                while (hasMore) {
+                    let query = db.collection(collectionName)
+                        .where('isActive', '==', true)
+                        .limit(batchLimit);
+                    
+                    let snapshot = await query.get();
+                    
+                    if (snapshot.empty) {
+                        hasMore = false;
+                        break;
+                    }
+                    
+                    // Process batch
+                    const batch = db.batch();
+                    
+                    snapshot.docs.forEach(doc => {
+                        batch.update(doc.ref, {
+                            isActive: false,
+                            deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    });
+                    
+                    await batch.commit();
+                    totalDeleted += snapshot.docs.length;
+                    console.log(`Deleted ${snapshot.docs.length} reports from ${collectionName}`);
+                    
+                    // If we got less than batchLimit, we're done with this collection
+                    if (snapshot.docs.length < batchLimit) {
+                        hasMore = false;
+                    }
+                }
+            }
+            
+            console.log(`Successfully deleted ${totalDeleted} reports in total`);
+            return { success: true, deletedCount: totalDeleted };
+        } catch (error) {
+            console.error('Error deleting all reports:', error);
             return { success: false, error: error.message };
         }
     },
@@ -1458,6 +1640,54 @@ const FirebaseService = {
         } catch (error) {
             console.error('Error getting current user role:', error);
             return null;
+        }
+    },
+
+    // Upload image to Firebase Storage
+    async uploadImage(file, folder, fileName = null) {
+        try {
+            // Generate unique filename if not provided
+            if (!fileName) {
+                const timestamp = Date.now();
+                const extension = file.name.split('.').pop();
+                fileName = `${timestamp}_${Math.random().toString(36).substring(7)}.${extension}`;
+            }
+
+            // Create storage reference
+            const storageRef = storage.ref().child(`${folder}/${fileName}`);
+
+            // Upload file
+            const uploadTask = storageRef.put(file);
+
+            // Return promise that resolves with download URL
+            return new Promise((resolve, reject) => {
+                uploadTask.on(
+                    'state_changed',
+                    (snapshot) => {
+                        // Progress tracking (optional)
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        console.log(`Upload progress: ${progress.toFixed(1)}%`);
+                    },
+                    (error) => {
+                        console.error('Error uploading image:', error);
+                        reject(error);
+                    },
+                    async () => {
+                        // Upload completed successfully
+                        try {
+                            const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+                            console.log('Image uploaded successfully:', downloadURL);
+                            resolve({ success: true, url: downloadURL });
+                        } catch (error) {
+                            console.error('Error getting download URL:', error);
+                            reject(error);
+                        }
+                    }
+                );
+            });
+        } catch (error) {
+            console.error('Error in uploadImage:', error);
+            return { success: false, error: error.message };
         }
     }
 };

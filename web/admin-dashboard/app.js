@@ -8,6 +8,8 @@ let unsubscribeVets = null;
 let unsubscribeStores = null;
 let currentEditingVet = null;
 let currentEditingStore = null;
+let isCreatingVet = false; // Flag to track veterinarian creation
+let adminUserBeforeVetCreation = null; // Store admin user before creating vet
 
 // Admin management (Added)
 const addAdminBtn = document.getElementById('add-admin-btn');
@@ -71,6 +73,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         // Check authentication state
         FirebaseService.onAuthStateChanged(async (user) => {
+            // Ignore auth state changes during veterinarian creation
+            if (isCreatingVet) {
+                console.log('⏳ Ignoring auth state change during vet creation');
+                return;
+            }
+            
             if (user) {
                 console.log('✅ User authenticated:', user.email);
                 // Check for admin status from Firestore instead of custom claims
@@ -137,7 +145,7 @@ function initializeEventListeners() {
     
     // Add pet store button
     if (addStoreBtn) {
-        addStoreBtn.addEventListener('click', () => openStoreModal());
+        addStoreBtn.addEventListener('click', () => openStoreModal(null));
     }
     
     // Add Admin button (Added)
@@ -214,6 +222,47 @@ function initializeEventListeners() {
     // Pet store form
     if (storeForm) {
         storeForm.addEventListener('submit', handleStoreSubmit);
+        
+        // Add image preview functionality
+        const storeImageInput = document.getElementById('store-image');
+        if (storeImageInput) {
+            storeImageInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                const preview = document.getElementById('store-image-preview');
+                const previewImg = document.getElementById('store-image-preview-img');
+                
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        previewImg.src = e.target.result;
+                        preview.style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    preview.style.display = 'none';
+                }
+            });
+        }
+        
+        // Add working hours closed checkbox functionality
+        const days = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+        days.forEach(day => {
+            const checkbox = document.getElementById(`store-hours-${day}-closed`);
+            const input = document.getElementById(`store-hours-${day}`);
+            
+            if (checkbox && input) {
+                checkbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        input.disabled = true;
+                        input.value = '';
+                        input.placeholder = 'Closed';
+                    } else {
+                        input.disabled = false;
+                        input.placeholder = '9:00 AM - 10:00 PM';
+                    }
+                });
+            }
+        });
     }
     
     // Search and filters for Veterinarians
@@ -326,21 +375,38 @@ async function handleLogin(e) {
         return;
     }
     
+    // Store credentials temporarily in sessionStorage for vet creation restoration
+    // This is only used to restore admin session after creating a veterinarian
+    sessionStorage.setItem('tempAdminEmail', email);
+    sessionStorage.setItem('tempAdminPassword', password);
+    
     loginBtn.classList.add('loading');
     loginBtn.disabled = true;
+    loginBtn.textContent = 'Logging in...';
     
     try {
+        console.log('🚀 Starting login process...');
         const result = await FirebaseService.signIn(email, password);
         
         if (result.success) {
-            console.log('✅ Login successful');
+            console.log('✅ Login successful, checking admin status...');
+            loginBtn.textContent = 'Checking permissions...';
             // Dashboard will be shown by onAuthStateChanged
         } else {
-            showNotification(result.error, 'error');
+            console.error('❌ Login failed:', result.error);
+            showNotification(result.error || 'Login failed. Please try again.', 'error');
+            loginBtn.textContent = 'Login';
+            // Clear stored credentials on login failure
+            sessionStorage.removeItem('tempAdminEmail');
+            sessionStorage.removeItem('tempAdminPassword');
         }
     } catch (error) {
         console.error('❌ Login error:', error);
         showNotification('Login failed. Please try again.', 'error');
+        loginBtn.textContent = 'Login';
+        // Clear stored credentials on error
+        sessionStorage.removeItem('tempAdminEmail');
+        sessionStorage.removeItem('tempAdminPassword');
     } finally {
         loginBtn.classList.remove('loading');
         loginBtn.disabled = false;
@@ -365,6 +431,10 @@ async function handleLogout() {
         currentUser = null;
         veterinariansData = [];
         petStoresData = [];
+        
+        // Clear stored admin credentials
+        sessionStorage.removeItem('tempAdminEmail');
+        sessionStorage.removeItem('tempAdminPassword');
         
         showLogin();
     } catch (error) {
@@ -720,22 +790,45 @@ async function handleVetSubmit(e) {
             result = await FirebaseService.updateVeterinarian(currentEditingVet.id, formData);
         } else {
             // Create new veterinarian
+            const adminEmail = currentUser?.email;
+            const adminPassword = sessionStorage.getItem('tempAdminPassword');
+            
+            // Set flag to prevent auth state change handler from interfering
+            // This flag will prevent showing error messages during the creation process
+            isCreatingVet = true;
+            
             formData.password = document.getElementById('vet-password').value;
-            result = await FirebaseService.createVeterinarian(formData);
-        }
-        
-        if (result.success) {
-            showNotification(
-                currentEditingVet ? 'Veterinarian updated successfully!' : 'Veterinarian created successfully!',
-                'success'
-            );
-            closeVetModal();
-        } else {
-            showNotification(result.error, 'error');
+            
+            try {
+                // Create veterinarian - this function will handle sign out and sign back in automatically
+                result = await FirebaseService.createVeterinarian(formData, adminEmail, adminPassword);
+                
+                // Wait a bit to ensure auth state has stabilized
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // Reset the flag after creation and sign-in are complete
+                isCreatingVet = false;
+                
+                // Show success message and close modal
+                if (result.success) {
+                    showNotification('Veterinarian created successfully!', 'success');
+                    closeVetModal();
+                    // Reload veterinarians list to show the new one
+                    loadVeterinarians();
+                } else {
+                    showNotification(result.error || 'Failed to create veterinarian', 'error');
+                }
+            } catch (error) {
+                // Reset flag on error
+                isCreatingVet = false;
+                console.error('Error in handleVetSubmit:', error);
+                showNotification('Failed to create veterinarian', 'error');
+            }
         }
     } catch (error) {
         console.error('❌ Error saving veterinarian:', error);
         showNotification('Failed to save veterinarian', 'error');
+        isCreatingVet = false; // Reset flag on error
     } finally {
         saveBtn.classList.remove('loading');
         saveBtn.disabled = false;
@@ -941,7 +1034,7 @@ function displayPetStores(stores) {
                 <div class="store-info">
                     <div><i class="fas fa-map-marker-alt"></i> ${store.city || 'Unknown City'}</div>
                     <div><i class="fas fa-phone"></i> ${store.phone || 'N/A'}</div>
-                    ${store.workingHours ? `<div><i class="fas fa-clock"></i> ${store.workingHours}</div>` : ''}
+                    ${store.workingHours ? `<div><i class="fas fa-clock"></i> ${formatWorkingHours(store.workingHours)}</div>` : ''}
                     ${store.email ? `<div><i class="fas fa-envelope"></i> ${store.email}</div>` : ''}
                 </div>
                 
@@ -1029,10 +1122,16 @@ function filterPetStores() {
 }
 
 // Pet Store modal functions
-function openStoreModal(store = null) {
+async function openStoreModal(store = null) {
     currentEditingStore = store;
     
     const modalTitle = document.getElementById('store-modal-title');
+    const imageInput = document.getElementById('store-image');
+    const imagePreview = document.getElementById('store-image-preview');
+    const imagePreviewImg = document.getElementById('store-image-preview-img');
+    
+    // Load locations
+    await loadStoreLocations();
     
     if (store) {
         // Edit mode
@@ -1046,11 +1145,78 @@ function openStoreModal(store = null) {
         document.getElementById('store-address').value = store.address || '';
         document.getElementById('store-city').value = store.city || '';
         document.getElementById('store-website').value = store.website || '';
-        document.getElementById('store-hours').value = store.workingHours || '';
+        
+        // Load working hours for each day
+        const workingHours = store.workingHours || {};
+        if (typeof workingHours === 'string') {
+            // Legacy format: single string, apply to all days
+            const days = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+            days.forEach(day => {
+                const input = document.getElementById(`store-hours-${day}`);
+                const checkbox = document.getElementById(`store-hours-${day}-closed`);
+                if (input) {
+                    input.value = workingHours;
+                    input.disabled = false;
+                    input.placeholder = '9:00 AM - 10:00 PM';
+                }
+                if (checkbox) {
+                    checkbox.checked = false;
+                }
+            });
+        } else {
+            // New format: object with days
+            const days = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+            days.forEach(day => {
+                const dayHours = workingHours[day];
+                const input = document.getElementById(`store-hours-${day}`);
+                const checkbox = document.getElementById(`store-hours-${day}-closed`);
+                
+                if (dayHours && dayHours.closed) {
+                    if (input) {
+                        input.value = '';
+                        input.disabled = true;
+                        input.placeholder = 'Closed';
+                    }
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                } else if (dayHours && dayHours.hours) {
+                    if (input) {
+                        input.value = dayHours.hours;
+                        input.disabled = false;
+                        input.placeholder = '9:00 AM - 10:00 PM';
+                    }
+                    if (checkbox) {
+                        checkbox.checked = false;
+                    }
+                } else {
+                    if (input) {
+                        input.value = '';
+                        input.disabled = false;
+                        input.placeholder = '9:00 AM - 10:00 PM';
+                    }
+                    if (checkbox) {
+                        checkbox.checked = false;
+                    }
+                }
+            });
+        }
+        
         document.getElementById('store-delivery').value = store.deliveryAvailable ? 'true' : 'false';
         document.getElementById('store-description').value = store.description || '';
-        document.getElementById('store-image').value = store.imageUrl || '';
         document.getElementById('store-rating').value = store.rating || 4.0;
+        
+        // Show existing image preview
+        if (store.imageUrl) {
+            imagePreviewImg.src = store.imageUrl;
+            imagePreview.style.display = 'block';
+        } else {
+            imagePreview.style.display = 'none';
+        }
+        
+        // Clear file input (user can select new image if needed)
+        imageInput.value = '';
+        imageInput.required = false; // Not required when editing
     } else {
         // Add mode
         modalTitle.textContent = 'Add Pet Store';
@@ -1059,9 +1225,64 @@ function openStoreModal(store = null) {
         storeForm.reset();
         document.getElementById('store-delivery').value = 'true';
         document.getElementById('store-rating').value = '4.0';
+        imagePreview.style.display = 'none';
+        imageInput.required = true; // Required when adding
+        
+        // Clear working hours
+        const days = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+        days.forEach(day => {
+            const input = document.getElementById(`store-hours-${day}`);
+            const checkbox = document.getElementById(`store-hours-${day}-closed`);
+            if (input) {
+                input.value = '';
+                input.disabled = false;
+                input.placeholder = '9:00 AM - 10:00 PM';
+            }
+            if (checkbox) {
+                checkbox.checked = false;
+            }
+        });
+        
+        // Reset locations to "all"
+        document.getElementById('store-location-all').checked = true;
+        toggleStoreLocationCheckboxes(false);
     }
     
     storeModal.classList.add('show');
+}
+
+// Load locations for store form
+async function loadStoreLocations() {
+    try {
+        const result = await FirebaseService.getAllLocations();
+        if (result.success && result.data) {
+            const locationsList = document.getElementById('store-locations-list');
+            if (!locationsList) return;
+            
+            locationsList.innerHTML = result.data
+                .filter(loc => loc.isActive !== false)
+                .map(loc => `
+                    <div style="margin-bottom: 8px;">
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="store-location-checkbox" value="${loc.id}" data-location-name="${loc.name}">
+                            <span class="checkmark"></span>
+                            ${loc.name}
+                        </label>
+                    </div>
+                `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading locations:', error);
+        const locationsList = document.getElementById('store-locations-list');
+        if (locationsList) {
+            locationsList.innerHTML = '<p style="color: #f44336;">Failed to load locations</p>';
+        }
+    }
+}
+
+function toggleStoreLocationCheckboxes(disabled) {
+    const checkboxes = document.querySelectorAll('.store-location-checkbox');
+    checkboxes.forEach(cb => cb.disabled = disabled);
 }
 
 function closeStoreModal() {
@@ -1082,6 +1303,63 @@ async function handleStoreSubmit(e) {
     saveBtn.disabled = true;
     
     try {
+        const imageInput = document.getElementById('store-image');
+        let imageUrl = currentEditingStore ? currentEditingStore.imageUrl : '';
+        
+        // Upload image if a new file is selected
+        if (imageInput.files && imageInput.files.length > 0) {
+            const file = imageInput.files[0];
+            saveBtn.textContent = 'Uploading image...';
+            
+            const uploadResult = await FirebaseService.uploadImage(file, 'store_images');
+            if (uploadResult.success) {
+                imageUrl = uploadResult.url;
+            } else {
+                showNotification('Failed to upload image: ' + uploadResult.error, 'error');
+                saveBtn.classList.remove('loading');
+                saveBtn.disabled = false;
+                return;
+            }
+        } else if (!currentEditingStore && !imageUrl) {
+            // New store must have an image
+            showNotification('Please select an image for the store', 'error');
+            saveBtn.classList.remove('loading');
+            saveBtn.disabled = false;
+            return;
+        }
+        
+        // Collect working hours for each day
+        const workingHours = {};
+        const days = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+        days.forEach(day => {
+            const closed = document.getElementById(`store-hours-${day}-closed`).checked;
+            const hours = document.getElementById(`store-hours-${day}`).value.trim();
+            
+            if (closed) {
+                workingHours[day] = { closed: true };
+            } else if (hours) {
+                workingHours[day] = { hours: hours, closed: false };
+            } else {
+                workingHours[day] = { closed: false };
+            }
+        });
+        
+        // Get selected locations
+        const allLocationsChecked = document.getElementById('store-location-all').checked;
+        let locations = [];
+        if (allLocationsChecked) {
+            locations = ['all'];
+        } else {
+            const selectedCheckboxes = document.querySelectorAll('.store-location-checkbox:checked');
+            locations = Array.from(selectedCheckboxes).map(cb => cb.value);
+            if (locations.length === 0) {
+                showNotification('Please select at least one location or "All Locations"', 'error');
+                saveBtn.classList.remove('loading');
+                saveBtn.disabled = false;
+                return;
+            }
+        }
+        
         const formData = {
             name: document.getElementById('store-name').value.trim(),
             category: document.getElementById('store-category').value,
@@ -1090,11 +1368,12 @@ async function handleStoreSubmit(e) {
             address: document.getElementById('store-address').value.trim(),
             city: document.getElementById('store-city').value.trim(),
             website: document.getElementById('store-website').value.trim(),
-            workingHours: document.getElementById('store-hours').value.trim(),
+            workingHours: workingHours,
             deliveryAvailable: document.getElementById('store-delivery').value,
             description: document.getElementById('store-description').value.trim(),
-            imageUrl: document.getElementById('store-image').value.trim(),
-            rating: document.getElementById('store-rating').value
+            imageUrl: imageUrl,
+            rating: document.getElementById('store-rating').value,
+            locations: locations
         };
         
         let result;
@@ -1122,16 +1401,79 @@ async function handleStoreSubmit(e) {
     } finally {
         saveBtn.classList.remove('loading');
         saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Store';
     }
 }
 
 // Global functions for inline event handlers
-window.editPetStore = function(storeId) {
+window.editPetStore = async function(storeId) {
     const store = petStoresData.find(s => s.id === storeId);
     if (store) {
-        openStoreModal(store);
+        await openStoreModal(store);
     }
 };
+
+// Function to copy Saturday hours to all days
+// Function to format working hours for display
+function formatWorkingHours(workingHours) {
+    if (!workingHours) return '';
+    
+    // Legacy format: string
+    if (typeof workingHours === 'string') {
+        return workingHours;
+    }
+    
+    // New format: object with days
+    const dayNames = {
+        saturday: 'Sat',
+        sunday: 'Sun',
+        monday: 'Mon',
+        tuesday: 'Tue',
+        wednesday: 'Wed',
+        thursday: 'Thu',
+        friday: 'Fri'
+    };
+    
+    const days = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    const formattedDays = days.map(day => {
+        const dayHours = workingHours[day];
+        if (!dayHours) return null;
+        
+        if (dayHours.closed) {
+            return `${dayNames[day]}: Closed`;
+        } else if (dayHours.hours) {
+            return `${dayNames[day]}: ${dayHours.hours}`;
+        }
+        return null;
+    }).filter(Boolean);
+    
+    if (formattedDays.length === 0) return '';
+    if (formattedDays.length <= 2) return formattedDays.join(', ');
+    return formattedDays.slice(0, 2).join(', ') + '...';
+}
+
+// Function to copy Saturday hours to all days
+function copyWorkingHoursToAll() {
+    const saturdayHours = document.getElementById('store-hours-saturday').value;
+    const saturdayClosed = document.getElementById('store-hours-saturday-closed').checked;
+    
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    days.forEach(day => {
+        const input = document.getElementById(`store-hours-${day}`);
+        const checkbox = document.getElementById(`store-hours-${day}-closed`);
+        
+        if (input) {
+            input.value = saturdayHours;
+            input.disabled = saturdayClosed;
+            input.placeholder = saturdayClosed ? 'Closed' : '9:00 AM - 10:00 PM';
+        }
+        if (checkbox) {
+            checkbox.checked = saturdayClosed;
+        }
+    });
+    
+    showNotification('Working hours copied to all days', 'success');
+}
 
 window.toggleStoreStatus = async function(storeId, newStatus) {
     try {
@@ -1199,6 +1541,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Advertisement form submission
+            // Add image preview functionality for ads
+            const adImageInput = document.getElementById('ad-image-url');
+            if (adImageInput) {
+                adImageInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    const preview = document.getElementById('ad-image-preview');
+                    const previewImg = document.getElementById('ad-image-preview-img');
+                    
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            previewImg.src = e.target.result;
+                            preview.style.display = 'block';
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        preview.style.display = 'none';
+                    }
+                });
+            }
+            
             document.getElementById('ad-form')?.addEventListener('submit', (e) => {
                 e.preventDefault();
                 console.log('Ad form submitted!');

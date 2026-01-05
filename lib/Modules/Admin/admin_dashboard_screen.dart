@@ -5,6 +5,8 @@ import '../../core/Theme/app_theme.dart';
 import '../../core/Language/translation_service.dart';
 import '../../Widgets/translated_text.dart';
 import 'veterinarian_management_screen.dart';
+import 'admin_user_management_screen.dart';
+import 'admin_reports_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   static const String routeName = '/admin';
@@ -156,9 +158,11 @@ class AdminDashboardScreen extends StatelessWidget {
                     subtitle: 'View and manage user accounts',
                     color: AppTheme.info,
                     onTap: () {
-                      // TODO: Navigate to user management
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('User Management - Coming Soon')),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminUserManagementScreen(),
+                        ),
                       );
                     },
                   ),
@@ -169,9 +173,11 @@ class AdminDashboardScreen extends StatelessWidget {
                     subtitle: 'Monitor and manage pet reports',
                     color: AppTheme.primaryOrange,
                     onTap: () {
-                      // TODO: Navigate to report management
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Report Management - Coming Soon')),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminReportsScreen(),
+                        ),
                       );
                     },
                   ),

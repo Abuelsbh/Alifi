@@ -43,6 +43,51 @@ class AuthService {
         password: password,
       );
       
+      // Check if user is deleted or banned in Firestore
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(credential.safeUser.uid)
+          .get();
+      
+      if (userDoc.exists) {
+        final userData = userDoc.data();
+        if (userData != null) {
+          // Check if user is deleted
+          if (userData['isDeleted'] == true) {
+            await ImprovedFirebaseWrapper.signOut();
+            throw Exception('تم حذف هذا الحساب');
+          }
+          // Check if user is banned
+          if (userData['status'] == 'banned') {
+            await ImprovedFirebaseWrapper.signOut();
+            throw Exception('تم حظر هذا الحساب');
+          }
+        }
+      }
+      
+      // Also check if this is a veterinarian trying to login through user login
+      // (veterinarians should use VeterinarianLoginScreen)
+      final vetDoc = await _firestore
+          .collection('veterinarians')
+          .doc(credential.safeUser.uid)
+          .get();
+      
+      if (vetDoc.exists) {
+        final vetData = vetDoc.data();
+        if (vetData != null) {
+          // Check if veterinarian is deleted
+          if (vetData['isDeleted'] == true) {
+            await ImprovedFirebaseWrapper.signOut();
+            throw Exception('تم حذف هذا الحساب');
+          }
+          // Check if veterinarian is inactive
+          if (vetData['isActive'] == false) {
+            await ImprovedFirebaseWrapper.signOut();
+            throw Exception('تم توقيف هذا الحساب');
+          }
+        }
+      }
+      
       // Update last login time
       await _updateLastLogin(credential.safeUser.uid);
       
@@ -210,6 +255,16 @@ class AuthService {
 
   // Handle Firebase Auth errors
   static String _handleAuthError(dynamic error) {
+    // If it's a simple Exception, return its message directly
+    if (error is Exception) {
+      final errorString = error.toString();
+      // Check if it's just "Exception: message" format
+      if (errorString.startsWith('Exception: ')) {
+        return errorString.substring(11); // Remove "Exception: " prefix
+      }
+      return errorString;
+    }
+    
     if (error is FirebaseAuthException) {
       switch (error.code) {
         case 'user-not-found':
@@ -234,7 +289,7 @@ class AuthService {
           return 'Authentication failed: ${error.message}';
       }
     }
-    return 'An unexpected error occurred.';
+    return error.toString();
   }
 
   // Check if user is authenticated

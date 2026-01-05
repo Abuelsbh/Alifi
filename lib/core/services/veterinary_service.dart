@@ -74,6 +74,21 @@ class VeterinaryService {
         throw Exception('هذا الحساب ليس حساب طبيب بيطري');
       }
 
+      // Check if veterinarian is deleted or inactive
+      final vetData = vetDoc.data();
+      if (vetData != null) {
+        // Check if veterinarian is deleted
+        if (vetData['isDeleted'] == true) {
+          await _auth.signOut();
+          throw Exception('تم حذف هذا الحساب');
+        }
+        // Check if veterinarian is inactive
+        if (vetData['isActive'] == false) {
+          await _auth.signOut();
+          throw Exception('تم توقيف هذا الحساب');
+        }
+      }
+
       // Update online status
       await _firestore
           .collection('veterinarians')
@@ -96,11 +111,14 @@ class VeterinaryService {
         .where('isVerified', isEqualTo: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        return data;
-      }).toList();
+      return snapshot.docs
+          .map((doc) {
+            final data = doc.data();
+            data['id'] = doc.id;
+            return data;
+          })
+          .where((vet) => vet['isDeleted'] != true) // Filter out deleted veterinarians
+          .toList();
     });
   }
 
@@ -111,11 +129,14 @@ class VeterinaryService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        return data;
-      }).toList();
+      return snapshot.docs
+          .map((doc) {
+            final data = doc.data();
+            data['id'] = doc.id;
+            return data;
+          })
+          .where((vet) => vet['isDeleted'] != true) // Filter out deleted veterinarians
+          .toList();
     });
   }
 

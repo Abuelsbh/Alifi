@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/services/pet_stores_service.dart';
 import '../../../core/Language/app_languages.dart';
 import '../../../core/Theme/app_theme.dart';
@@ -449,28 +450,59 @@ class _PetStoresScreenState extends State<PetStoresScreen> {
                   
                   SizedBox(height: 8.h),
                   
-                  // Location
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on,
-                        size: 16.sp,
-                        color: AppTheme.primaryGreen,
+                  // Location with Google Maps link
+                  if (store['address'] != null && store['address'].toString().isNotEmpty)
+                    InkWell(
+                      onTap: () => _openMap(store),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.location_on,
+                            size: 16.sp,
+                            color: AppTheme.primaryGreen,
+                          ),
+                          SizedBox(width: 4.w),
+                          Expanded(
+                            child: Text(
+                              '${store['address']}, ${store['city'] ?? 'Unknown City'}',
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                color: AppTheme.primaryGreen,
+                                decoration: TextDecoration.underline,
+                                decorationColor: AppTheme.primaryGreen,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.open_in_new,
+                            size: 14.sp,
+                            color: AppTheme.primaryGreen,
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 4.w),
-                      Expanded(
-                        child: Text(
-                          '${store['city'] ?? 'Unknown City'}',
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: AppTheme.lightOnBackground,
+                    )
+                  else
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          size: 16.sp,
+                          color: AppTheme.primaryGreen,
+                        ),
+                        SizedBox(width: 4.w),
+                        Expanded(
+                          child: Text(
+                            '${store['city'] ?? 'Unknown City'}',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: AppTheme.lightOnBackground,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                   
-                  if (store['workingHours'] != null && store['workingHours'].isNotEmpty) ...[
+                  if (_hasWorkingHours(store['workingHours'])) ...[
                     SizedBox(height: 4.h),
                     Row(
                       children: [
@@ -482,7 +514,7 @@ class _PetStoresScreenState extends State<PetStoresScreen> {
                         SizedBox(width: 4.w),
                         Expanded(
                           child: Text(
-                            store['workingHours'],
+                            _formatWorkingHours(store['workingHours']),
                             style: TextStyle(
                               fontSize: 14.sp,
                               color: AppTheme.lightOnBackground,
@@ -573,6 +605,101 @@ class _PetStoresScreenState extends State<PetStoresScreen> {
         ),
       ),
     );
+  }
+
+  // Helper function to format working hours
+  String _formatWorkingHours(dynamic workingHours) {
+    if (workingHours == null) return '';
+    
+    // Legacy format: string
+    if (workingHours is String) {
+      return workingHours;
+    }
+    
+    // New format: Map with days
+    if (workingHours is Map) {
+      final dayNames = {
+        'saturday': 'Sat',
+        'sunday': 'Sun',
+        'monday': 'Mon',
+        'tuesday': 'Tue',
+        'wednesday': 'Wed',
+        'thursday': 'Thu',
+        'friday': 'Fri',
+      };
+      
+      final arabicDayNames = {
+        'saturday': 'السبت',
+        'sunday': 'الأحد',
+        'monday': 'الإثنين',
+        'tuesday': 'الثلاثاء',
+        'wednesday': 'الأربعاء',
+        'thursday': 'الخميس',
+        'friday': 'الجمعة',
+      };
+      
+      final days = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+      final formattedDays = <String>[];
+      
+      for (final day in days) {
+        final dayData = workingHours[day];
+        if (dayData is Map) {
+          if (dayData['closed'] == true) {
+            formattedDays.add('${dayNames[day]}: Closed');
+          } else if (dayData['hours'] != null && dayData['hours'].toString().isNotEmpty) {
+            formattedDays.add('${dayNames[day]}: ${dayData['hours']}');
+          }
+        }
+      }
+      
+      if (formattedDays.isEmpty) return '';
+      if (formattedDays.length <= 2) {
+        return formattedDays.join(', ');
+      }
+      return formattedDays.take(2).join(', ') + '...';
+    }
+    
+    return '';
+  }
+  
+  // Helper function to check if working hours exist
+  bool _hasWorkingHours(dynamic workingHours) {
+    if (workingHours == null) return false;
+    
+    if (workingHours is String) {
+      return workingHours.isNotEmpty;
+    }
+    
+    if (workingHours is Map) {
+      final days = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+      for (final day in days) {
+        final dayData = workingHours[day];
+        if (dayData is Map) {
+          if (dayData['closed'] == true || 
+              (dayData['hours'] != null && dayData['hours'].toString().isNotEmpty)) {
+            return true;
+          }
+        }
+      }
+    }
+    
+    return false;
+  }
+
+  // Helper function to open Google Maps
+  Future<void> _openMap(Map<String, dynamic> store) async {
+    final address = '${store['address']}, ${store['city'] ?? ''}';
+    final Uri mapUri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(address)}',
+    );
+    try {
+      if (await canLaunchUrl(mapUri)) {
+        await launchUrl(mapUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      // Handle error silently or show a snackbar
+      print('Error opening map: $e');
+    }
   }
 
   Widget _buildEmptyState() {

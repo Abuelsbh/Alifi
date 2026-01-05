@@ -141,7 +141,9 @@ class ChatService {
                 .map((doc) {
                   final data = doc.data();
                   // Filter veterinarians who are verified or don't have isVerified field (backward compatibility)
-                  if (data['isVerified'] == true || data['isVerified'] == null) {
+                  // AND filter out deleted veterinarians
+                  if ((data['isVerified'] == true || data['isVerified'] == null) && 
+                      data['isDeleted'] != true) {
                     return {
                       'id': doc.id,
                       ...data,

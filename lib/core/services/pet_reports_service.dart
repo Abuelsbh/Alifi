@@ -846,6 +846,63 @@ class PetReportsService {
     }
   }
 
+  // Delete all reports (Admin only)
+  static Future<void> deleteAllReports() async {
+    try {
+      print('🔍 Deleting all reports...');
+      
+      final collections = ['lost_pets', 'found_pets', 'adoption_pets', 'breeding_pets'];
+      int totalDeleted = 0;
+      const int batchLimit = 500; // Firestore batch limit
+      
+      for (final collectionName in collections) {
+        Query? query = _firestore
+            .collection(collectionName)
+            .where('isActive', isEqualTo: true)
+            .limit(batchLimit);
+        
+        QuerySnapshot snapshot = await query.get();
+        
+        // Process in batches if there are more than batchLimit documents
+        while (snapshot.docs.isNotEmpty) {
+          // Create batch for current set of documents
+          WriteBatch batch = _firestore.batch();
+          
+          for (final doc in snapshot.docs) {
+            batch.update(doc.reference, {
+              'isActive': false,
+              'deletedAt': FieldValue.serverTimestamp(),
+            });
+          }
+          
+          await batch.commit();
+          totalDeleted += snapshot.docs.length;
+          print('✅ Deleted ${snapshot.docs.length} reports from $collectionName');
+          
+          // If we got exactly batchLimit documents, there might be more
+          if (snapshot.docs.length == batchLimit) {
+            // Get next batch using the last document as cursor
+            final lastDoc = snapshot.docs.last;
+            query = _firestore
+                .collection(collectionName)
+                .where('isActive', isEqualTo: true)
+                .startAfterDocument(lastDoc)
+                .limit(batchLimit);
+            snapshot = await query.get();
+          } else {
+            // No more documents
+            break;
+          }
+        }
+      }
+      
+      print('✅ Successfully deleted $totalDeleted reports in total');
+    } catch (e) {
+      print('❌ Error deleting all reports: $e');
+      throw Exception('Failed to delete all reports: $e');
+    }
+  }
+
   // Get all reports for admin (including pending)
   static Stream<List<Map<String, dynamic>>> getAllReportsForAdmin() {
     print('📱 Starting admin reports stream');

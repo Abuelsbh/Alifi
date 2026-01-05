@@ -12,6 +12,8 @@ import '../lost_found/user_chat_screen.dart';
 import 'enhanced_chat_screen.dart';
 import 'real_time_chat_screen.dart';
 import '../../../Widgets/home_header_widget.dart';
+import '../../../core/services/location_service.dart';
+import '../../../Models/location_model.dart';
 
 class EnhancedVeterinaryScreen extends StatefulWidget {
   static const String routeName = '/EnhancedVeterinaryScreen';
@@ -36,12 +38,16 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
   // User data
   String _userName = 'User';
   String? _userProfileImage;
+  
+  // Location data
+  LocationModel? _selectedLocation;
 
   // Stream subscriptions
   StreamSubscription? _veterinariansSubscription;
   StreamSubscription? _chatsSubscription;
   StreamSubscription<List<ChatModel>>? _userChatsSub;
   StreamSubscription<List<ChatModel>>? _userToUserChatsSub;
+  StreamSubscription? _locationSubscription;
 
   @override
   void initState() {
@@ -49,6 +55,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
     _tabController = TabController(length: 2, vsync: this);
     _loadUserData();
     _loadData();
+    _loadLocation();
   }
 
   Future<void> _loadUserData() async {
@@ -68,8 +75,65 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
   }
 
   Future<void> _loadLocation() async {
-    // This method can be used to reload location if needed
-    // Currently just a placeholder for the callback
+    try {
+      print('🔄 Loading user location in chat screen...');
+      final locationId = LocationService.getUserLocation();
+      print('📍 Current user location ID: $locationId');
+      
+      if (locationId != null && locationId.isNotEmpty) {
+        final location = await LocationService.getLocationById(locationId);
+        if (mounted) {
+          setState(() {
+            _selectedLocation = location;
+          });
+          print('✅ Location loaded in chat: ${location?.name ?? "null"}');
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _selectedLocation = null;
+          });
+        }
+      }
+
+      // Listen for location changes from Firebase
+      final locationsStream = LocationService.getActiveLocationsStream();
+      _locationSubscription = locationsStream.listen((locations) {
+        if (mounted) {
+          final locationId = LocationService.getUserLocation();
+          if (locationId != null && locationId.isNotEmpty) {
+            try {
+              final location = locations.firstWhere(
+                (loc) => loc.id == locationId,
+                orElse: () => LocationModel(
+                  id: '',
+                  name: '',
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                ),
+              );
+              setState(() {
+                _selectedLocation = location.id.isNotEmpty ? location : null;
+              });
+            } catch (e) {
+              print('⚠️ Location not found in list: $e');
+              setState(() {
+                _selectedLocation = null;
+              });
+            }
+          } else {
+            setState(() {
+              _selectedLocation = null;
+            });
+          }
+        }
+      }, onError: (error) {
+        print('❌ Error in location stream: $error');
+      });
+    } catch (e, stackTrace) {
+      print('❌ Error loading location in chat: $e');
+      print('Stack trace: $stackTrace');
+    }
   }
 
   @override
@@ -158,10 +222,12 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
     await _chatsSubscription?.cancel();
     await _userChatsSub?.cancel();
     await _userToUserChatsSub?.cancel();
+    await _locationSubscription?.cancel();
     _veterinariansSubscription = null;
     _chatsSubscription = null;
     _userChatsSub = null;
     _userToUserChatsSub = null;
+    _locationSubscription = null;
   }
 
   void _filterVeterinarians(String query) {
@@ -239,6 +305,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
               userName: _userName,
               userProfileImage: _userProfileImage,
               onLocationChanged: _loadLocation,
+              selectedLocation: _selectedLocation,
             ),
             
 

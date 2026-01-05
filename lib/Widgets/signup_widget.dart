@@ -267,9 +267,10 @@ class _LoginWidgetState extends State<SignupWidget> {
                 dialogWidget: const LoginWidget(),
               );
             },
-            child: const TranslatedText(
+            child: TranslatedText(
               'auth.login',
               style: TextStyle(
+                fontSize: 14.sp,
                 color: AppTheme.primaryGreen,
                 fontWeight: FontWeight.bold,
               ),

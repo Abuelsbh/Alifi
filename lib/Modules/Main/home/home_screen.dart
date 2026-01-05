@@ -21,6 +21,8 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/services/pet_reports_service.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../core/services/veterinary_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../stores/pet_stores_screen.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/Language/translation_service.dart';
@@ -77,8 +79,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   StreamSubscription? _unreadMessagesSubscription;
   StreamSubscription? _veterinariansSubscription;
   StreamSubscription? _locationSubscription;
+  StreamSubscription? _userStatusSubscription;
+  StreamSubscription? _veterinarianStatusSubscription;
   Timer? _refreshTimer;
   bool _dataLoaded = false;
+  bool _isLoggingOut = false; // Flag to prevent multiple logout calls
   // User data
   Map<String, dynamic>? _user;
   String _userName = 'User';
@@ -89,7 +94,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _loadUserData() async {
     try {
       if (AuthService.isAuthenticated && AuthService.userId != null) {
-        final userProfile = await AuthService.getUserProfile(AuthService.userId!);
+        final userId = AuthService.userId!;
+        
+        // Check user status
+        await _checkAndHandleAccountStatus(userId);
+        
+        // Load user profile
+        final userProfile = await AuthService.getUserProfile(userId);
         if (userProfile != null) {
           setState(() {
             _user = userProfile;
@@ -97,9 +108,192 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             _userProfileImage = userProfile['profileImageUrl'];
           });
         }
+        
+        // Setup listeners for account status changes
+        _setupAccountStatusListeners(userId);
       }
     } catch (e) {
       print('Error loading user data: $e');
+    }
+  }
+  
+  Future<void> _checkAndHandleAccountStatus(String userId) async {
+    if (_isLoggingOut) return; // Prevent multiple calls
+    
+    try {
+      final firestore = FirebaseFirestore.instance;
+      
+      // Check if user is in users collection
+      final userDoc = await firestore.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        final userData = userDoc.data();
+        if (userData != null) {
+          // Check if user is deleted
+          if (userData['isDeleted'] == true) {
+            await _logoutWithMessage('تم حذف هذا الحساب');
+            return;
+          }
+          // Check if user is banned
+          if (userData['status'] == 'banned') {
+            await _logoutWithMessage('تم حظر هذا الحساب');
+            return;
+          }
+        }
+      }
+      
+      // Check if user is a veterinarian
+      final vetDoc = await firestore.collection('veterinarians').doc(userId).get();
+      if (vetDoc.exists) {
+        final vetData = vetDoc.data();
+        if (vetData != null) {
+          // Check if veterinarian is deleted
+          if (vetData['isDeleted'] == true) {
+            await _logoutWithMessage('تم حذف هذا الحساب');
+            return;
+          }
+          // Check if veterinarian is inactive
+          if (vetData['isActive'] == false) {
+            await _logoutWithMessage('تم توقيف هذا الحساب');
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      print('Error checking account status: $e');
+    }
+  }
+  
+  void _setupAccountStatusListeners(String userId) {
+    try {
+      final firestore = FirebaseFirestore.instance;
+      
+      // Cancel existing subscriptions
+      _userStatusSubscription?.cancel();
+      _veterinarianStatusSubscription?.cancel();
+      
+      // Listen to user status changes
+      _userStatusSubscription = firestore
+          .collection('users')
+          .doc(userId)
+          .snapshots()
+          .listen((snapshot) {
+        if (!snapshot.exists || !mounted || _isLoggingOut) return;
+        
+        final userData = snapshot.data();
+        if (userData != null) {
+          // Check if user is deleted
+          if (userData['isDeleted'] == true) {
+            _logoutWithMessage('تم حذف هذا الحساب');
+            return;
+          }
+          // Check if user is banned
+          if (userData['status'] == 'banned') {
+            _logoutWithMessage('تم حظر هذا الحساب');
+            return;
+          }
+        }
+      }, onError: (error) {
+        print('Error in user status listener: $error');
+      });
+      
+      // Listen to veterinarian status changes
+      _veterinarianStatusSubscription = firestore
+          .collection('veterinarians')
+          .doc(userId)
+          .snapshots()
+          .listen((snapshot) {
+        if (!snapshot.exists || !mounted || _isLoggingOut) return;
+        
+        final vetData = snapshot.data();
+        if (vetData != null) {
+          // Check if veterinarian is deleted
+          if (vetData['isDeleted'] == true) {
+            _logoutWithMessage('تم حذف هذا الحساب');
+            return;
+          }
+          // Check if veterinarian is inactive
+          if (vetData['isActive'] == false) {
+            _logoutWithMessage('تم توقيف هذا الحساب');
+            return;
+          }
+        }
+      }, onError: (error) {
+        print('Error in veterinarian status listener: $error');
+      });
+    } catch (e) {
+      print('Error setting up account status listeners: $e');
+    }
+  }
+  
+  Future<void> _logoutWithMessage(String message) async {
+    if (!mounted || _isLoggingOut) return; // Prevent multiple calls
+    
+    _isLoggingOut = true; // Set flag to prevent multiple calls
+    
+    try {
+      // Cancel subscriptions immediately to prevent multiple triggers
+      await _userStatusSubscription?.cancel();
+      await _veterinarianStatusSubscription?.cancel();
+      _userStatusSubscription = null;
+      _veterinarianStatusSubscription = null;
+      
+      // Show message to user (only once)
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      
+      // Wait a bit for user to see the message
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Check if user is veterinarian and sign out accordingly
+      final isVet = await VeterinaryService.isCurrentUserVeterinarian();
+      if (isVet) {
+        await VeterinaryService.signOutVeterinarian();
+      } else {
+        await AuthService.signOut();
+      }
+      
+      // Clear user data and stay on home page
+      if (mounted) {
+        setState(() {
+          _user = null;
+          _userName = 'User';
+          _userProfileImage = null;
+        });
+        
+        // Cancel all subscriptions
+        await _cancelSubscriptions();
+        _dataLoaded = false;
+      }
+    } catch (e) {
+      print('Error during logout: $e');
+      // Force logout anyway
+      try {
+        await AuthService.signOut();
+      } catch (_) {}
+      
+      if (mounted) {
+        setState(() {
+          _user = null;
+          _userName = 'User';
+          _userProfileImage = null;
+        });
+        
+        // Cancel all subscriptions
+        await _cancelSubscriptions();
+        _dataLoaded = false;
+      }
+    } finally {
+      // Reset flag after a delay to allow future logins
+      Future.delayed(const Duration(seconds: 2), () {
+        _isLoggingOut = false;
+      });
     }
   }
 
@@ -259,6 +453,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     await _unreadMessagesSubscription?.cancel();
     await _veterinariansSubscription?.cancel();
     await _locationSubscription?.cancel();
+    await _userStatusSubscription?.cancel();
+    await _veterinarianStatusSubscription?.cancel();
     _refreshTimer?.cancel();
   }
 
@@ -386,6 +582,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   userName: _userName,
                   userProfileImage: _userProfileImage,
                   onLocationChanged: _loadLocation,
+                  onProfileTap: _navigateToProfile,
+                  selectedLocation: _selectedLocation,
                 ),
 
                 SizedBox(height: 10.h),
@@ -789,12 +987,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _navigateToChats() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const EnhancedVeterinaryScreen(),
-      ),
-    );
+    if (FirebaseConfig.isDemoMode) {
+      DialogHelper.custom(context: context).customDialog(
+        dialogWidget: LoginWidget(
+          onLoginSuccess: () {
+            _dataLoaded = false;
+            _loadData();
+            _loadUserData();
+          },
+        ),
+      );
+    } else if (AuthService.isAuthenticated) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const EnhancedVeterinaryScreen(),
+        ),
+      );
+    } else {
+      DialogHelper.custom(context: context).customDialog(
+        dialogWidget: LoginWidget(
+          onLoginSuccess: () {
+            _dataLoaded = false;
+            _loadData();
+            _loadUserData();
+          },
+        ),
+      );
+    }
   }
 
   void _navigateToVeterinary() {

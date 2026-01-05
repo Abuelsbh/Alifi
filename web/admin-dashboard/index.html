@@ -83,10 +83,13 @@
                     <span>Admins</span>
                 </a>
 
+                <!-- Settings hidden temporarily -->
+                <!--
                 <a href="#" class="nav-item" data-page="settings">
                     <i class="fas fa-cog"></i>
                     <span>Settings</span>
                 </a>
+                -->
             </nav>
             <div class="sidebar-footer">
                 <button id="logout-btn" class="logout-btn">
@@ -298,6 +301,10 @@
                     <div class="page-header">
                         <h2>Pet Reports Management</h2>
                         <div class="header-actions">
+                            <button id="delete-all-reports-btn" class="btn btn-danger" onclick="window.adminFeatures.deleteAllReports()">
+                                <i class="fas fa-trash-alt"></i>
+                                Delete All Reports
+                            </button>
                             <button id="export-reports-btn" class="btn btn-secondary">
                                 <i class="fas fa-download"></i>
                                 Export Reports
@@ -792,11 +799,101 @@
                         <input type="url" id="store-website" placeholder="https://example.com">
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="store-hours">Working Hours</label>
-                        <input type="text" id="store-hours" placeholder="e.g. 9:00 AM - 10:00 PM">
+                <div class="form-row working-hours-row">
+                    <div class="form-group working-hours-form-group">
+                        <label style="margin-bottom: 12px; display: block; font-size: 14px; font-weight: 600; color: #333;">
+                            <i class="fas fa-clock" style="margin-right: 8px; color: #007bff;"></i>
+                            Working Hours (ساعات العمل)
+                        </label>
+                        <div class="working-hours-container">
+                            <div class="working-hours-header">
+                                <button type="button" onclick="copyWorkingHoursToAll()" class="copy-hours-btn">
+                                    <i class="fas fa-copy"></i> Copy Saturday to All Days
+                                </button>
+                            </div>
+                            <div class="working-hours-grid">
+                                <div class="working-hour-day">
+                                    <div class="day-header">
+                                        <span class="day-name">Saturday</span>
+                                        <span class="day-name-ar">السبت</span>
+                                    </div>
+                                    <input type="text" id="store-hours-saturday" class="hours-input" placeholder="9:00 AM - 10:00 PM">
+                                    <label class="closed-checkbox">
+                                        <input type="checkbox" id="store-hours-saturday-closed">
+                                        <span>Closed (مغلق)</span>
+                                    </label>
+                                </div>
+                                <div class="working-hour-day">
+                                    <div class="day-header">
+                                        <span class="day-name">Sunday</span>
+                                        <span class="day-name-ar">الأحد</span>
+                                    </div>
+                                    <input type="text" id="store-hours-sunday" class="hours-input" placeholder="9:00 AM - 10:00 PM">
+                                    <label class="closed-checkbox">
+                                        <input type="checkbox" id="store-hours-sunday-closed">
+                                        <span>Closed (مغلق)</span>
+                                    </label>
+                                </div>
+                                <div class="working-hour-day">
+                                    <div class="day-header">
+                                        <span class="day-name">Monday</span>
+                                        <span class="day-name-ar">الإثنين</span>
+                                    </div>
+                                    <input type="text" id="store-hours-monday" class="hours-input" placeholder="9:00 AM - 10:00 PM">
+                                    <label class="closed-checkbox">
+                                        <input type="checkbox" id="store-hours-monday-closed">
+                                        <span>Closed (مغلق)</span>
+                                    </label>
+                                </div>
+                                <div class="working-hour-day">
+                                    <div class="day-header">
+                                        <span class="day-name">Tuesday</span>
+                                        <span class="day-name-ar">الثلاثاء</span>
+                                    </div>
+                                    <input type="text" id="store-hours-tuesday" class="hours-input" placeholder="9:00 AM - 10:00 PM">
+                                    <label class="closed-checkbox">
+                                        <input type="checkbox" id="store-hours-tuesday-closed">
+                                        <span>Closed (مغلق)</span>
+                                    </label>
+                                </div>
+                                <div class="working-hour-day">
+                                    <div class="day-header">
+                                        <span class="day-name">Wednesday</span>
+                                        <span class="day-name-ar">الأربعاء</span>
+                                    </div>
+                                    <input type="text" id="store-hours-wednesday" class="hours-input" placeholder="9:00 AM - 10:00 PM">
+                                    <label class="closed-checkbox">
+                                        <input type="checkbox" id="store-hours-wednesday-closed">
+                                        <span>Closed (مغلق)</span>
+                                    </label>
+                                </div>
+                                <div class="working-hour-day">
+                                    <div class="day-header">
+                                        <span class="day-name">Thursday</span>
+                                        <span class="day-name-ar">الخميس</span>
+                                    </div>
+                                    <input type="text" id="store-hours-thursday" class="hours-input" placeholder="9:00 AM - 10:00 PM">
+                                    <label class="closed-checkbox">
+                                        <input type="checkbox" id="store-hours-thursday-closed">
+                                        <span>Closed (مغلق)</span>
+                                    </label>
+                                </div>
+                                <div class="working-hour-day">
+                                    <div class="day-header">
+                                        <span class="day-name">Friday</span>
+                                        <span class="day-name-ar">الجمعة</span>
+                                    </div>
+                                    <input type="text" id="store-hours-friday" class="hours-input" placeholder="9:00 AM - 10:00 PM">
+                                    <label class="closed-checkbox">
+                                        <input type="checkbox" id="store-hours-friday-closed">
+                                        <span>Closed (مغلق)</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
                         <label for="store-delivery">Delivery Available</label>
                         <select id="store-delivery">
@@ -812,9 +909,39 @@
                     </div>
                 </div>
                 <div class="form-row">
+                    <div class="form-group" style="flex: 1; width: 100%;">
+                        <label>Locations *</label>
+                        <div id="store-locations-container" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 12px; background: #f9f9f9;">
+                            <div style="margin-bottom: 8px;">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="store-location-all" checked onchange="
+                                        const allChecked = document.getElementById('store-location-all').checked;
+                                        const locationCheckboxes = document.querySelectorAll('.store-location-checkbox');
+                                        locationCheckboxes.forEach(cb => {
+                                            cb.disabled = allChecked;
+                                            if (allChecked) cb.checked = false;
+                                        });
+                                    ">
+                                    <span class="checkmark"></span>
+                                    All Locations (عرض في جميع المناطق)
+                                </label>
+                            </div>
+                            <div id="store-locations-list" style="margin-left: 20px;">
+                                <!-- Locations will be loaded here -->
+                                <p style="color: #999; font-style: italic;">Loading locations...</p>
+                            </div>
+                        </div>
+                        <small>Select which locations this store should be shown in</small>
+                    </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
-                        <label for="store-image">Store Image URL</label>
-                        <input type="url" id="store-image" placeholder="https://example.com/image.jpg">
+                        <label for="store-image">Store Image *</label>
+                        <input type="file" id="store-image" accept="image/*" required>
+                        <small>Upload an image for the store</small>
+                        <div id="store-image-preview" style="margin-top: 10px; display: none;">
+                            <img id="store-image-preview-img" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 4px; border: 1px solid #ddd;">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="store-rating">Rating (0-5)</label>
@@ -906,9 +1033,12 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="ad-image-url">Image URL *</label>
-                    <input type="url" id="ad-image-url" required placeholder="https://example.com/image.jpg">
-                    <small>Enter the direct URL to the advertisement image</small>
+                    <label for="ad-image-url">Advertisement Image *</label>
+                    <input type="file" id="ad-image-url" accept="image/*" required>
+                    <small>Upload an image for the advertisement</small>
+                    <div id="ad-image-preview" style="margin-top: 10px; display: none;">
+                        <img id="ad-image-preview-img" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 4px; border: 1px solid #ddd;">
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -1049,11 +1179,36 @@
     </script>
 
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" onerror="console.error('Failed to load Firebase App SDK'); alert('Failed to load Firebase. Please check your internet connection.');"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js" onerror="console.error('Failed to load Firebase Auth SDK'); alert('Failed to load Firebase Auth. Please check your internet connection.');"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js" onerror="console.error('Failed to load Firebase Firestore SDK'); alert('Failed to load Firebase Firestore. Please check your internet connection.');"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js" onerror="console.error('Failed to load Firebase Storage SDK');"></script>
     
     <!-- Application Scripts -->
+    <script>
+        // Check if Firebase is loaded before initializing
+        if (typeof firebase === 'undefined') {
+            console.error('❌ Firebase SDK not loaded!');
+            document.addEventListener('DOMContentLoaded', () => {
+                const loginContainer = document.getElementById('login-container');
+                if (loginContainer) {
+                    loginContainer.innerHTML = `
+                        <div class="login-card">
+                            <div class="login-header">
+                                <h1>⚠️ Error</h1>
+                                <p>Firebase SDK failed to load</p>
+                            </div>
+                            <div style="padding: 20px; text-align: center;">
+                                <p>Please check your internet connection and refresh the page.</p>
+                                <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Refresh Page</button>
+                            </div>
+                        </div>
+                    `;
+                    loginContainer.style.display = 'flex';
+                }
+            });
+        }
+    </script>
     <script src="firebase-config.js"></script>
     <script src="admin-features.js"></script>
     <script src="app.js"></script>
