@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../core/Theme/app_theme.dart';
 import '../../core/services/veterinary_service.dart';
+import '../../core/Language/translation_service.dart';
 import '../../Widgets/custom_textfield_widget.dart';
 import '../../Widgets/custom_button.dart';
+import '../../Widgets/translated_text.dart';
 
 class AddVeterinarianDialog extends StatefulWidget {
   final Map<String, dynamic>? veterinarian;
@@ -95,18 +97,18 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            _isEditing ? 'Edit Veterinarian' : 'Add New Veterinarian',
+                          TranslatedText(
+                            _isEditing ? 'admin.edit_veterinarian' : 'admin.add_new_veterinarian',
                             style: TextStyle(
                               fontSize: 20.sp,
                               fontWeight: FontWeight.bold,
                               color: AppTheme.lightOnSurface,
                             ),
                           ),
-                          Text(
+                          TranslatedText(
                             _isEditing 
-                                ? 'Update veterinarian information'
-                                : 'Create a new veterinarian account',
+                                ? 'admin.update_veterinarian_info'
+                                : 'admin.create_veterinarian_account',
                             style: TextStyle(
                               fontSize: 14.sp,
                               color: Colors.grey[600],
@@ -125,17 +127,17 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
                 SizedBox(height: 24.h),
                 
                 // Form Fields
-                _buildSectionTitle('Personal Information'),
+                _buildSectionTitle(TranslationService.instance.translate('admin.personal_information')),
                 SizedBox(height: 12.h),
                 
                 _buildTextField(
                   controller: _nameController,
-                  label: 'Full Name *',
+                  label: TranslationService.instance.translate('admin.full_name_required'),
                   hint: 'Dr. Ahmed Hassan',
                   icon: Icons.person,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Full name is required';
+                      return TranslationService.instance.translate('admin.full_name_required_error');
                     }
                     return null;
                   },
@@ -145,16 +147,16 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
                 
                 _buildTextField(
                   controller: _emailController,
-                  label: 'Email Address *',
+                  label: TranslationService.instance.translate('admin.email_address_required'),
                   hint: 'doctor@example.com',
                   icon: Icons.email,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Email is required';
+                      return TranslationService.instance.translate('admin.email_required_error');
                     }
                     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                      return 'Please enter a valid email';
+                      return TranslationService.instance.translate('admin.valid_email_error');
                     }
                     return null;
                   },
@@ -165,16 +167,16 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
                 if (!_isEditing) ...[
                   _buildTextField(
                     controller: _passwordController,
-                    label: 'Password *',
+                    label: TranslationService.instance.translate('admin.password_required'),
                     hint: 'Minimum 6 characters',
                     icon: Icons.lock,
                     obscureText: true,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Password is required';
+                        return TranslationService.instance.translate('admin.password_required_error');
                       }
                       if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
+                        return TranslationService.instance.translate('admin.password_min_length_error');
                       }
                       return null;
                     },
@@ -184,13 +186,13 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
                 
                 _buildTextField(
                   controller: _phoneController,
-                  label: 'Phone Number *',
+                  label: TranslationService.instance.translate('admin.phone_number_required'),
                   hint: '+201234567890',
                   icon: Icons.phone,
                   keyboardType: TextInputType.phone,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Phone number is required';
+                      return TranslationService.instance.translate('admin.phone_required_error');
                     }
                     return null;
                   },
@@ -198,17 +200,17 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
                 
                 SizedBox(height: 24.h),
                 
-                _buildSectionTitle('Professional Information'),
+                _buildSectionTitle(TranslationService.instance.translate('admin.professional_information')),
                 SizedBox(height: 12.h),
                 
                 _buildTextField(
                   controller: _specializationController,
-                  label: 'Specialization *',
+                  label: TranslationService.instance.translate('admin.specialization_required'),
                   hint: 'General Veterinary, Surgery, etc.',
                   icon: Icons.medical_services,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Specialization is required';
+                      return TranslationService.instance.translate('admin.specialization_required_error');
                     }
                     return null;
                   },
@@ -218,12 +220,12 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
                 
                 _buildTextField(
                   controller: _experienceController,
-                  label: 'Years of Experience *',
+                  label: TranslationService.instance.translate('admin.years_of_experience_required'),
                   hint: '5 years',
                   icon: Icons.timeline,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Experience is required';
+                      return TranslationService.instance.translate('admin.experience_required_error');
                     }
                     return null;
                   },
@@ -233,7 +235,7 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
                 
                 _buildTextField(
                   controller: _licenseController,
-                  label: 'License Number',
+                  label: TranslationService.instance.translate('admin.license_number'),
                   hint: 'VET-12345',
                   icon: Icons.verified,
                 ),
@@ -252,7 +254,7 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
                             borderRadius: BorderRadius.circular(8.r),
                           ),
                         ),
-                        child: const Text('Cancel'),
+                        child: TranslatedText('common.cancel'),
                       ),
                     ),
                     SizedBox(width: 16.w),
@@ -276,7 +278,7 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
                                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
                               )
-                            : Text(_isEditing ? 'Update' : 'Create Account'),
+                            : TranslatedText(_isEditing ? 'admin.update' : 'auth.create_account'),
                       ),
                     ),
                   ],
@@ -389,10 +391,10 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
+            content: TranslatedText(
               _isEditing 
-                  ? 'Veterinarian updated successfully!' 
-                  : 'Veterinarian account created successfully!',
+                  ? 'admin.veterinarian_updated_successfully' 
+                  : 'admin.veterinarian_account_created_successfully',
             ),
             backgroundColor: AppTheme.success,
           ),

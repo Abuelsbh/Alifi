@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/Language/translation_service.dart';
 import '../../../Models/pet_report_model.dart';
-import '../../../Widgets/custom_card.dart';
-import '../../../Widgets/custom_button.dart';
-import '../../../Widgets/translated_text.dart';
-import '../../../Widgets/translated_custom_button.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../Utilities/dialog_helper.dart';
@@ -45,20 +40,6 @@ class UnifiedPetDetailsScreen extends StatefulWidget {
 }
 
 class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
-  int _currentImageIndex = 0;
-  late PageController _pageController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController();
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
 
   List<String> get _images {
     switch (widget.type) {
@@ -91,7 +72,10 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
   String get _description {
     switch (widget.type) {
       case PetDetailsType.report:
-        return widget.report!['description'] ?? '';
+        // البحث عن description في report مباشرة أو في petDetails
+        final report = widget.report!;
+        return report['description']?.toString() ?? 
+               (report['petDetails'] as Map<String, dynamic>?)?['description']?.toString() ?? '';
       case PetDetailsType.adoption:
         return widget.adoptionPet!.description;
       case PetDetailsType.breeding:
@@ -99,1250 +83,548 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverAppBar(),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(16.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // _buildHeaderSection(),
-                  // SizedBox(height: 24.h),
-                  _buildBasicInfoSection(),
-                  SizedBox(height: 24.h),
-                  if (_description.isNotEmpty) ...[
-                    _buildDescriptionSection(),
-                    SizedBox(height: 24.h),
-                  ],
-                  _buildTypeSpecificSections(),
-                  SizedBox(height: 24.h),
-                  _buildContactSection(),
-                  SizedBox(height: 32.h),
-                  _buildActionButtons(),
-                  SizedBox(height: 24.h),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSliverAppBar() {
-    final isLost = widget.type == PetDetailsType.report && 
-                   widget.report!['type'] == 'lost';
+  // دالة لترجمة نوع الحيوان
+  String _translatePetType(String petType) {
+    final translationService = TranslationService.instance;
+    String key = petType.toLowerCase().replaceAll(' ', '_');
     
-    Color appBarColor;
-    switch (widget.type) {
-      case PetDetailsType.report:
-        appBarColor = isLost ? AppTheme.error : AppTheme.success;
-        break;
-      case PetDetailsType.adoption:
-        appBarColor = AppTheme.primaryGreen;
-        break;
-      case PetDetailsType.breeding:
-        appBarColor = AppTheme.primaryOrange;
-        break;
+    // محاولة الترجمة من animal_types
+    try {
+      String translated = translationService.translate('add_animal.pet_details.animal_types.$key');
+      // إذا كانت الترجمة مختلفة عن المفتاح، فهي ترجمة صحيحة
+      if (translated != 'add_animal.pet_details.animal_types.$key') {
+        return translated;
+      }
+    } catch (e) {
+      // إذا فشلت الترجمة، استخدم القيمة الأصلية
     }
+    
+    // إذا لم تكن هناك ترجمة، استخدم القيمة الأصلية
+    return petType;
+  }
 
-    return SliverAppBar(
-      expandedHeight: 350.h,
-      floating: false,
-      pinned: true,
-      backgroundColor: appBarColor,
-      leading: IconButton(
-        icon: Container(
-          padding: EdgeInsets.all(8.w),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            Icons.arrow_back,
-            color: Colors.white,
-            size: 20.sp,
-          ),
-        ),
-        onPressed: () => Navigator.pop(context),
-      ),
-      actions: [
-        IconButton(
-          icon: Container(
-            padding: EdgeInsets.all(8.w),
+  // دالة لترجمة الجنس
+  String _translateGender(String gender) {
+    final translationService = TranslationService.instance;
+    
+    // تحويل القيمة إلى مفتاح الترجمة
+    String genderKey = gender.toLowerCase();
+    if (genderKey == 'male') {
+      return translationService.translate('add_animal.pet_details.male');
+    } else if (genderKey == 'female') {
+      return translationService.translate('add_animal.pet_details.female');
+    } else if (genderKey == 'unknown') {
+      return translationService.translate('add_animal.pet_details.unknown');
+    }
+    
+    // إذا كانت القيمة بالفعل مترجمة أو غير معروفة، استخدمها كما هي
+    return gender;
+  }
+
+  // معرض صور محسّن يعرض جميع الصور - تصميم جديد يشبه الصورة
+  Widget _buildEnhancedImageGallery() {
+    if (_images.isEmpty) return const SizedBox.shrink();
+
+    // إذا كانت هناك صورة واحدة فقط، عرضها كاملة
+    if (_images.length == 1) {
+      return Container(
+        height: 280.h,
+        margin: EdgeInsets.only(bottom: 16.h),
+        child: GestureDetector(
+          onTap: () => _showFullScreenImage(0),
+          child: Container(
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.share,
-              color: Colors.white,
-              size: 20.sp,
-            ),
-          ),
-          onPressed: () => _sharePet(),
-        ),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        title: Text(
-          _petName,
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 20.sp,
-            shadows: [
-              Shadow(
-                offset: const Offset(0, 2),
-                blurRadius: 4,
-                color: Colors.black.withOpacity(0.5),
-              ),
-            ],
-          ),
-        ),
-        centerTitle: true,
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (_images.isNotEmpty)
-              _buildImageCarousel()
-            else
-              _buildDefaultBackground(appBarColor),
-            
-            // Gradient overlay
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.6),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // دوال للتنقل بين الصور
-  void _nextImage() {
-    if (_currentImageIndex < _images.length - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  void _previousImage() {
-    if (_currentImageIndex > 0) {
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  Widget _buildImageCarousel() {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // الصور الرئيسية
-        PageView.builder(
-          controller: _pageController,
-          itemCount: _images.length,
-          onPageChanged: (index) {
-            setState(() {
-              _currentImageIndex = index;
-            });
-          },
-          itemBuilder: (context, index) {
-            return CachedNetworkImage(
-              imageUrl: _images[index],
-              fit: BoxFit.cover,
-              memCacheWidth: 800,
-              memCacheHeight: 600,
-              maxWidthDiskCache: 1920,
-              maxHeightDiskCache: 1080,
-              placeholder: (context, url) => Container(
-                color: AppTheme.primaryGreen.withOpacity(0.1),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: AppTheme.primaryGreen,
-                  ),
-                ),
-              ),
-              errorWidget: (context, url, error) {
-                return _buildDefaultBackground(AppTheme.primaryGreen);
-              },
-            );
-          },
-        ),
-        
-        // GestureDetector للصورة (فقط في المنطقة الوسطى)
-        if (_images.length > 1)
-          Positioned(
-            left: 100.w,
-            right: 100.w,
-            top: 0,
-            bottom: 0,
-            child: GestureDetector(
-              onTap: () => _showFullScreenImage(_currentImageIndex),
-              child: Container(color: Colors.transparent),
-            ),
-          )
-        else
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: () => _showFullScreenImage(_currentImageIndex),
-              child: Container(color: Colors.transparent),
-            ),
-          ),
-        
-        // عداد الصور في الأعلى
-        if (_images.length > 1)
-          Positioned(
-            top: 50.h,
-            right: 16.w,
-            child: IgnorePointer(
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(20.r),
-                ),
-                child: Text(
-                  '${_currentImageIndex + 1} / ${_images.length}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        
-        // مؤشرات الصور في الأسفل
-        if (_images.length > 1)
-          Positioned(
-            bottom: 20.h,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  _images.length,
-                  (index) => Container(
-                    width: _currentImageIndex == index ? 24.w : 8.w,
-                    height: 8.h,
-                    margin: EdgeInsets.symmetric(horizontal: 4.w),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(4.r),
-                      color: _currentImageIndex == index 
-                          ? Colors.white 
-                          : Colors.white.withOpacity(0.5),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        
-        // أزرار التنقل - في المقدمة تماماً
-        if (_images.length > 1) ...[
-          // زر السابق
-          Positioned(
-            left: 16.w,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _previousImage,
-                  borderRadius: BorderRadius.circular(25.r),
-                  child: Container(
-                    width: 50.w,
-                    height: 50.h,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.chevron_left,
-                      color: Colors.white,
-                      size: 30.sp,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          
-          // زر التالي
-          Positioned(
-            right: 16.w,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _nextImage,
-                  borderRadius: BorderRadius.circular(25.r),
-                  child: Container(
-                    width: 50.w,
-                    height: 50.h,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.chevron_right,
-                      color: Colors.white,
-                      size: 30.sp,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildDefaultBackground(Color color) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            color,
-            color.withOpacity(0.7),
-          ],
-        ),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.pets,
-          size: 100.sp,
-          color: Colors.white.withOpacity(0.3),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeaderSection() {
-    String typeLabel;
-    Color typeColor;
-    IconData typeIcon;
-
-    switch (widget.type) {
-      case PetDetailsType.report:
-        final isLost = widget.report!['type'] == 'lost';
-        typeLabel = isLost 
-            ? TranslationService.instance.translate('lost')
-            : TranslationService.instance.translate('found');
-        typeColor = isLost ? AppTheme.error : AppTheme.success;
-        typeIcon = isLost ? Icons.search : Icons.check_circle;
-        break;
-      case PetDetailsType.adoption:
-        typeLabel = TranslationService.instance.translate('adoption');
-        typeColor = AppTheme.primaryGreen;
-        typeIcon = Icons.favorite;
-        break;
-      case PetDetailsType.breeding:
-        typeLabel = TranslationService.instance.translate('breeding');
-        typeColor = AppTheme.primaryOrange;
-        typeIcon = Icons.family_restroom;
-        break;
-    }
-
-    return Container(
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            typeColor.withOpacity(0.1),
-            typeColor.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(
-          color: typeColor.withOpacity(0.3),
-          width: 2,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(12.w),
-            decoration: BoxDecoration(
-              color: typeColor.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              typeIcon,
-              color: typeColor,
-              size: 28.sp,
-            ),
-          ),
-          SizedBox(width: 16.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  typeLabel,
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                    color: typeColor,
-                  ),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  _petName,
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                  ),
+              borderRadius: BorderRadius.circular(16.r),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-          ),
-          if (_images.length > 1)
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-              decoration: BoxDecoration(
-                color: typeColor.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.photo_library,
-                    size: 16.sp,
-                    color: typeColor,
-                  ),
-                  SizedBox(width: 4.w),
-                  Text(
-                    '${_images.length}',
-                    style: TextStyle(
-                      color: typeColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14.sp,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16.r),
+              child: CachedNetworkImage(
+                imageUrl: _images[0],
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                memCacheWidth: 800,
+                memCacheHeight: 600,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[200],
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: AppTheme.primaryGreen,
+                      strokeWidth: 2,
                     ),
                   ),
-                ],
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[300],
+                  child: Icon(
+                    Icons.broken_image,
+                    color: Colors.grey[600],
+                    size: 40.sp,
+                  ),
+                ),
               ),
             ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      height: 280.h,
+      margin: EdgeInsets.only(bottom: 16.h),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // الصورة الرئيسية الكبيرة على اليسار
+          Expanded(
+            flex: 2,
+            child: GestureDetector(
+              onTap: () => _showFullScreenImage(0),
+              child: Container(
+                height: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16.r),
+                  child: CachedNetworkImage(
+                    imageUrl: _images[0],
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    memCacheWidth: 800,
+                    memCacheHeight: 600,
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey[200],
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppTheme.primaryGreen,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey[300],
+                      child: Icon(
+                        Icons.broken_image,
+                        color: Colors.grey[600],
+                        size: 40.sp,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 8.w),
+          // صورتان صغيرتان على اليمين
+          Expanded(
+            flex: 1,
+            child: Column(
+              children: [
+                if (_images.length > 1)
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => _showFullScreenImage(1),
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16.r),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16.r),
+                          child: CachedNetworkImage(
+                            imageUrl: _images[1],
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            memCacheWidth: 400,
+                            memCacheHeight: 300,
+                            placeholder: (context, url) => Container(
+                              color: Colors.grey[200],
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: AppTheme.primaryGreen,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: Colors.grey[300],
+                              child: Icon(
+                                Icons.broken_image,
+                                color: Colors.grey[600],
+                                size: 30.sp,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (_images.length > 1) SizedBox(height: 8.h),
+                if (_images.length > 2)
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => _showFullScreenImage(2),
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16.r),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16.r),
+                          child: CachedNetworkImage(
+                            imageUrl: _images[2],
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            memCacheWidth: 400,
+                            memCacheHeight: 300,
+                            placeholder: (context, url) => Container(
+                              color: Colors.grey[200],
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: AppTheme.primaryGreen,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: Colors.grey[300],
+                              child: Icon(
+                                Icons.broken_image,
+                                color: Colors.grey[600],
+                                size: 30.sp,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                else if (_images.length == 2)
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(16.r),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildBasicInfoSection() {
-    Map<String, String> basicInfo = {};
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        backgroundColor: AppTheme.primaryOrange,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Colors.white,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // معرض الصور المحسّن
+              if (_images.isNotEmpty) ...[
+                _buildEnhancedImageGallery(),
+                // مؤشرات الصور (النقاط البيضاء)
+                if (_images.length > 1)
+                  Padding(
+                    padding: EdgeInsets.only(top: 12.h, bottom: 24.h),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        _images.length > 4 ? 4 : _images.length,
+                        (index) => Container(
+                          width: 8.w,
+                          height: 8.h,
+                          margin: EdgeInsets.symmetric(horizontal: 4.w),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: index == 0 
+                                ? Colors.grey[600] 
+                                : Colors.grey[300],
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  SizedBox(height: 24.h),
+              ] else
+                SizedBox(height: 16.h),
+              // اسم الحيوان والسلالة - في المنتصف
+              _buildPetNameAndBreed(),
+              SizedBox(height: 24.h),
+              // ثلاث بطاقات المعلومات (Color, Gender, Type)
+              _buildInfoCardsRow(),
+              SizedBox(height: 24.h),
+              // قسم الوصف
+              if (_description.isNotEmpty) ...[
+                _buildDescriptionSection(),
+                SizedBox(height: 24.h),
+              ],
+              // زر "Contact Us" - يظهر فقط إذا لم يكن المستخدم هو صاحب الإعلان
+              if (!_isCurrentUserOwner()) ...[
+                _buildContactUsButton(),
+                SizedBox(height: 32.h),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
+  // اسم الحيوان والسلالة - في المنتصف
+  Widget _buildPetNameAndBreed() {
+    String breed = '';
     switch (widget.type) {
       case PetDetailsType.report:
         final petDetails = widget.report!['petDetails'] as Map<String, dynamic>? ?? {};
-        if (petDetails['type'] != null) {
-          basicInfo[TranslationService.instance.translate('type')] = petDetails['type'];
-        }
-        if (petDetails['breed'] != null) {
-          basicInfo[TranslationService.instance.translate('breed')] = petDetails['breed'];
-        }
-        if (petDetails['age'] != null) {
-          basicInfo[TranslationService.instance.translate('age')] = petDetails['age'].toString();
-        }
-        if (petDetails['gender'] != null) {
-          basicInfo[TranslationService.instance.translate('gender')] = petDetails['gender'];
-        }
-        if (petDetails['color'] != null) {
-          basicInfo[TranslationService.instance.translate('color')] = petDetails['color'];
-        }
-        if (petDetails['size'] != null) {
-          basicInfo[TranslationService.instance.translate('size')] = petDetails['size'];
+        breed = petDetails['breed']?.toString() ?? '';
+        break;
+      case PetDetailsType.adoption:
+        breed = widget.adoptionPet!.breed;
+        break;
+      case PetDetailsType.breeding:
+        breed = widget.breedingPet!.breed;
+        break;
+    }
+
+    return Column(
+      children: [
+        Text(
+          _petName,
+          style: TextStyle(
+            fontSize: 28.sp,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+          textAlign: TextAlign.center,
+        ),
+        if (breed.isNotEmpty) ...[
+          SizedBox(height: 8.h),
+          Text(
+            breed,
+            style: TextStyle(
+              fontSize: 16.sp,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ],
+    );
+  }
+
+  // ثلاث بطاقات المعلومات (Color, Gender, Type)
+  Widget _buildInfoCardsRow() {
+    String color = '';
+    String gender = '';
+    String type = '';
+
+    switch (widget.type) {
+      case PetDetailsType.report:
+        final report = widget.report!;
+        final petDetails = report['petDetails'] as Map<String, dynamic>? ?? {};
+        color = report['color']?.toString() ?? petDetails['color']?.toString() ?? '';
+        gender = report['gender']?.toString() ?? petDetails['gender']?.toString() ?? '';
+        type = report['petType']?.toString() ?? petDetails['type']?.toString() ?? petDetails['petType']?.toString() ?? '';
+        if (type.isNotEmpty) {
+          type = _translatePetType(type);
         }
         break;
       case PetDetailsType.adoption:
         final pet = widget.adoptionPet!;
-        if (pet.petType.isNotEmpty) {
-          basicInfo[TranslationService.instance.translate('type')] = pet.petType;
-        }
-        if (pet.breed.isNotEmpty) {
-          basicInfo[TranslationService.instance.translate('breed')] = pet.breed;
-        }
-        if (pet.age > 0) {
-          basicInfo[TranslationService.instance.translate('age')] = '${pet.age} ${TranslationService.instance.translate('years')}';
-        }
-        if (pet.gender.isNotEmpty) {
-          basicInfo[TranslationService.instance.translate('gender')] = pet.gender;
-        }
-        if (pet.color.isNotEmpty) {
-          basicInfo[TranslationService.instance.translate('color')] = pet.color;
-        }
-        if (pet.weight > 0) {
-          basicInfo[TranslationService.instance.translate('weight')] = '${pet.weight} ${TranslationService.instance.translate('kg')}';
-        }
+        color = pet.color;
+        gender = pet.gender;
+        type = pet.petType;
         break;
       case PetDetailsType.breeding:
         final pet = widget.breedingPet!;
-        if (pet.petType.isNotEmpty) {
-          basicInfo[TranslationService.instance.translate('type')] = pet.petType;
-        }
-        if (pet.breed.isNotEmpty) {
-          basicInfo[TranslationService.instance.translate('breed')] = pet.breed;
-        }
-        if (pet.age > 0) {
-          basicInfo[TranslationService.instance.translate('age')] = '${pet.age} ${TranslationService.instance.translate('years')}';
-        }
-        if (pet.gender.isNotEmpty) {
-          basicInfo[TranslationService.instance.translate('gender')] = pet.gender;
-        }
-        if (pet.color.isNotEmpty) {
-          basicInfo[TranslationService.instance.translate('color')] = pet.color;
-        }
-        if (pet.weight > 0) {
-          basicInfo[TranslationService.instance.translate('weight')] = '${pet.weight} ${TranslationService.instance.translate('kg')}';
-        }
+        color = pet.color;
+        gender = pet.gender;
+        type = pet.petType;
         break;
     }
 
-    if (basicInfo.isEmpty) return const SizedBox.shrink();
+    if (gender.isNotEmpty) {
+      gender = _translateGender(gender);
+    }
 
-    return CustomCard(
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Icon(
-                    Icons.info_outline,
-                    color: AppTheme.primaryGreen,
-                    size: 24.sp,
-                  ),
-                ),
-                SizedBox(width: 12.w),
-                Text(
-                  TranslationService.instance.translate('pet_details'),
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryGreen,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 20.h),
-            ...basicInfo.entries.map((entry) => Padding(
-              padding: EdgeInsets.only(bottom: 12.h),
-              child: Row(
-                children: [
-                  Container(
-                    width: 100.w,
-                    child: Text(
-                      '${entry.key}:',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      entry.value,
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )),
-          ],
+    return Row(
+      children: [
+        Expanded(
+          child: _buildInfoCard(
+            icon: Icons.palette,
+            iconColor: const Color(0xFF8B4513), // Brown color
+            label: TranslationService.instance.translate('add_animal.pet_details.color'),
+            value: color.isNotEmpty ? color : '-',
+          ),
         ),
+        SizedBox(width: 12.w),
+        Expanded(
+          child: _buildInfoCard(
+            icon: Icons.wc,
+            iconColor: Colors.pink,
+            label: TranslationService.instance.translate('add_animal.pet_details.gender'),
+            value: gender.isNotEmpty ? gender : '-',
+          ),
+        ),
+        SizedBox(width: 12.w),
+        Expanded(
+          child: _buildInfoCard(
+            icon: Icons.pets,
+            iconColor: const Color(0xFF87CEEB), // Light blue
+            label: TranslationService.instance.translate('add_animal.pet_details.pet_type'),
+            value: type.isNotEmpty ? type : '-',
+          ),
+        ),
+      ],
+    );
+  }
+
+  // بطاقة معلومات واحدة (للبطاقات الثلاث: Color, Gender, Type)
+  Widget _buildInfoCard({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 12.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: iconColor,
+            size: 28.sp,
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.sp,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: 4.h),
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildDescriptionSection() {
-    return CustomCard(
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryOrange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Icon(
-                    Icons.description,
-                    color: AppTheme.primaryOrange,
-                    size: 24.sp,
-                  ),
-                ),
-                SizedBox(width: 12.w),
-                Text(
-                  TranslationService.instance.translate('description'),
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryOrange,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16.h),
-            Text(
-              _description,
-              style: TextStyle(
-                fontSize: 14.sp,
-                height: 1.6,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTypeSpecificSections() {
-    switch (widget.type) {
-      case PetDetailsType.report:
-        return _buildReportSpecificSections();
-      case PetDetailsType.adoption:
-        return _buildAdoptionSpecificSections();
-      case PetDetailsType.breeding:
-        return _buildBreedingSpecificSections();
-    }
-  }
-
-  Widget _buildReportSpecificSections() {
-    final report = widget.report!;
-    final location = report['location'] as Map<String, dynamic>? ?? {};
-    final contactInfo = report['contactInfo'] as Map<String, dynamic>? ?? {};
-    final petDetails = report['petDetails'] as Map<String, dynamic>? ?? {};
-
-    return Column(
-      children: [
-        if (location['address'] != null || location['coordinates'] != null) ...[
-          _buildLocationCard(location),
-          SizedBox(height: 16.h),
-        ],
-        if (petDetails['distinguishingMarks'] != null) ...[
-          _buildInfoCard(
-            TranslationService.instance.translate('distinguishing_marks'),
-            petDetails['distinguishingMarks'],
-            Icons.visibility,
-            AppTheme.primaryGreen,
-          ),
-          SizedBox(height: 16.h),
-        ],
-        if (report['reward'] != null) ...[
-          _buildRewardCard(report['reward']),
-          SizedBox(height: 16.h),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildAdoptionSpecificSections() {
-    final pet = widget.adoptionPet!;
-    final sections = <Widget>[];
-
-    if (pet.adoptionFee > 0) {
-      sections.add(_buildFeeCard(
-        TranslationService.instance.translate('adoption_fee'),
-        '${pet.adoptionFee.toStringAsFixed(0)} ${TranslationService.instance.translate('currency')}',
-        AppTheme.primaryGreen,
-      ));
-      sections.add(SizedBox(height: 16.h));
-    }
-
-    if (pet.isVaccinated || pet.isNeutered || pet.goodWithKids || pet.goodWithPets) {
-      sections.add(_buildFeaturesSection(pet));
-      sections.add(SizedBox(height: 16.h));
-    }
-
-    if (pet.healthStatus.isNotEmpty || pet.microchipId.isNotEmpty) {
-      sections.add(_buildHealthCard(pet));
-      sections.add(SizedBox(height: 16.h));
-    }
-
-    if (pet.address.isNotEmpty) {
-      sections.add(_buildLocationCard({'address': pet.address}));
-      sections.add(SizedBox(height: 16.h));
-    }
-
-    return Column(children: sections);
-  }
-
-  Widget _buildBreedingSpecificSections() {
-    final pet = widget.breedingPet!;
-    final sections = <Widget>[];
-
-    if (pet.breedingFee > 0) {
-      sections.add(_buildFeeCard(
-        TranslationService.instance.translate('breeding_fee'),
-        '${pet.breedingFee.toStringAsFixed(0)} ${TranslationService.instance.translate('currency')}',
-        AppTheme.primaryOrange,
-      ));
-      sections.add(SizedBox(height: 16.h));
-    }
-
-    if (pet.isRegistered || pet.hasBreedingExperience) {
-      sections.add(_buildBreedingFeaturesSection(pet));
-      sections.add(SizedBox(height: 16.h));
-    }
-
-    if (pet.breedingGoals.isNotEmpty || pet.availabilityPeriod.isNotEmpty) {
-      sections.add(_buildBreedingInfoCard(pet));
-      sections.add(SizedBox(height: 16.h));
-    }
-
-    if (pet.address.isNotEmpty) {
-      sections.add(_buildLocationCard({'address': pet.address}));
-      sections.add(SizedBox(height: 16.h));
-    }
-
-    return Column(children: sections);
-  }
-
-  Widget _buildFeaturesSection(AdoptionPetModel pet) {
-    final features = <Widget>[];
-    
-    if (pet.isVaccinated) {
-      features.add(_buildFeatureChip('مُطعّم', Icons.medical_services, Colors.green));
-    }
-    if (pet.isNeutered) {
-      features.add(_buildFeatureChip('مُعقّم', Icons.medical_services, Colors.blue));
-    }
-    if (pet.goodWithKids) {
-      features.add(_buildFeatureChip('ودود مع الأطفال', Icons.child_care, Colors.orange));
-    }
-    if (pet.goodWithPets) {
-      features.add(_buildFeatureChip('ودود مع الحيوانات', Icons.pets, Colors.purple));
-    }
-
-    if (features.isEmpty) return const SizedBox.shrink();
-
-    return CustomCard(
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              TranslationService.instance.translate('features'),
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryGreen,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            Wrap(
-              spacing: 8.w,
-              runSpacing: 8.h,
-              children: features,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBreedingFeaturesSection(BreedingPetModel pet) {
-    final features = <Widget>[];
-    
-    if (pet.isRegistered) {
-      features.add(_buildFeatureChip('مسجّل', Icons.verified, AppTheme.primaryOrange));
-    }
-    if (pet.hasBreedingExperience) {
-      features.add(_buildFeatureChip('لديه خبرة', Icons.star, Colors.blue));
-    }
-    if (pet.willTravel) {
-      features.add(_buildFeatureChip('يقبل السفر', Icons.directions_car, Colors.purple));
-    }
-
-    if (features.isEmpty) return const SizedBox.shrink();
-
-    return CustomCard(
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              TranslationService.instance.translate('features'),
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryOrange,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            Wrap(
-              spacing: 8.w,
-              runSpacing: 8.h,
-              children: features,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeatureChip(String label, IconData icon, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+      width: double.infinity,
+      padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16.sp, color: color),
-          SizedBox(width: 6.w),
           Text(
-            label,
+            TranslationService.instance.translate('add_animal.pet_details.description'),
             style: TextStyle(
-              color: color,
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w600,
+              fontSize: 18.sp,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+          ),
+          SizedBox(height: 12.h),
+          Text(
+            _description,
+            style: TextStyle(
+              fontSize: 14.sp,
+              height: 1.6,
+              color: Colors.grey[700],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildHealthCard(AdoptionPetModel pet) {
-    return CustomCard(
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.favorite, color: AppTheme.primaryGreen, size: 24.sp),
-                SizedBox(width: 12.w),
-                Text(
-                  TranslationService.instance.translate('health_status'),
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryGreen,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 12.h),
-            if (pet.healthStatus.isNotEmpty)
-              _buildInfoRow('الحالة الصحية', pet.healthStatus),
-            if (pet.microchipId.isNotEmpty) ...[
-              SizedBox(height: 8.h),
-              _buildInfoRow('رقم الشريحة', pet.microchipId),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBreedingInfoCard(BreedingPetModel pet) {
-    return CustomCard(
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.info, color: AppTheme.primaryOrange, size: 24.sp),
-                SizedBox(width: 12.w),
-                Text(
-                  TranslationService.instance.translate('breeding_information'),
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryOrange,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 12.h),
-            if (pet.breedingGoals.isNotEmpty)
-              _buildInfoRow('أهداف التزاوج', pet.breedingGoals),
-            if (pet.availabilityPeriod.isNotEmpty) ...[
-              SizedBox(height: 8.h),
-              _buildInfoRow('فترة التوفر', pet.availabilityPeriod),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: 2,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14.sp,
-              color: Colors.grey[600],
-            ),
-          ),
-        ),
-        Expanded(
-          flex: 3,
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLocationCard(Map<String, dynamic> location) {
-    final address = location['address'] ?? '';
-    if (address.isEmpty) return const SizedBox.shrink();
-
-    return CustomCard(
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Icon(
-                    Icons.location_on,
-                    color: AppTheme.primaryGreen,
-                    size: 24.sp,
-                  ),
-                ),
-                SizedBox(width: 12.w),
-                Text(
-                  TranslationService.instance.translate('location'),
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryGreen,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 12.h),
-            Text(
-              address,
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(String title, String content, IconData icon, Color color) {
-    return CustomCard(
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: color, size: 24.sp),
-                SizedBox(width: 12.w),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 12.h),
-            Text(
-              content,
-              style: TextStyle(fontSize: 14.sp),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeeCard(String title, String amount, Color color) {
-    return CustomCard(
-      child: Container(
-        padding: EdgeInsets.all(20.w),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color.withOpacity(0.1),
-              color.withOpacity(0.05),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(16.r),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(12.w),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.attach_money,
-                color: color,
-                size: 28.sp,
-              ),
-            ),
-            SizedBox(width: 16.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    amount,
-                    style: TextStyle(
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRewardCard(dynamic reward) {
-    return CustomCard(
-      child: Container(
-        padding: EdgeInsets.all(20.w),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.warning.withOpacity(0.1),
-              AppTheme.warning.withOpacity(0.05),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(16.r),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(12.w),
-              decoration: BoxDecoration(
-                color: AppTheme.warning.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.monetization_on,
-                color: AppTheme.warning,
-                size: 28.sp,
-              ),
-            ),
-            SizedBox(width: 16.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    TranslationService.instance.translate('reward_for_finding'),
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    '$reward ${TranslationService.instance.translate('currency')}',
-                    style: TextStyle(
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.warning,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContactSection() {
-    String contactName = '';
-    String contactPhone = '';
-    String contactEmail = '';
-
-    switch (widget.type) {
-      case PetDetailsType.report:
-        final contactInfo = widget.report!['contactInfo'] as Map<String, dynamic>? ?? {};
-        contactName = contactInfo['name'] ?? widget.report!['userId'] ?? '';
-        contactPhone = contactInfo['phone'] ?? '';
-        contactEmail = contactInfo['email'] ?? '';
-        break;
-      case PetDetailsType.adoption:
-        final pet = widget.adoptionPet!;
-        contactName = pet.contactName;
-        contactPhone = pet.contactPhone;
-        contactEmail = pet.contactEmail;
-        break;
-      case PetDetailsType.breeding:
-        final pet = widget.breedingPet!;
-        contactName = pet.contactName;
-        contactPhone = pet.contactPhone;
-        contactEmail = pet.contactEmail;
-        break;
-    }
-
-    return CustomCard(
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryOrange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Icon(
-                    Icons.contact_phone,
-                    color: AppTheme.primaryOrange,
-                    size: 24.sp,
-                  ),
-                ),
-                SizedBox(width: 12.w),
-                Text(
-                  TranslationService.instance.translate('contact_information'),
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryOrange,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 20.h),
-            if (contactName.isNotEmpty) ...[
-              _buildContactRow(Icons.person, contactName),
-              SizedBox(height: 12.h),
-            ],
-            if (contactPhone.isNotEmpty) ...[
-              _buildContactRow(Icons.phone, contactPhone),
-              SizedBox(height: 12.h),
-            ],
-            if (contactEmail.isNotEmpty)
-              _buildContactRow(Icons.email, contactEmail),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContactRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 20.sp,
-          color: AppTheme.primaryOrange,
-        ),
-        SizedBox(width: 12.w),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -1397,7 +679,7 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
     final ownerUserId = _getOwnerUserId();
     if (ownerUserId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('لا يمكن العثور على صاحب الإعلان')),
+        SnackBar(content: Text(TranslationService.instance.translate('add_animal.messages.owner_not_found'))),
       );
       return;
     }
@@ -1405,7 +687,7 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
     final currentUserId = AuthService.userId!;
     if (currentUserId == ownerUserId) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('لا يمكنك التواصل مع نفسك')),
+        SnackBar(content: Text(TranslationService.instance.translate('add_animal.messages.cannot_chat_with_self'))),
       );
       return;
     }
@@ -1427,7 +709,7 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
               children: [
                 CircularProgressIndicator(color: AppTheme.primaryGreen),
                 SizedBox(height: 16.h),
-                const Text('جاري فتح المحادثة...'),
+                Text(TranslationService.instance.translate('add_animal.messages.opening_chat')),
               ],
             ),
           ),
@@ -1447,16 +729,19 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
                      'صاحب الإعلان';
         }
       } catch (e) {
-        print('Could not fetch owner name: $e');
+        // Could not fetch owner name
       }
 
       final petReportId = _getPetReportId();
       final petReportType = _getPetReportType();
 
+      final initialMessage = TranslationService.instance.translate('add_animal.messages.chat_initial_message')
+          .replaceAll('{0}', _petName);
+      
       final chatId = await ChatService.createChatWithUser(
         userId: currentUserId,
         otherUserId: ownerUserId,
-        initialMessage: 'مرحباً، أريد التواصل معك بخصوص ${_petName}',
+        initialMessage: initialMessage,
         petReportId: petReportId,
         petReportType: petReportType,
       );
@@ -1479,85 +764,46 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('خطأ في فتح المحادثة: $e'),
+          content: Text(TranslationService.instance.translate('add_animal.messages.chat_error').replaceAll('{0}', e.toString())),
           backgroundColor: AppTheme.error,
         ),
       );
     }
   }
 
-  Widget _buildActionButtons() {
-    String contactPhone = '';
-    final isOwner = _isCurrentUserOwner();
-
-    switch (widget.type) {
-      case PetDetailsType.report:
-        final contactInfo = widget.report!['contactInfo'] as Map<String, dynamic>? ?? {};
-        contactPhone = contactInfo['phone'] ?? '';
-        break;
-      case PetDetailsType.adoption:
-        contactPhone = widget.adoptionPet!.contactPhone;
-        break;
-      case PetDetailsType.breeding:
-        contactPhone = widget.breedingPet!.contactPhone;
-        break;
-    }
-
-    return Column(
-      children: [
-        // Chat button - only show if user is not the owner
-        if (!isOwner) ...[
-          SizedBox(
-            width: double.infinity,
-            child: CustomButton(
-              text: 'تواصل مع صاحب الإعلان',
-              onPressed: _startChatWithOwner,
-              backgroundColor: AppTheme.primaryGreen,
-              textColor: Colors.white,
-              icon: Icons.chat_bubble,
-              height: 56.h,
-            ),
+  // زر "Contact Us" باللون الأخضر
+  Widget _buildContactUsButton() {
+    return Container(
+      width: double.infinity,
+      height: 56.h,
+      decoration: BoxDecoration(
+        color: AppTheme.primaryGreen,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryGreen.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          SizedBox(height: 12.h),
         ],
-        SizedBox(
-          width: double.infinity,
-          child: CustomButton(
-            text: TranslationService.instance.translate('contact_owner'),
-            onPressed: () => _makePhoneCall(contactPhone),
-            backgroundColor: AppTheme.primaryGreen,
-            textColor: Colors.white,
-            icon: Icons.phone,
-            height: 56.h,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _startChatWithOwner,
+          borderRadius: BorderRadius.circular(16.r),
+          child: Center(
+            child: Text(
+              TranslationService.instance.translate('contact_us'),
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
           ),
         ),
-        SizedBox(height: 12.h),
-        Row(
-          children: [
-            Expanded(
-              child: CustomButton(
-                text: TranslationService.instance.translate('whatsapp'),
-                onPressed: () => _sendWhatsApp(contactPhone),
-                backgroundColor: Colors.green,
-                textColor: Colors.white,
-                icon: Icons.chat,
-                height: 56.h,
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: CustomButton(
-                text: TranslationService.instance.translate('share'),
-                onPressed: () => _sharePet(),
-                backgroundColor: AppTheme.primaryOrange,
-                textColor: Colors.white,
-                icon: Icons.share,
-                height: 56.h,
-              ),
-            ),
-          ],
-        ),
-      ],
+      ),
     );
   }
 
@@ -1573,52 +819,6 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
     );
   }
 
-  Future<void> _makePhoneCall(String phone) async {
-    if (phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(TranslationService.instance.translate('contact_info_unavailable'))),
-      );
-      return;
-    }
-
-    final url = Uri(scheme: 'tel', path: phone);
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(TranslationService.instance.translate('cannot_make_call'))),
-        );
-      }
-    }
-  }
-
-  Future<void> _sendWhatsApp(String phone) async {
-    if (phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(TranslationService.instance.translate('contact_info_unavailable'))),
-      );
-      return;
-    }
-
-    final message = TranslationService.instance.translate('whatsapp_message').replaceAll('{0}', _petName);
-    final url = Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(message)}');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(TranslationService.instance.translate('cannot_open_whatsapp'))),
-        );
-      }
-    }
-  }
-
-  void _sharePet() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(TranslationService.instance.translate('share_feature_coming_soon'))),
-    );
-  }
 }
 
 class _FullScreenImageView extends StatefulWidget {
@@ -1723,7 +923,7 @@ class _FullScreenImageViewState extends State<_FullScreenImageView> {
                       width: 60.w,
                       height: 60.h,
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
+                        color: Colors.black.withValues(alpha: 0.6),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -1759,7 +959,7 @@ class _FullScreenImageViewState extends State<_FullScreenImageView> {
                       width: 60.w,
                       height: 60.h,
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
+                        color: Colors.black.withValues(alpha: 0.6),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(

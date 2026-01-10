@@ -36,45 +36,35 @@ class _AdoptionPetsScreenState extends State<AdoptionPetsScreen>
     return GestureDetector(
       onTap: () => _navigateToPostAdoption(context),
       child: SizedBox(
-        width: 120.w,
-        height: 120.h,
-        child: Stack(
-          alignment: Alignment.bottomRight,
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Container(
-                width: 56.w,
-                height: 56.h,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white,
-                    width: 2.5.w,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.25),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.add,
-                    color: Colors.white,
-                    size: 30.sp,
-                    weight: 700,
-                  ),
-                ),
+        width: 70.w,
+        height: 70.h,
+        child: Container(
+          width: 56.w,
+          height: 56.h,
+          decoration: BoxDecoration(
+            color: AppTheme.primaryGreen,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white,
+              width: 2.5.w,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.25),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
+            ],
+          ),
+          child: Center(
+            child: Icon(
+              Icons.add,
+              color: Colors.white,
+              size: 30.sp,
+              weight: 700,
             ),
-          ],
-            ),
+          ),
+        ),
           ),
         );
   }

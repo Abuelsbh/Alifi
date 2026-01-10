@@ -8,6 +8,7 @@ import '../../../Widgets/custom_textfield_widget.dart';
 import '../add_animal_controller.dart';
 import 'package:alifi/core/Language/app_languages.dart';
 import 'package:provider/provider.dart';
+import 'package:alifi/Utilities/constants.dart';
 
 class AddAnimalFirstStep extends StatefulWidget {
   final VoidCallback? onNext;
@@ -40,29 +41,8 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
           ),
           const SizedBox(height: 30),
 
-          // Pet Name
-          _buildTextField(widget.con.nameController, Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.pet_name')),
-          const SizedBox(height: 15),
-
-          // Pet Type
-          _buildTextField(widget.con.typeController, Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.pet_type')),
-          const SizedBox(height: 15),
-
-          // Age Selector
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildAgeSelector(),
-              const SizedBox(width: 10),
-              Column(
-                children: [
-                  _buildToggleButton(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.year')),
-                  const SizedBox(height: 5),
-                  _buildToggleButton(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.month')),
-                ],
-              )
-            ],
-          ),
+          // Pet Type Dropdown
+          _buildPetTypeDropdown(),
           const SizedBox(height: 15),
 
           // Colour
@@ -73,11 +53,17 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildGenderButton(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.male')),
+              _buildGenderButton('Male', Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.male')),
               const SizedBox(width: 10),
-              _buildGenderButton(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.female')),
+              _buildGenderButton('Female', Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.female')),
+              const SizedBox(width: 10),
+              _buildGenderButton('Unknown', Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.unknown')),
             ],
           ),
+          const SizedBox(height: 15),
+
+          // Description
+          _buildDescriptionField(),
 
           const Spacer(),
 
@@ -176,88 +162,89 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
       controller: controller,
       borderStyleFlag: 1,
       hint: hint,
-      textInputType: TextInputType.emailAddress,
+      textInputType: TextInputType.text,
     );
   }
 
-  Widget _buildAgeSelector() {
+  Widget _buildDescriptionField() {
     return Container(
-      padding: const EdgeInsets.all(10),
+      width: 240.w,
+      height: 80.h,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
       ),
-      child: Column(
-        children: [
-          const Text("Age", style: TextStyle(fontWeight: FontWeight.bold)),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.chevron_left, color: Colors.orange),
-                onPressed: () {
-                  setState(() {
-                    if (widget.con.age > 0) widget.con.age--;
-                  });
-                },
-              ),
-              Text(
-                "${widget.con.age}",
-                style: TextStyleHelper.of(context).s18RegTextStyle.copyWith(color: Colors.black),
-
-              ),
-              IconButton(
-                icon: const Icon(Icons.chevron_right, color: Colors.orange),
-                onPressed: () {
-                  setState(() {
-                    widget.con.age++;
-                  });
-                },
-              ),
-            ],
-          ),
-        ],
+      child: TextField(
+        controller: widget.con.descriptionController,
+        maxLines: 3,
+        decoration: InputDecoration(
+          hintText: Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.description_hint'),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+        ),
+        style: TextStyleHelper.of(context).s14RegTextStyle.copyWith(color: Colors.black),
       ),
     );
   }
 
-  Widget _buildToggleButton(String type) {
-    final bool isSelected = widget.con.ageType == type;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          widget.con.ageType = type;
-        });
-      },
-      child: Container(
-        width: 80,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.orange.shade200 : Colors.white,
-          borderRadius: BorderRadius.circular(15),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          type,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: isSelected ? Colors.orange.shade900 : Colors.grey,
+  Widget _buildPetTypeDropdown() {
+    final appLanguage = Provider.of<AppLanguage>(context, listen: false);
+    final petTypes = AppConstants.petTypes;
+    
+    // Get translated pet types
+    List<String> translatedTypes = petTypes.map((type) {
+      String key = type.toLowerCase().replaceAll(' ', '_');
+      return appLanguage.translate('add_animal.pet_details.animal_types.$key');
+    }).toList();
+    
+    return Container(
+      width: 240.w,
+      height: 39.h,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+      ),
+      padding: EdgeInsets.symmetric(horizontal: 12.w),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: widget.con.selectedPetType,
+          isExpanded: true,
+          hint: Text(
+            appLanguage.translate('add_animal.pet_details.select_pet_type'),
+            style: TextStyleHelper.of(context).s14RegTextStyle.copyWith(color: Colors.grey),
           ),
+          items: petTypes.asMap().entries.map((entry) {
+            int index = entry.key;
+            String originalType = entry.value;
+            String translatedType = translatedTypes[index];
+            return DropdownMenuItem<String>(
+              value: originalType,
+              child: Text(
+                translatedType,
+                style: TextStyleHelper.of(context).s14RegTextStyle.copyWith(color: Colors.black),
+              ),
+            );
+          }).toList(),
+          onChanged: (String? newValue) {
+            setState(() {
+              widget.con.selectedPetType = newValue;
+            });
+          },
         ),
       ),
     );
   }
 
-  Widget _buildGenderButton(String value) {
-    final bool isSelected = widget.con.gender == value;
+  Widget _buildGenderButton(String genderKey, String displayText) {
+    final bool isSelected = widget.con.gender == genderKey;
     return GestureDetector(
       onTap: () {
         setState(() {
-          widget.con.gender = value;
+          widget.con.gender = genderKey;
         });
       },
       child: Container(
-        width: 120.w,
+        width: 100.w,
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: isSelected ? Colors.orange.shade200 : Colors.white,
@@ -265,11 +252,13 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
         ),
         alignment: Alignment.center,
         child: Text(
-          value,
+          displayText,
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: isSelected ? Colors.orange.shade900 : Colors.grey,
+            fontSize: 12.sp,
           ),
+          textAlign: TextAlign.center,
         ),
       ),
     );

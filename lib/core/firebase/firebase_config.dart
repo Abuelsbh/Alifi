@@ -5,6 +5,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'firebase_options.dart';
+import '../services/chat_service.dart';
 
 class FirebaseConfig {
   static bool _isInitialized = false;
@@ -61,6 +62,14 @@ class FirebaseConfig {
       _isDemoMode = false;
       
       print('✅ Firebase initialized successfully');
+      
+      // Clear chat cache when Firebase is initialized
+      try {
+        ChatService.clearAllCaches();
+        print('✅ Chat cache cleared after Firebase initialization');
+      } catch (e) {
+        print('⚠️ Could not clear chat cache: $e');
+      }
       
       // Initialize App Check for security
       await _initializeAppCheck();

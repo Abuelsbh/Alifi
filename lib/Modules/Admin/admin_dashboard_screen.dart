@@ -17,7 +17,7 @@ class AdminDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('🏥 Alifi Admin Dashboard'),
+        title: TranslatedText('admin.dashboard_title'),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
         centerTitle: true,
@@ -26,7 +26,7 @@ class AdminDashboardScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () => context.go('/main'),
-            tooltip: 'Back to App',
+            tooltip: TranslationService.instance.translate('admin.back_to_app'),
           ),
         ],
       ),
@@ -69,8 +69,8 @@ class AdminDashboardScreen extends StatelessWidget {
                           Icon(Icons.admin_panel_settings, 
                                color: Colors.white, size: 32.sp),
                           SizedBox(width: 12.w),
-                          Text(
-                            'Admin Control Panel',
+                          TranslatedText(
+                            'admin.admin_control_panel',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 24.sp,
@@ -80,8 +80,8 @@ class AdminDashboardScreen extends StatelessWidget {
                         ],
                       ),
                       SizedBox(height: 8.h),
-                      Text(
-                        'Manage veterinarians, users, and application settings',
+                      TranslatedText(
+                        'admin.admin_control_panel_subtitle',
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.9),
                           fontSize: 16.sp,
@@ -95,8 +95,8 @@ class AdminDashboardScreen extends StatelessWidget {
               SizedBox(height: 32.h),
               
               // Statistics Section
-              Text(
-                'Quick Stats',
+              TranslatedText(
+                'admin.quick_stats',
                 style: TextStyle(
                   fontSize: 20.sp,
                   fontWeight: FontWeight.bold,
@@ -107,19 +107,19 @@ class AdminDashboardScreen extends StatelessWidget {
               
               Row(
                 children: [
-                  Expanded(child: _buildStatCard('👥', 'Total Users', '150+', AppTheme.info)),
+                  Expanded(child: _buildStatCard('👥', TranslationService.instance.translate('admin.total_users'), '150+', AppTheme.info)),
                   SizedBox(width: 16.w),
-                  Expanded(child: _buildStatCard('🏥', 'Veterinarians', '12', AppTheme.primaryGreen)),
+                  Expanded(child: _buildStatCard('🏥', TranslationService.instance.translate('admin.veterinarians'), '12', AppTheme.primaryGreen)),
                   SizedBox(width: 16.w),
-                  Expanded(child: _buildStatCard('🐕', 'Active Reports', '45', AppTheme.primaryOrange)),
+                  Expanded(child: _buildStatCard('🐕', TranslationService.instance.translate('admin.active_reports'), '45', AppTheme.primaryOrange)),
                 ],
               ),
               
               SizedBox(height: 32.h),
               
               // Management Options
-              Text(
-                'Management Options',
+              TranslatedText(
+                'admin.management_options',
                 style: TextStyle(
                   fontSize: 20.sp,
                   fontWeight: FontWeight.bold,
@@ -139,8 +139,8 @@ class AdminDashboardScreen extends StatelessWidget {
                   _buildManagementCard(
                     context,
                     icon: Icons.local_hospital,
-                    title: 'Veterinarian Management',
-                    subtitle: 'Add, edit, or remove veterinarian accounts',
+                    title: TranslationService.instance.translate('admin.veterinarian_management'),
+                    subtitle: TranslationService.instance.translate('admin.veterinarian_management_subtitle'),
                     color: AppTheme.primaryGreen,
                     onTap: () {
                       Navigator.push(
@@ -154,8 +154,8 @@ class AdminDashboardScreen extends StatelessWidget {
                   _buildManagementCard(
                     context,
                     icon: Icons.people,
-                    title: 'User Management',
-                    subtitle: 'View and manage user accounts',
+                    title: TranslationService.instance.translate('admin.user_management'),
+                    subtitle: TranslationService.instance.translate('admin.user_management_subtitle'),
                     color: AppTheme.info,
                     onTap: () {
                       Navigator.push(
@@ -169,8 +169,8 @@ class AdminDashboardScreen extends StatelessWidget {
                   _buildManagementCard(
                     context,
                     icon: Icons.report,
-                    title: 'Report Management',
-                    subtitle: 'Monitor and manage pet reports',
+                    title: TranslationService.instance.translate('admin.report_management'),
+                    subtitle: TranslationService.instance.translate('admin.report_management_subtitle'),
                     color: AppTheme.primaryOrange,
                     onTap: () {
                       Navigator.push(
@@ -184,13 +184,13 @@ class AdminDashboardScreen extends StatelessWidget {
                   _buildManagementCard(
                     context,
                     icon: Icons.settings,
-                    title: 'App Settings',
-                    subtitle: 'Configure application settings',
+                    title: TranslationService.instance.translate('admin.app_settings'),
+                    subtitle: TranslationService.instance.translate('admin.app_settings_subtitle'),
                     color: Colors.grey[600]!,
                     onTap: () {
                       // TODO: Navigate to app settings
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('App Settings - Coming Soon')),
+                        SnackBar(content: TranslatedText('admin.app_settings_coming_soon')),
                       );
                     },
                   ),

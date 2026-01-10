@@ -71,7 +71,7 @@ class StoreDetailsScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              store['name'] ?? 'Unknown Store',
+                              store['name'] ?? Provider.of<AppLanguage>(context).translate('stores.unknown_store'),
                               style: TextStyle(
                                 fontSize: 24.sp,
                                 fontWeight: FontWeight.bold,
@@ -169,7 +169,7 @@ class StoreDetailsScreen extends StatelessWidget {
                   // Store Features
                   _buildSectionTitle(context, 'stores.features'),
                   SizedBox(height: 12.h),
-                  _buildFeaturesCard(),
+                  _buildFeaturesCard(context),
 
                   SizedBox(height: 24.h),
 
@@ -331,35 +331,37 @@ class StoreDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFeaturesCard() {
+  Widget _buildFeaturesCard(BuildContext context) {
     final features = <Map<String, dynamic>>[];
 
+    final lang = Provider.of<AppLanguage>(context);
+    
     if (store['deliveryAvailable'] == true) {
       features.add({
         'icon': Icons.local_shipping,
-        'title': 'Delivery Available',
-        'description': 'Home delivery service',
+        'title': lang.translate('stores.delivery_available'),
+        'description': lang.translate('stores.delivery_available_description'),
       });
     }
 
     if (store['website'] != null && store['website'].isNotEmpty) {
       features.add({
         'icon': Icons.language,
-        'title': 'Online Store',
-        'description': 'Visit our website',
+        'title': lang.translate('stores.online_store'),
+        'description': lang.translate('stores.online_store_description'),
       });
     }
 
     features.add({
       'icon': Icons.store,
-      'title': 'Physical Store',
-      'description': 'Visit our location',
+      'title': lang.translate('stores.physical_store'),
+      'description': lang.translate('stores.physical_store_description'),
     });
 
     features.add({
       'icon': Icons.verified,
-      'title': 'Verified Store',
-      'description': 'Trusted by Alifi',
+      'title': lang.translate('stores.verified_store'),
+      'description': lang.translate('stores.verified_store_description'),
     });
 
     return Container(

@@ -44,6 +44,11 @@ post_install do |installer|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
       # Exclude x86_64 architecture for simulator builds (Apple Silicon only)
       config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'x86_64'
+      
+      # Fix for BoringSSL-GRPC: Remove problematic -G compiler flag (Xcode 16 compatibility)
+      if target.name == 'BoringSSL-GRPC'
+        config.build_settings['WARNING_CFLAGS'] = ''
+      end
     end
   end
 end

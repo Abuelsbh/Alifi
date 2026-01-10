@@ -40,9 +40,9 @@ class AddAnimalController extends StateXController {
   late TextEditingController vetContactController;
   
   // Step 1 Controllers
-  late TextEditingController nameController;
-  late TextEditingController typeController;
+  late TextEditingController descriptionController;
   late TextEditingController colorController;
+  String? selectedPetType; // Changed from typeController to dropdown selection
 
   // Step 2 Controllers
   late TextEditingController addressController;
@@ -55,9 +55,7 @@ class AddAnimalController extends StateXController {
   late TextEditingController distinctiveMarksController;
   late TextEditingController commentsController;
 
-  int age = 1;
-  String ageType = "Year";
-  String gender = "Male";
+  String gender = "Unknown"; // Changed default to Unknown
   String medicalStatus = "Healthy";
   
   // Step 4 - Images
@@ -69,9 +67,9 @@ class AddAnimalController extends StateXController {
     super.initState();
     
     // Initialize Step 1 Controllers
-    nameController = TextEditingController();
-    typeController = TextEditingController();
+    descriptionController = TextEditingController();
     colorController = TextEditingController();
+    selectedPetType = null; // Initialize to null for dropdown
     
     // Initialize Step 2 Controllers
     addressController = TextEditingController();
@@ -96,8 +94,7 @@ class AddAnimalController extends StateXController {
   @override
   void dispose() {
     // Dispose Step 1 Controllers
-    nameController.dispose();
-    typeController.dispose();
+    descriptionController.dispose();
     colorController.dispose();
     
     // Dispose Step 2 Controllers
@@ -127,12 +124,10 @@ class AddAnimalController extends StateXController {
     activeStep = 0;
     
     // Reset Step 1
-    nameController.clear();
-    typeController.clear();
+    descriptionController.clear();
     colorController.clear();
-    age = 1;
-    ageType = "Year";
-    gender = "Male";
+    selectedPetType = null;
+    gender = "Unknown";
     
     // Reset Step 2
     addressController.clear();
@@ -188,11 +183,7 @@ class AddAnimalController extends StateXController {
       print('✅ User authenticated: ${user.uid}');
 
       // Basic validation
-      if (nameController.text.trim().isEmpty) {
-        throw Exception('Pet name is required');
-      }
-      
-      if (typeController.text.trim().isEmpty) {
+      if (selectedPetType == null || selectedPetType!.isEmpty) {
         throw Exception('Pet type is required');
       }
       
@@ -212,14 +203,12 @@ class AddAnimalController extends StateXController {
       // Prepare base report data
       final Map<String, dynamic> baseReport = {
         'userId': user.uid,
-        'petName': nameController.text.trim(),
-        'petType': typeController.text.trim(),
+        'petName': '', // Removed - no longer required
+        'petType': selectedPetType ?? '',
         'breed': '', // Could be extracted from type or added as separate field
-        'age': age,
-        'ageType': ageType,
         'gender': gender,
         'color': colorController.text.trim(),
-        'description': commentsController.text.trim(),
+        'description': descriptionController.text.trim(),
         'distinguishingMarks': distinctiveMarksController.text.trim(),
         'medicalStatus': medicalStatus,
         'contactName': userName,

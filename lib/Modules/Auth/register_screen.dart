@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/Theme/app_theme.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/Language/app_languages.dart';
 import '../../Widgets/translated_text.dart';
 import '../../Widgets/custom_textfield_widget.dart';
 import '../../Widgets/translated_custom_button.dart';
@@ -118,8 +120,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       SizedBox(height: 16.h),
-                      Text(
-                        'Create Account',
+                      TranslatedText(
+                        'auth.create_account',
                         style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: AppTheme.primaryGreen,
@@ -142,14 +144,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // Name Field
                 CustomTextFieldWidget(
                   controller: _nameController,
-                  hint: 'Full Name',
+                  hint: Provider.of<AppLanguage>(context).translate('auth.full_name'),
                   textInputType: TextInputType.name,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Name is required';
+                      return Provider.of<AppLanguage>(context).translate('auth.name_required');
                     }
                     if (value.length < 2) {
-                      return 'Name must be at least 2 characters';
+                      return Provider.of<AppLanguage>(context).translate('auth.name_min_length');
                     }
                     return null;
                   },
@@ -161,14 +163,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // Email Field
                 CustomTextFieldWidget(
                   controller: _emailController,
-                  hint: 'Email',
+                  hint: Provider.of<AppLanguage>(context).translate('auth.email'),
                   textInputType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Email is required';
+                      return Provider.of<AppLanguage>(context).translate('auth.email_required');
                     }
                     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                      return 'Please enter a valid email';
+                      return Provider.of<AppLanguage>(context).translate('auth.valid_email_required');
                     }
                     return null;
                   },
@@ -180,14 +182,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // Password Field
                 CustomTextFieldWidget(
                   controller: _passwordController,
-                  hint: 'Password',
+                  hint: Provider.of<AppLanguage>(context).translate('auth.password'),
                   obscure: _obscurePassword,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Password is required';
+                      return Provider.of<AppLanguage>(context).translate('auth.password_required');
                     }
                     if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
+                      return Provider.of<AppLanguage>(context).translate('auth.password_min_length');
                     }
                     return null;
                   },
@@ -209,14 +211,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // Confirm Password Field
                 CustomTextFieldWidget(
                   controller: _confirmPasswordController,
-                  hint: 'Confirm Password',
+                  hint: Provider.of<AppLanguage>(context).translate('auth.confirm_password'),
                   obscure: _obscureConfirmPassword,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please confirm your password';
+                      return Provider.of<AppLanguage>(context).translate('auth.confirm_password_required');
                     }
                     if (value != _passwordController.text) {
-                      return 'Passwords do not match';
+                      return Provider.of<AppLanguage>(context).translate('auth.passwords_not_match');
                     }
                     return null;
                   },

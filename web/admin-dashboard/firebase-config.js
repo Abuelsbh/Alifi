@@ -900,7 +900,7 @@ const FirebaseService = {
 
     async deleteAllReports() {
         try {
-            console.log('Deleting all reports...');
+            console.log('Deleting all reports permanently from database...');
             const collections = ['lost_pets', 'found_pets', 'adoption_pets', 'breeding_pets'];
             let totalDeleted = 0;
             const batchLimit = 500; // Firestore batch limit
@@ -909,8 +909,8 @@ const FirebaseService = {
                 let hasMore = true;
                 
                 while (hasMore) {
+                    // Delete ALL reports regardless of isActive status
                     let query = db.collection(collectionName)
-                        .where('isActive', '==', true)
                         .limit(batchLimit);
                     
                     let snapshot = await query.get();
@@ -920,28 +920,31 @@ const FirebaseService = {
                         break;
                     }
                     
-                    // Process batch
+                    // Process batch - DELETE permanently instead of soft delete
                     const batch = db.batch();
                     
                     snapshot.docs.forEach(doc => {
-                        batch.update(doc.ref, {
-                            isActive: false,
-                            deletedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
+                        batch.delete(doc.ref); // Permanently delete from database
                     });
                     
                     await batch.commit();
                     totalDeleted += snapshot.docs.length;
-                    console.log(`Deleted ${snapshot.docs.length} reports from ${collectionName}`);
+                    console.log(`Permanently deleted ${snapshot.docs.length} reports from ${collectionName}`);
                     
                     // If we got less than batchLimit, we're done with this collection
                     if (snapshot.docs.length < batchLimit) {
                         hasMore = false;
+                    } else {
+                        // Get next batch using the last document as cursor
+                        const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+                        query = db.collection(collectionName)
+                            .startAfter(lastDoc)
+                            .limit(batchLimit);
                     }
                 }
             }
             
-            console.log(`Successfully deleted ${totalDeleted} reports in total`);
+            console.log(`Successfully permanently deleted ${totalDeleted} reports in total`);
             return { success: true, deletedCount: totalDeleted };
         } catch (error) {
             console.error('Error deleting all reports:', error);

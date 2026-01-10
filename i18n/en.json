@@ -44,7 +44,16 @@
     "account_created_successfully": "Account created successfully!",
     "demo_mode": "Demo Mode",
     "guest_mode": "Guest Mode",
-    "continue_demo_mode": "Continue in Demo Mode"
+    "continue_demo_mode": "Continue in Demo Mode",
+    "join_community": "Join the Alifi community",
+    "name_required": "Name is required",
+    "name_min_length": "Name must be at least 2 characters",
+    "email_required": "Email is required",
+    "valid_email_required": "Please enter a valid email",
+    "password_required": "Password is required",
+    "password_min_length": "Password must be at least 6 characters",
+    "confirm_password_required": "Please confirm your password",
+    "passwords_not_match": "Passwords do not match"
   },
   "profile": {
     "my_profile": "My Profile",
@@ -83,7 +92,11 @@
     "account": "Account",
     "services": "Services",
     "image_updated": "Profile image updated successfully",
-    "image_error": "Error updating profile image"
+    "image_error": "Error updating profile image",
+    "lost_animals": "Lost Animals",
+    "animal_for_adoption": "Animal for Adoption",
+    "animals_for_mating": "Animals for Mating",
+    "pet_supply_stores": "Pet Supply Stores"
   },
   "home": {
     "welcome": "Welcome to Alifi",
@@ -173,6 +186,10 @@
     "large": "Large",
     "no_results": "No results found",
     "try_different_search": "Try a different search",
+    "no_lost_pets": "No lost pets",
+    "no_found_pets": "No found pets",
+    "no_matching_pets": "No pets matching the search were found",
+    "try_adjust_search": "Try adjusting your search or filters",
     "report_details": "Report Details",
     "contact_reporter": "Contact Reporter",
     "select_report_type": "Select Report Type",
@@ -285,16 +302,30 @@
       "title": "Pet Details",
       "pet_name": "Pet Name",
       "pet_type": "Pet Type",
+      "select_pet_type": "Select Pet Type",
       "age": "Age",
       "color": "Color",
       "gender": "Gender",
       "male": "Male",
       "female": "Female",
+      "unknown": "Unknown",
       "year": "Year",
       "month": "Month",
       "weight": "Weight",
       "size": "Size",
-      "breed": "Breed"
+      "breed": "Breed",
+      "description": "Description",
+      "description_hint": "Enter a description of the animal",
+      "animal_types": {
+        "dog": "Dog",
+        "cat": "Cat",
+        "bird": "Bird",
+        "fish": "Fish",
+        "rabbit": "Rabbit",
+        "hamster": "Hamster",
+        "guinea_pig": "Guinea Pig",
+        "other": "Other"
+      }
     },
     "contact_info": {
       "title": "Contact Information",
@@ -342,6 +373,14 @@
       "submit": "Submit",
       "save_draft": "Save Draft",
       "preview": "Preview"
+    },
+    "messages": {
+      "owner_not_found": "Cannot find the ad owner",
+      "cannot_chat_with_self": "You cannot chat with yourself",
+      "opening_chat": "Opening chat...",
+      "chat_with_owner": "Chat with Owner",
+      "chat_initial_message": "Hello, I would like to contact you regarding {0}",
+      "chat_error": "Error opening chat: {0}"
     }
   },
   "post_report": {
@@ -458,7 +497,17 @@
     "features": "Features",
     "rating": "rating",
     "visit_website": "Visit Website",
-    "get_directions": "Get Directions"
+    "get_directions": "Get Directions",
+    "delivery_available": "Delivery Available",
+    "delivery_available_description": "Home delivery service",
+    "online_store": "Online Store",
+    "online_store_description": "Visit our website",
+    "physical_store": "Physical Store",
+    "physical_store_description": "Visit our location",
+    "verified_store": "Verified Store",
+    "verified_store_description": "Trusted by Alifi",
+    "unknown_store": "Unknown Store",
+    "unknown_city": "Unknown City"
   },
   "location": {
     "title": "Location",
@@ -478,5 +527,51 @@
     "language_changed": "Language changed successfully"
   },
   "we_have_the_best_doctors_in_this_app": "We have the best doctors in this app",
-  "chat_with_dr_now": "Chat with Dr Now"
+  "chat_with_dr_now": "Chat with Dr Now",
+  "admin": {
+    "dashboard_title": "🏥 Alifi Admin Dashboard",
+    "back_to_app": "Back to App",
+    "admin_control_panel": "Admin Control Panel",
+    "admin_control_panel_subtitle": "Manage veterinarians, users, and application settings",
+    "quick_stats": "Quick Stats",
+    "total_users": "Total Users",
+    "veterinarians": "Veterinarians",
+    "active_reports": "Active Reports",
+    "management_options": "Management Options",
+    "veterinarian_management": "Veterinarian Management",
+    "veterinarian_management_subtitle": "Add, edit, or remove veterinarian accounts",
+    "user_management": "User Management",
+    "user_management_subtitle": "View and manage user accounts",
+    "report_management": "Report Management",
+    "report_management_subtitle": "Monitor and manage pet reports",
+    "app_settings": "App Settings",
+    "app_settings_subtitle": "Configure application settings",
+    "app_settings_coming_soon": "App Settings - Coming Soon",
+    "edit_veterinarian": "Edit Veterinarian",
+    "add_new_veterinarian": "Add New Veterinarian",
+    "update_veterinarian_info": "Update veterinarian information",
+    "create_veterinarian_account": "Create a new veterinarian account",
+    "personal_information": "Personal Information",
+    "full_name_required": "Full Name *",
+    "email_address_required": "Email Address *",
+    "password_required": "Password *",
+    "phone_number_required": "Phone Number *",
+    "professional_information": "Professional Information",
+    "specialization_required": "Specialization *",
+    "years_of_experience_required": "Years of Experience *",
+    "license_number": "License Number",
+    "update": "Update",
+    "veterinarian_updated_successfully": "Veterinarian updated successfully!",
+    "veterinarian_account_created_successfully": "Veterinarian account created successfully!",
+    "add_veterinarian": "Add Veterinarian",
+    "delete_veterinarian": "Delete Veterinarian",
+    "full_name_required_error": "Full name is required",
+    "email_required_error": "Email is required",
+    "valid_email_error": "Please enter a valid email",
+    "password_required_error": "Password is required",
+    "password_min_length_error": "Password must be at least 6 characters",
+    "phone_required_error": "Phone number is required",
+    "specialization_required_error": "Specialization is required",
+    "experience_required_error": "Experience is required"
+  }
 }

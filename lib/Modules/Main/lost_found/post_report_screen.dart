@@ -67,7 +67,7 @@ class PostReportScreen extends StatelessWidget {
                     Expanded(
                       child: _buildActionButton(
                         context: context,
-                        title: 'Found Animals',
+                        title: 'lost_found.found_pets',
                         color: AppTheme.primaryOrange,
                         onTap: () => _handleFoundPet(context),
                       ),
@@ -79,7 +79,7 @@ class PostReportScreen extends StatelessWidget {
                     Expanded(
                       child: _buildActionButton(
                         context: context,
-                        title: 'Lost Animals',
+                        title: 'lost_found.lost_pets',
                         color: AppTheme.primaryGreen,
                         onTap: () => _handleLostPet(context),
                       ),

@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../firebase/firebase_config.dart';
 import 'improved_firebase_wrapper.dart';
+import 'chat_service.dart';
 
 
 class AuthService {
@@ -91,6 +92,14 @@ class AuthService {
       // Update last login time
       await _updateLastLogin(credential.safeUser.uid);
       
+      // Clear chat cache after successful login
+      try {
+        ChatService.clearAllCaches();
+        print('✅ Chat cache cleared after login');
+      } catch (e) {
+        print('⚠️ Could not clear chat cache: $e');
+      }
+      
       return credential;
     } catch (e) {
       throw Exception(_handleAuthError(e));
@@ -133,6 +142,14 @@ class AuthService {
         // Continue anyway - Firebase Auth succeeded
       }
 
+      // Clear chat cache after successful login
+      try {
+        ChatService.clearAllCaches();
+        print('✅ Chat cache cleared after login');
+      } catch (e) {
+        print('⚠️ Could not clear chat cache: $e');
+      }
+      
       return credential;
     } catch (e) {
       print('❌ Error creating user: $e');
@@ -143,6 +160,14 @@ class AuthService {
   // Sign out
   static Future<void> signOut() async {
     try {
+      // Clear chat cache before logout
+      try {
+        ChatService.clearAllCaches();
+        print('✅ Chat cache cleared before logout');
+      } catch (e) {
+        print('⚠️ Could not clear chat cache: $e');
+      }
+      
       await ImprovedFirebaseWrapper.signOut();
     } catch (e) {
       throw Exception(_handleAuthError(e));

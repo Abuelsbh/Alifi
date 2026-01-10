@@ -421,7 +421,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
           ),
           if (_servicesExpanded) ...[
             _buildServiceItem(
-              'Lost Animals',
+              Provider.of<AppLanguage>(context).translate('profile.lost_animals'),
               () {
                 Navigator.push(
                   context,
@@ -432,7 +432,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
               },
             ),
             _buildServiceItem(
-              'Animal for Adoption',
+              Provider.of<AppLanguage>(context).translate('profile.animal_for_adoption'),
               () {
                 Navigator.push(
                   context,
@@ -443,7 +443,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
               },
             ),
             _buildServiceItem(
-              'Animals for Mating',
+              Provider.of<AppLanguage>(context).translate('profile.animals_for_mating'),
               () {
                 Navigator.push(
                   context,
@@ -454,7 +454,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
               },
             ),
             _buildServiceItem(
-              'Pet Supply Stores',
+              Provider.of<AppLanguage>(context).translate('profile.pet_supply_stores'),
               () {
                 Navigator.push(
                   context,

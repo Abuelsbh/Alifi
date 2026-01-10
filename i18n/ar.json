@@ -44,7 +44,16 @@
     "account_created_successfully": "تم إنشاء الحساب بنجاح!",
     "demo_mode": "وضع التجريب",
     "guest_mode": "وضع الزائر",
-    "continue_demo_mode": "المتابعة في وضع التجريب"
+    "continue_demo_mode": "المتابعة في وضع التجريب",
+    "join_community": "انضم إلى مجتمع عليفي",
+    "name_required": "الاسم مطلوب",
+    "name_min_length": "الاسم يجب أن يكون حرفين على الأقل",
+    "email_required": "البريد الإلكتروني مطلوب",
+    "valid_email_required": "يرجى إدخال بريد إلكتروني صحيح",
+    "password_required": "كلمة المرور مطلوبة",
+    "password_min_length": "كلمة المرور يجب أن تكون 6 أحرف على الأقل",
+    "confirm_password_required": "يرجى تأكيد كلمة المرور",
+    "passwords_not_match": "كلمات المرور غير متطابقة"
   },
   "profile": {
     "my_profile": "ملفي الشخصي",
@@ -83,7 +92,11 @@
     "account": "الحساب",
     "services": "الخدمات",
     "image_updated": "تم تحديث صورة الملف الشخصي بنجاح",
-    "image_error": "خطأ في تحديث صورة الملف الشخصي"
+    "image_error": "خطأ في تحديث صورة الملف الشخصي",
+    "lost_animals": "الحيوانات الضائعة",
+    "animal_for_adoption": "حيوانات للتبني",
+    "animals_for_mating": "حيوانات للتزاوج",
+    "pet_supply_stores": "متاجر مستلزمات الحيوانات"
   },
   "home": {
     "welcome": "مرحباً بك في عليفي",
@@ -173,6 +186,10 @@
     "large": "كبير",
     "no_results": "لم يتم العثور على نتائج",
     "try_different_search": "جرب بحثاً مختلفاً",
+    "no_lost_pets": "لا توجد حيوانات مفقودة",
+    "no_found_pets": "لا توجد حيوانات موجودة",
+    "no_matching_pets": "لم يتم العثور على أي حيوانات مطابقة للبحث",
+    "try_adjust_search": "جرب تعديل البحث أو الفلاتر",
     "report_details": "تفاصيل البلاغ",
     "contact_reporter": "الاتصال بالمبلغ",
     "select_report_type": "اختر نوع الإعلان",
@@ -285,16 +302,30 @@
       "title": "تفاصيل الحيوان",
       "pet_name": "اسم الحيوان",
       "pet_type": "نوع الحيوان",
+      "select_pet_type": "اختر نوع الحيوان",
       "age": "العمر",
       "color": "اللون",
       "gender": "الجنس",
       "male": "ذكر",
       "female": "أنثى",
+      "unknown": "غير معروف",
       "year": "سنة",
       "month": "شهر",
       "weight": "الوزن",
       "size": "الحجم",
-      "breed": "السلالة"
+      "breed": "السلالة",
+      "description": "الوصف",
+      "description_hint": "اكتب وصفاً للحيوان",
+      "animal_types": {
+        "dog": "كلب",
+        "cat": "قطة",
+        "bird": "طائر",
+        "fish": "سمك",
+        "rabbit": "أرنب",
+        "hamster": "همستر",
+        "guinea_pig": "خنزير غيني",
+        "other": "أخرى"
+      }
     },
     "contact_info": {
       "title": "معلومات الاتصال",
@@ -342,6 +373,14 @@
       "submit": "إرسال",
       "save_draft": "حفظ كمسودة",
       "preview": "معاينة"
+    },
+    "messages": {
+      "owner_not_found": "لا يمكن العثور على صاحب الإعلان",
+      "cannot_chat_with_self": "لا يمكنك التواصل مع نفسك",
+      "opening_chat": "جاري فتح المحادثة...",
+      "chat_with_owner": "تواصل مع صاحب الإعلان",
+      "chat_initial_message": "مرحباً، أريد التواصل معك بخصوص {0}",
+      "chat_error": "خطأ في فتح المحادثة: {0}"
     }
   },
   "post_report": {
@@ -458,7 +497,17 @@
     "features": "المميزات",
     "rating": "التقييم",
     "visit_website": "زيارة الموقع",
-    "get_directions": "الحصول على الاتجاهات"
+    "get_directions": "الحصول على الاتجاهات",
+    "delivery_available": "التوصيل متاح",
+    "delivery_available_description": "خدمة التوصيل للمنازل",
+    "online_store": "متجر إلكتروني",
+    "online_store_description": "زر موقعنا الإلكتروني",
+    "physical_store": "متجر فعلي",
+    "physical_store_description": "زر موقعنا",
+    "verified_store": "متجر موثوق",
+    "verified_store_description": "موثوق من عليفي",
+    "unknown_store": "متجر غير معروف",
+    "unknown_city": "مدينة غير معروفة"
   },
   "location": {
     "title": "الموقع",
@@ -478,5 +527,51 @@
     "language_changed": "تم تغيير اللغة بنجاح"
   },
   "we_have_the_best_doctors_in_this_app": "لدينا أفضل الأطباء في هذا التطبيق",
-  "chat_with_dr_now": "تحدث مع الطبيب الآن"
+  "chat_with_dr_now": "تحدث مع الطبيب الآن",
+  "admin": {
+    "dashboard_title": "لوحة تحكم عليفي",
+    "back_to_app": "العودة للتطبيق",
+    "admin_control_panel": "لوحة التحكم الإدارية",
+    "admin_control_panel_subtitle": "إدارة الأطباء البيطريين والمستخدمين وإعدادات التطبيق",
+    "quick_stats": "إحصائيات سريعة",
+    "total_users": "إجمالي المستخدمين",
+    "veterinarians": "الأطباء البيطريين",
+    "active_reports": "البلاغات النشطة",
+    "management_options": "خيارات الإدارة",
+    "veterinarian_management": "إدارة الأطباء البيطريين",
+    "veterinarian_management_subtitle": "إضافة أو تعديل أو حذف حسابات الأطباء البيطريين",
+    "user_management": "إدارة المستخدمين",
+    "user_management_subtitle": "عرض وإدارة حسابات المستخدمين",
+    "report_management": "إدارة البلاغات",
+    "report_management_subtitle": "مراقبة وإدارة بلاغات الحيوانات",
+    "app_settings": "إعدادات التطبيق",
+    "app_settings_subtitle": "تكوين إعدادات التطبيق",
+    "app_settings_coming_soon": "إعدادات التطبيق - قريباً",
+    "edit_veterinarian": "تعديل طبيب بيطري",
+    "add_new_veterinarian": "إضافة طبيب بيطري جديد",
+    "update_veterinarian_info": "تحديث معلومات الطبيب البيطري",
+    "create_veterinarian_account": "إنشاء حساب طبيب بيطري جديد",
+    "personal_information": "المعلومات الشخصية",
+    "full_name_required": "الاسم الكامل *",
+    "email_address_required": "عنوان البريد الإلكتروني *",
+    "password_required": "كلمة المرور *",
+    "phone_number_required": "رقم الهاتف *",
+    "professional_information": "المعلومات المهنية",
+    "specialization_required": "التخصص *",
+    "years_of_experience_required": "سنوات الخبرة *",
+    "license_number": "رقم الترخيص",
+    "update": "تحديث",
+    "veterinarian_updated_successfully": "تم تحديث الطبيب البيطري بنجاح!",
+    "veterinarian_account_created_successfully": "تم إنشاء حساب الطبيب البيطري بنجاح!",
+    "add_veterinarian": "إضافة طبيب بيطري",
+    "delete_veterinarian": "حذف طبيب بيطري",
+    "full_name_required_error": "الاسم الكامل مطلوب",
+    "email_required_error": "البريد الإلكتروني مطلوب",
+    "valid_email_error": "يرجى إدخال بريد إلكتروني صحيح",
+    "password_required_error": "كلمة المرور مطلوبة",
+    "password_min_length_error": "كلمة المرور يجب أن تكون 6 أحرف على الأقل",
+    "phone_required_error": "رقم الهاتف مطلوب",
+    "specialization_required_error": "التخصص مطلوب",
+    "experience_required_error": "الخبرة مطلوبة"
+  }
 }

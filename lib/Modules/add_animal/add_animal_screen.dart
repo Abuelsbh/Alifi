@@ -117,18 +117,15 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
   Future<void> _handleFormSubmission() async {
     try {
       // Validation
-      if (con.nameController.text.trim().isEmpty) {
-        _showErrorDialog('يرجى إدخال اسم الحيوان');
-        return;
-      }
-      
-      if (con.typeController.text.trim().isEmpty) {
-        _showErrorDialog('يرجى إدخال نوع الحيوان');
+      if (con.selectedPetType == null || con.selectedPetType!.isEmpty) {
+        final appLanguage = Provider.of<AppLanguage>(context, listen: false);
+        _showErrorDialog(appLanguage.translate('validation.required_field') + ': ' + appLanguage.translate('add_animal.pet_details.pet_type'));
         return;
       }
       
       if (con.selectedImages.isEmpty) {
-        _showErrorDialog('يرجى إضافة صورة واحدة على الأقل');
+        final appLanguage = Provider.of<AppLanguage>(context, listen: false);
+        _showErrorDialog(appLanguage.translate('post_report.photo_required'));
         return;
       }
 

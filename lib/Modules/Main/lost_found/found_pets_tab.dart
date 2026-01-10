@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../Utilities/theme_helper.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/pet_reports_service.dart';
+import '../../../Widgets/translated_text.dart';
 import 'unified_pet_card.dart';
 
 class FoundPetsTab extends StatefulWidget {
@@ -193,15 +194,15 @@ class _FoundPetsTabState extends State<FoundPetsTab> {
             color: Colors.grey[400],
           ),
           SizedBox(height: 16.h),
-          Text(
-            'لا توجد حيوانات موجودة',
+          TranslatedText(
+            'lost_found.no_found_pets',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: Colors.grey[600],
             ),
           ),
           SizedBox(height: 8.h),
-          Text(
-            'لم يتم العثور على أي حيوانات مطابقة للبحث',
+          TranslatedText(
+            'lost_found.no_matching_pets',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey[500],
             ),

@@ -41,48 +41,10 @@ class ChatService {
 
   // Get user's chats stream with caching
   static Stream<List<ChatModel>> getUserChatsStream(String userId) {
-    if (_chatStreamsCache.containsKey(userId)) {
-      return _chatStreamsCache[userId]!;
-    }
-    
-    // If in demo mode, return mock chats
+    // Always create a fresh stream from Firebase - don't cache to ensure real-time updates
+    // If in demo mode, return empty stream
     if (FirebaseConfig.isDemoMode) {
-      final mockChats = [
-        ChatModel(
-          id: 'demo_chat_1',
-          participants: [userId, 'demo_vet_1'],
-          participantNames: {
-            userId: 'المستخدم',
-            'demo_vet_1': 'د. أحمد محمد',
-          },
-          lastMessage: 'مرحباً، كيف يمكنني مساعدتك؟',
-          lastMessageAt: DateTime.now().subtract(const Duration(minutes: 5)),
-          lastMessageSender: 'demo_vet_1',
-          isActive: true,
-          createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-          updatedAt: DateTime.now().subtract(const Duration(minutes: 5)),
-          unreadCount: {userId: 0, 'demo_vet_1': 0},
-        ),
-        ChatModel(
-          id: 'demo_chat_2',
-          participants: [userId, 'demo_vet_2'],
-          participantNames: {
-            userId: 'المستخدم',
-            'demo_vet_2': 'د. فاطمة علي',
-          },
-          lastMessage: 'سأقوم بفحص حالة حيوانك الأليف',
-          lastMessageAt: DateTime.now().subtract(const Duration(hours: 1)),
-          lastMessageSender: 'demo_vet_2',
-          isActive: true,
-          createdAt: DateTime.now().subtract(const Duration(days: 1)),
-          updatedAt: DateTime.now().subtract(const Duration(hours: 1)),
-          unreadCount: {userId: 1, 'demo_vet_2': 0},
-        ),
-      ];
-      
-      final stream = Stream.value(mockChats);
-      _chatStreamsCache[userId] = stream;
-      return stream;
+      return Stream.value(<ChatModel>[]);
     }
     
     final stream = _firestore
@@ -98,14 +60,14 @@ class ChatService {
           return chats;
         });
     
-    _chatStreamsCache[userId] = stream;
     return stream;
   }
 
-  // Get chat messages stream with caching
+  // Get chat messages stream - always fresh from Firebase
   static Stream<List<ChatMessage>> getChatMessagesStream(String chatId) {
-    if (_messageStreamsCache.containsKey(chatId)) {
-      return _messageStreamsCache[chatId]!;
+    // Always create a fresh stream from Firebase - don't cache to ensure real-time updates
+    if (FirebaseConfig.isDemoMode) {
+      return Stream.value(<ChatMessage>[]);
     }
     
     final stream = _firestore
@@ -121,15 +83,14 @@ class ChatService {
               .toList();
         });
     
-    _messageStreamsCache[chatId] = stream;
     return stream;
   }
 
-  // Get veterinarians stream with caching
+  // Get veterinarians stream - always fresh from Firebase
   static Stream<List<Map<String, dynamic>>> getVeterinariansStream() {
-    const cacheKey = 'veterinarians';
-    if (_veterinariansStreamCache.containsKey(cacheKey)) {
-      return _veterinariansStreamCache[cacheKey]!;
+    // Always create a fresh stream from Firebase - don't cache to ensure real-time updates
+    if (FirebaseConfig.isDemoMode) {
+      return Stream.value(<Map<String, dynamic>>[]);
     }
     
     try {
@@ -160,7 +121,6 @@ class ChatService {
             return <Map<String, dynamic>>[];
           });
       
-      _veterinariansStreamCache[cacheKey] = stream;
       return stream;
     } catch (e) {
       print('Error creating veterinarians stream: $e');
@@ -230,13 +190,22 @@ class ChatService {
           .collection('veterinary_chats')
           .add(chatData);
 
+      // Wait for document to be fully created
+      await chatRef.get();
+
       // Add initial message if provided
       if (initialMessage != null && initialMessage.isNotEmpty) {
-        await sendTextMessage(
-          chatId: chatRef.id,
-          senderId: userId,
-          message: initialMessage,
-        );
+        try {
+          await sendTextMessage(
+            chatId: chatRef.id,
+            senderId: userId,
+            message: initialMessage,
+          );
+          print('✅ Initial message sent successfully to veterinary chat: ${chatRef.id}');
+        } catch (e) {
+          print('⚠️ Error sending initial message to veterinary chat: $e');
+          // Don't throw - chat was created successfully, message can be sent later
+        }
       }
 
       return chatRef.id;
@@ -819,10 +788,11 @@ class ChatService {
 
   // ========== USER TO USER CHAT METHODS ==========
 
-  // Get user's chats with other users stream
+  // Get user's chats with other users stream - always fresh from Firebase
   static Stream<List<ChatModel>> getUserToUserChatsStream(String userId) {
-    if (_chatStreamsCache.containsKey('user_$userId')) {
-      return _chatStreamsCache['user_$userId']!;
+    // Always create a fresh stream from Firebase - don't cache to ensure real-time updates
+    if (FirebaseConfig.isDemoMode) {
+      return Stream.value(<ChatModel>[]);
     }
     
     final stream = _firestore
@@ -838,14 +808,14 @@ class ChatService {
           return chats;
         });
     
-    _chatStreamsCache['user_$userId'] = stream;
     return stream;
   }
 
-  // Get chat messages stream for user-to-user chats
+  // Get chat messages stream for user-to-user chats - always fresh from Firebase
   static Stream<List<ChatMessage>> getUserChatMessagesStream(String chatId) {
-    if (_messageStreamsCache.containsKey('user_$chatId')) {
-      return _messageStreamsCache['user_$chatId']!;
+    // Always create a fresh stream from Firebase - don't cache to ensure real-time updates
+    if (FirebaseConfig.isDemoMode) {
+      return Stream.value(<ChatMessage>[]);
     }
     
     final stream = _firestore
@@ -861,7 +831,6 @@ class ChatService {
               .toList();
         });
     
-    _messageStreamsCache['user_$chatId'] = stream;
     return stream;
   }
 
@@ -931,13 +900,43 @@ class ChatService {
           .collection('user_chats')
           .add(chatData);
 
+      // Wait for document to be fully created and ensure it's persisted
+      final chatDoc = await chatRef.get();
+      if (!chatDoc.exists) {
+        throw Exception('فشل في إنشاء المحادثة');
+      }
+
       // Add initial message if provided
       if (initialMessage != null && initialMessage.isNotEmpty) {
-        await sendUserTextMessage(
-          chatId: chatRef.id,
-          senderId: userId,
-          message: initialMessage,
-        );
+        try {
+          // Wait a bit to ensure chat document is fully written
+          await Future.delayed(const Duration(milliseconds: 300));
+          
+          await sendUserTextMessage(
+            chatId: chatRef.id,
+            senderId: userId,
+            message: initialMessage,
+          );
+          print('✅ Initial message sent successfully to chat: ${chatRef.id}');
+          
+          // Verify message was saved
+          final messagesSnapshot = await _firestore
+              .collection('user_chats')
+              .doc(chatRef.id)
+              .collection('messages')
+              .orderBy('timestamp', descending: true)
+              .limit(1)
+              .get();
+          
+          if (messagesSnapshot.docs.isEmpty) {
+            print('⚠️ Warning: Initial message might not have been saved');
+          } else {
+            print('✅ Verified: Initial message exists in chat: ${chatRef.id}');
+          }
+        } catch (e) {
+          print('⚠️ Error sending initial message: $e');
+          // Don't throw - chat was created successfully, message can be sent later
+        }
       }
 
       return chatRef.id;
@@ -953,10 +952,15 @@ class ChatService {
     required String message,
   }) async {
     try {
+      print('📤 Sending user-to-user message to chat: $chatId, from: $senderId');
+      
       final chatDoc = await _firestore.collection('user_chats').doc(chatId).get();
       if (!chatDoc.exists) {
+        print('❌ Chat document does not exist: $chatId');
         throw Exception('المحادثة غير موجودة');
       }
+      
+      print('✅ Chat document exists, proceeding with message send');
       
       final chatData = chatDoc.data()!;
       final participants = List<String>.from(chatData['participants'] ?? []);
@@ -982,6 +986,9 @@ class ChatService {
         print('Warning: Could not fetch sender name: $e');
       }
       
+      // Create message document with explicit ID for better tracking
+      final messageId = DateTime.now().millisecondsSinceEpoch.toString();
+      
       final messageData = {
         'chatId': chatId,
         'senderId': senderId,
@@ -989,7 +996,7 @@ class ChatService {
         'timestamp': FieldValue.serverTimestamp(),
         'type': MessageType.text.name,
         'isRead': false,
-        'messageId': DateTime.now().millisecondsSinceEpoch.toString(),
+        'messageId': messageId,
         'senderName': senderName,
       };
 
@@ -999,7 +1006,7 @@ class ChatService {
           .collection('user_chats')
           .doc(chatId)
           .collection('messages')
-          .doc();
+          .doc(messageId);
 
       batch.set(messageRef, messageData);
 
@@ -1022,7 +1029,22 @@ class ChatService {
       });
 
       await batch.commit();
+      print('✅ User-to-user message sent successfully to chat: $chatId, messageId: $messageId');
+      
+      // Verify message was saved (with a small delay to allow Firestore to process)
+      try {
+        await Future.delayed(const Duration(milliseconds: 200));
+        final savedMessage = await messageRef.get();
+        if (savedMessage.exists) {
+          print('✅ Verified: Message saved successfully in chat: $chatId');
+        } else {
+          print('⚠️ Warning: Message might not have been saved properly');
+        }
+      } catch (e) {
+        print('⚠️ Warning: Could not verify message save: $e');
+      }
     } catch (e) {
+      print('❌ Error sending user-to-user message: $e');
       throw Exception('فشل في إرسال الرسالة: $e');
     }
   }

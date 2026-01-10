@@ -92,31 +92,64 @@ class _BreedingPetsScreenState extends State<BreedingPetsScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          if (AuthService.isAuthenticated) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AddAnimalScreen(
-                  reportType: ReportType.breeding,
-                  title: 'إضافة حيوان للتزاوج',
-                ),
-              ),
-            );
-          } else {
-            DialogHelper.custom(context: context).customDialog(
-              dialogWidget: LoginWidget(
-              ),
-            );
-          }
+      floatingActionButton: _buildCustomFloatingActionButton(),
+    );
+  }
 
-        },
-        backgroundColor: AppTheme.primaryGreen,
-        child: const Icon(Icons.add, color: Colors.white),
+  Widget _buildCustomFloatingActionButton() {
+    return GestureDetector(
+      onTap: () {
+        if (AuthService.isAuthenticated) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AddAnimalScreen(
+                reportType: ReportType.breeding,
+                title: 'إضافة حيوان للتزاوج',
+              ),
+            ),
+          );
+        } else {
+          DialogHelper.custom(context: context).customDialog(
+            dialogWidget: LoginWidget(
+            ),
+          );
+        }
+      },
+      child: SizedBox(
+        width: 70.w,
+        height: 70.h,
+        child: Container(
+          width: 56.w,
+          height: 56.h,
+          decoration: BoxDecoration(
+            color: AppTheme.primaryGreen,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white,
+              width: 2.5.w,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.25),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Icon(
+              Icons.add,
+              color: Colors.white,
+              size: 30.sp,
+              weight: 700,
+            ),
+          ),
+        ),
       ),
     );
   }
+
 
   Widget _buildEmptyState() {
     return Center(
