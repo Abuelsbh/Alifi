@@ -24,23 +24,29 @@ class VeterinaryService {
         password: password,
       );
 
-      // Create veterinarian profile in Firestore
-      await _firestore.collection('veterinarians').doc(userCredential.user!.uid).set({
+      // Create veterinarian profile in users collection
+      await _firestore.collection('users').doc(userCredential.user!.uid).set({
         'uid': userCredential.user!.uid,
         'email': email,
-        'name': name,
+        'username': name,
+        'name': name, // Also store as name
         'specialization': specialization,
         'experience': experience,
         'phone': phone,
+        'phoneNumber': phone, // Also store as phoneNumber
         'profileImage': profileImage,
+        'profileImageUrl': profileImage, // Also store as profileImageUrl
+        'profilePhoto': profileImage, // Also store as profilePhoto for compatibility
         'bio': bio,
         'isOnline': false,
+        'isActive': true,
         'rating': 0.0,
         'totalRatings': 0,
         'isVerified': true,
+        'userType': 'veterinarian', // Flag to identify veterinarian
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-        'userType': 'veterinarian',
+        'lastLoginAt': null,
       });
 
       // Update display name in Firebase Auth
@@ -63,35 +69,41 @@ class VeterinaryService {
         password: password,
       );
 
-      // Check if user is a veterinarian
-      final vetDoc = await _firestore
-          .collection('veterinarians')
+      // Check if user is a veterinarian from users collection
+      final userDoc = await _firestore
+          .collection('users')
           .doc(userCredential.user!.uid)
           .get();
 
-      if (!vetDoc.exists) {
+      if (!userDoc.exists) {
+        await _auth.signOut();
+        throw Exception('المستخدم غير موجود');
+      }
+
+      final userData = userDoc.data();
+      // Check if user is a veterinarian
+      if (userData?['userType'] != 'veterinarian') {
         await _auth.signOut();
         throw Exception('هذا الحساب ليس حساب طبيب بيطري');
       }
 
       // Check if veterinarian is deleted or inactive
-      final vetData = vetDoc.data();
-      if (vetData != null) {
+      if (userData != null) {
         // Check if veterinarian is deleted
-        if (vetData['isDeleted'] == true) {
+        if (userData['isDeleted'] == true) {
           await _auth.signOut();
           throw Exception('تم حذف هذا الحساب');
         }
         // Check if veterinarian is inactive
-        if (vetData['isActive'] == false) {
+        if (userData['isActive'] == false) {
           await _auth.signOut();
           throw Exception('تم توقيف هذا الحساب');
         }
       }
 
-      // Update online status
+      // Update online status in users collection
       await _firestore
-          .collection('veterinarians')
+          .collection('users')
           .doc(userCredential.user!.uid)
           .update({
         'isOnline': true,
@@ -104,36 +116,48 @@ class VeterinaryService {
     }
   }
 
-  // Get all veterinarians stream
+  // Get all veterinarians stream from users collection
   static Stream<List<Map<String, dynamic>>> getVeterinariansStream() {
     return _firestore
-        .collection('veterinarians')
-        .where('isVerified', isEqualTo: true)
+        .collection('users')
+        .where('userType', isEqualTo: 'veterinarian')
+        .where('isActive', isEqualTo: true)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
           .map((doc) {
             final data = doc.data();
-            data['id'] = doc.id;
-            return data;
+            return {
+              'id': doc.id,
+              ...data,
+              // Map fields for compatibility
+              'name': data['name'] ?? data['username'] ?? 'طبيب بيطري',
+              'profilePhoto': data['profileImageUrl'] ?? data['profilePhoto'],
+            };
           })
           .where((vet) => vet['isDeleted'] != true) // Filter out deleted veterinarians
           .toList();
     });
   }
 
-  // Get all veterinarians for admin (including unverified)
+  // Get all veterinarians for admin (including unverified) from users collection
   static Stream<List<Map<String, dynamic>>> getAllVeterinariansForAdmin() {
     return _firestore
-        .collection('veterinarians')
+        .collection('users')
+        .where('userType', isEqualTo: 'veterinarian')
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
           .map((doc) {
             final data = doc.data();
-            data['id'] = doc.id;
-            return data;
+            return {
+              'id': doc.id,
+              ...data,
+              // Map fields for compatibility
+              'name': data['name'] ?? data['username'] ?? 'طبيب بيطري',
+              'profilePhoto': data['profileImageUrl'] ?? data['profilePhoto'],
+            };
           })
           .where((vet) => vet['isDeleted'] != true) // Filter out deleted veterinarians
           .toList();
@@ -159,24 +183,27 @@ class VeterinaryService {
 
       final uid = userCredential.user!.uid;
 
-      // Create veterinarian profile in Firestore
-      await _firestore.collection('veterinarians').doc(uid).set({
+      // Create veterinarian profile in users collection with all veterinarian data
+      await _firestore.collection('users').doc(uid).set({
         'uid': uid,
         'email': email,
-        'name': name,
+        'username': name,
+        'name': name, // Also store as name for compatibility
+        'phoneNumber': phone,
+        'phone': phone, // Also store as phone for compatibility
         'specialization': specialization,
         'experience': experience,
-        'phone': phone,
-        'license': license,
+        'license': license ?? '',
         'isOnline': false,
         'isActive': true,
         'rating': 0.0,
         'totalRatings': 0,
         'isVerified': true,
+        'userType': 'veterinarian', // Flag to identify veterinarian
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
+        'lastLoginAt': null,
         'joinDate': DateTime.now().toIso8601String(),
-        'userType': 'veterinarian',
       });
 
       // Update display name in Firebase Auth
@@ -188,7 +215,7 @@ class VeterinaryService {
     }
   }
 
-  // Update veterinarian
+  // Update veterinarian in users collection
   static Future<void> updateVeterinarian({
     required String vetId,
     required String name,
@@ -199,13 +226,15 @@ class VeterinaryService {
     String? license,
   }) async {
     try {
-      await _firestore.collection('veterinarians').doc(vetId).update({
+      await _firestore.collection('users').doc(vetId).update({
         'name': name,
+        'username': name, // Also update username
         'email': email,
         'specialization': specialization,
         'experience': experience,
         'phone': phone,
-        'license': license,
+        'phoneNumber': phone, // Also update phoneNumber
+        if (license != null) 'license': license,
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
@@ -213,10 +242,10 @@ class VeterinaryService {
     }
   }
 
-  // Toggle veterinarian active status
+  // Toggle veterinarian active status in users collection
   static Future<void> toggleVeterinarianStatus(String vetId, bool isActive) async {
     try {
-      await _firestore.collection('veterinarians').doc(vetId).update({
+      await _firestore.collection('users').doc(vetId).update({
         'isActive': isActive,
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -225,11 +254,16 @@ class VeterinaryService {
     }
   }
 
-  // Delete veterinarian
+  // Delete veterinarian (mark as deleted in users collection)
   static Future<void> deleteVeterinarian(String vetId) async {
     try {
-      // Delete from Firestore
-      await _firestore.collection('veterinarians').doc(vetId).delete();
+      // Mark as deleted instead of actually deleting
+      await _firestore.collection('users').doc(vetId).update({
+        'isDeleted': true,
+        'isActive': false,
+        'deletedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
       
       // Note: Firebase Auth user deletion requires admin SDK or the user to be signed in
       // For production, you should use Firebase Admin SDK or Cloud Functions
@@ -238,14 +272,22 @@ class VeterinaryService {
     }
   }
 
-  // Get veterinarian by ID
+  // Get veterinarian by ID from users collection
   static Future<Map<String, dynamic>?> getVeterinarianById(String vetId) async {
     try {
-      final doc = await _firestore.collection('veterinarians').doc(vetId).get();
+      final doc = await _firestore.collection('users').doc(vetId).get();
       if (doc.exists) {
         final data = doc.data()!;
-        data['id'] = doc.id;
-        return data;
+        // Check if user is a veterinarian
+        if (data['userType'] == 'veterinarian') {
+          return {
+            'id': doc.id,
+            ...data,
+            // Map fields for compatibility
+            'name': data['name'] ?? data['username'] ?? 'طبيب بيطري',
+            'profilePhoto': data['profileImageUrl'] ?? data['profilePhoto'],
+          };
+        }
       }
       return null;
     } catch (e) {
@@ -278,9 +320,9 @@ class VeterinaryService {
     }
   }
 
-  // Update veterinarian online status
+  // Update veterinarian online status in users collection
   static Future<void> updateOnlineStatus(String vetId, bool isOnline) async {
-    await _firestore.collection('veterinarians').doc(vetId).update({
+    await _firestore.collection('users').doc(vetId).update({
       'isOnline': isOnline,
       'lastSeen': FieldValue.serverTimestamp(),
     });
@@ -300,23 +342,37 @@ class VeterinaryService {
       'updatedAt': FieldValue.serverTimestamp(),
     };
 
-    if (name != null) updateData['name'] = name;
+    if (name != null) {
+      updateData['name'] = name;
+      updateData['username'] = name; // Also update username
+    }
     if (specialization != null) updateData['specialization'] = specialization;
     if (experience != null) updateData['experience'] = experience;
-    if (phone != null) updateData['phone'] = phone;
-    if (profileImage != null) updateData['profileImage'] = profileImage;
+    if (phone != null) {
+      updateData['phone'] = phone;
+      updateData['phoneNumber'] = phone; // Also update phoneNumber
+    }
+    if (profileImage != null) {
+      updateData['profileImage'] = profileImage;
+      updateData['profileImageUrl'] = profileImage; // Also update profileImageUrl
+      updateData['profilePhoto'] = profileImage; // Also update profilePhoto for compatibility
+    }
     if (bio != null) updateData['bio'] = bio;
 
-    await _firestore.collection('veterinarians').doc(vetId).update(updateData);
+    await _firestore.collection('users').doc(vetId).update(updateData);
   }
 
-  // Check if current user is veterinarian
+  // Check if current user is veterinarian from users collection
   static Future<bool> isCurrentUserVeterinarian() async {
     final user = _auth.currentUser;
     if (user == null) return false;
 
-    final doc = await _firestore.collection('veterinarians').doc(user.uid).get();
-    return doc.exists;
+    final doc = await _firestore.collection('users').doc(user.uid).get();
+    if (doc.exists) {
+      final data = doc.data();
+      return data?['userType'] == 'veterinarian';
+    }
+    return false;
   }
 
   // Get current veterinarian data

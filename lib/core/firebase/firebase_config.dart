@@ -1,9 +1,11 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'firebase_options.dart';
 import '../services/chat_service.dart';
 
@@ -24,6 +26,48 @@ class FirebaseConfig {
       throw Exception('Firebase is running in demo mode. Please configure valid API keys.');
     }
     return FirebaseFirestore.instance;
+  }
+  
+  static FirebaseDatabase? _databaseInstance;
+  
+  static FirebaseDatabase get database {
+    if (_isDemoMode) {
+      throw Exception('Firebase is running in demo mode. Please configure valid API keys.');
+    }
+    
+    // Cache the instance to avoid recreating it
+    if (_databaseInstance != null) {
+      return _databaseInstance!;
+    }
+    
+    // For web, we need to specify the database URL
+    if (kIsWeb) {
+      try {
+        // Try the new format first (default region)
+        const databaseURL = 'https://bookingplayground-3f74b-default-rtdb.firebaseio.com';
+        _databaseInstance = FirebaseDatabase.instanceFor(
+          app: Firebase.app(), 
+          databaseURL: databaseURL
+        );
+        return _databaseInstance!;
+      } catch (e) {
+        print('⚠️ Warning: Could not initialize Realtime Database with URL. Error: $e');
+        print('💡 Please check your Firebase Console for the correct database URL.');
+        print('💡 The URL should be in format: https://PROJECT_ID-default-rtdb.firebaseio.com');
+        print('💡 Or: https://PROJECT_ID-default-rtdb.REGION.firebasedatabase.app');
+        // Try without explicit URL (might work if configured in Firebase Console)
+        try {
+          _databaseInstance = FirebaseDatabase.instance;
+          return _databaseInstance!;
+        } catch (e2) {
+          print('❌ Failed to initialize Realtime Database: $e2');
+          rethrow;
+        }
+      }
+    }
+    
+    _databaseInstance = FirebaseDatabase.instance;
+    return _databaseInstance!;
   }
   
   static FirebaseStorage get storage {

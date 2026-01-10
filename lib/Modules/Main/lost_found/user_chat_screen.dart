@@ -466,6 +466,7 @@ class _UserChatScreenState extends State<UserChatScreen>
                 String? profilePhoto;
                 if (snapshot.hasData && snapshot.data!.exists) {
                   final data = snapshot.data!.data() as Map<String, dynamic>?;
+                  // Get profile photo from users collection
                   profilePhoto = data?['profileImageUrl'] ?? data?['profilePhoto'];
                 }
                 

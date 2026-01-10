@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gap/gap.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../Widgets/custom_textfield_widget.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/chat_service.dart';
@@ -462,26 +463,17 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Dr.",
-                      style: TextStyle(
-                        color: ThemeClass.of(context).primaryColor,
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
+                Expanded(
+                  child: Text(
+                    widget.veterinarianName,
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      color: ThemeClass.of(context).backGroundColor,
+                      fontWeight: FontWeight.w600,
                     ),
-                    Gap(4.w),
-                    Text(
-                      'Mahmoud',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        color: ThemeClass.of(context).backGroundColor,
-                      ),
-                    ),
-                  ],
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -491,14 +483,34 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
             left: 0,
             right: 0,
             child: Center(
-              child:  CircleAvatar(
-                radius: 25.r,
-                backgroundColor: ThemeClass.of(context).primaryColor,
-                child: Icon(
-                  Icons.person,
-                  color: ThemeClass.of(context).secondaryColor,
-                  size: 35.sp,
-                ),
+              child: FutureBuilder<DocumentSnapshot>(
+                future: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(widget.veterinarianId)
+                    .get(),
+                builder: (context, snapshot) {
+                  String? profilePhoto;
+                  if (snapshot.hasData && snapshot.data!.exists) {
+                    final data = snapshot.data!.data() as Map<String, dynamic>?;
+                    // Get profile photo from users collection
+                    profilePhoto = data?['profileImageUrl'] ?? data?['profilePhoto'];
+                  }
+
+                  return CircleAvatar(
+                    radius: 25.r,
+                    backgroundColor: ThemeClass.of(context).primaryColor,
+                    backgroundImage: profilePhoto != null && profilePhoto.isNotEmpty
+                        ? NetworkImage(profilePhoto)
+                        : null,
+                    child: profilePhoto == null || profilePhoto.isEmpty
+                        ? Icon(
+                            Icons.person,
+                            color: ThemeClass.of(context).secondaryColor,
+                            size: 35.sp,
+                          )
+                        : null,
+                  );
+                },
               ),
             ),
           ),

@@ -14,6 +14,8 @@ class ChatModel extends Equatable {
   final String id;
   final List<String> participants;
   final Map<String, String> participantNames;
+  final Map<String, String?> participantPhotos; // صور المشاركين
+  final Map<String, String> participantTypes; // نوع المستخدم: 'veterinarian' أو 'user'
   final String lastMessage;
   final DateTime lastMessageAt;
   final String lastMessageSender;
@@ -28,6 +30,8 @@ class ChatModel extends Equatable {
     required this.id,
     required this.participants,
     required this.participantNames,
+    this.participantPhotos = const {},
+    this.participantTypes = const {},
     required this.lastMessage,
     required this.lastMessageAt,
     required this.lastMessageSender,
@@ -46,6 +50,8 @@ class ChatModel extends Equatable {
       id: doc.id,
       participants: List<String>.from(data['participants'] ?? []),
       participantNames: Map<String, String>.from(data['participantNames'] ?? {}),
+      participantPhotos: Map<String, String?>.from(data['participantPhotos'] ?? {}),
+      participantTypes: Map<String, String>.from(data['participantTypes'] ?? {}),
       lastMessage: data['lastMessage'] ?? '',
       lastMessageAt: (data['lastMessageAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       lastMessageSender: data['lastMessageSender'] ?? '',
@@ -62,6 +68,8 @@ class ChatModel extends Equatable {
     return {
       'participants': participants,
       'participantNames': participantNames,
+      'participantPhotos': participantPhotos,
+      'participantTypes': participantTypes,
       'lastMessage': lastMessage,
       'lastMessageAt': Timestamp.fromDate(lastMessageAt),
       'lastMessageSender': lastMessageSender,
@@ -75,23 +83,40 @@ class ChatModel extends Equatable {
   }
 
   factory ChatModel.fromJson(Map<String, dynamic> json) {
+    // Helper to parse timestamp (supports both ISO8601 string and milliseconds int)
+    DateTime parseTimestamp(dynamic value) {
+      if (value == null) return DateTime.now();
+      if (value is int) {
+        return DateTime.fromMillisecondsSinceEpoch(value);
+      }
+      if (value is String) {
+        try {
+          return DateTime.parse(value);
+        } catch (e) {
+          // Try parsing as milliseconds
+          final ms = int.tryParse(value);
+          if (ms != null) {
+            return DateTime.fromMillisecondsSinceEpoch(ms);
+          }
+          return DateTime.now();
+        }
+      }
+      return DateTime.now();
+    }
+
     return ChatModel(
       id: json['id'] ?? '',
       participants: List<String>.from(json['participants'] ?? []),
       participantNames: Map<String, String>.from(json['participantNames'] ?? {}),
+      participantPhotos: Map<String, String?>.from(json['participantPhotos'] ?? {}),
+      participantTypes: Map<String, String>.from(json['participantTypes'] ?? {}),
       lastMessage: json['lastMessage'] ?? '',
-      lastMessageAt: json['lastMessageAt'] != null 
-          ? DateTime.parse(json['lastMessageAt']) 
-          : DateTime.now(),
+      lastMessageAt: parseTimestamp(json['lastMessageAt']),
       lastMessageSender: json['lastMessageSender'] ?? '',
       unreadCount: Map<String, int>.from(json['unreadCount'] ?? {}),
       isActive: json['isActive'] ?? true,
-      createdAt: json['createdAt'] != null 
-          ? DateTime.parse(json['createdAt']) 
-          : DateTime.now(),
-      updatedAt: json['updatedAt'] != null 
-          ? DateTime.parse(json['updatedAt']) 
-          : DateTime.now(),
+      createdAt: parseTimestamp(json['createdAt']),
+      updatedAt: parseTimestamp(json['updatedAt']),
       petReportId: json['petReportId'] as String?,
       petReportType: json['petReportType'] as String?,
     );
@@ -102,6 +127,8 @@ class ChatModel extends Equatable {
       'id': id,
       'participants': participants,
       'participantNames': participantNames,
+      'participantPhotos': participantPhotos,
+      'participantTypes': participantTypes,
       'lastMessage': lastMessage,
       'lastMessageAt': lastMessageAt.toIso8601String(),
       'lastMessageSender': lastMessageSender,
@@ -118,6 +145,8 @@ class ChatModel extends Equatable {
     String? id,
     List<String>? participants,
     Map<String, String>? participantNames,
+    Map<String, String?>? participantPhotos,
+    Map<String, String>? participantTypes,
     String? lastMessage,
     DateTime? lastMessageAt,
     String? lastMessageSender,
@@ -132,6 +161,8 @@ class ChatModel extends Equatable {
       id: id ?? this.id,
       participants: participants ?? this.participants,
       participantNames: participantNames ?? this.participantNames,
+      participantPhotos: participantPhotos ?? this.participantPhotos,
+      participantTypes: participantTypes ?? this.participantTypes,
       lastMessage: lastMessage ?? this.lastMessage,
       lastMessageAt: lastMessageAt ?? this.lastMessageAt,
       lastMessageSender: lastMessageSender ?? this.lastMessageSender,
@@ -149,6 +180,8 @@ class ChatModel extends Equatable {
         id,
         participants,
         participantNames,
+        participantPhotos,
+        participantTypes,
         lastMessage,
         lastMessageAt,
         lastMessageSender,
@@ -166,6 +199,8 @@ class ChatMessage extends Equatable {
   final String chatId;
   final String senderId;
   final String senderName;
+  final String? senderPhoto;
+  final String senderType; // 'veterinarian' or 'user'
   final String message;
   final MessageType type;
   final String? mediaUrl;
@@ -180,6 +215,8 @@ class ChatMessage extends Equatable {
     required this.chatId,
     required this.senderId,
     required this.senderName,
+    this.senderPhoto,
+    this.senderType = 'user',
     required this.message,
     required this.type,
     this.mediaUrl,
@@ -198,6 +235,8 @@ class ChatMessage extends Equatable {
       chatId: data['chatId'] ?? '',
       senderId: data['senderId'] ?? '',
       senderName: data['senderName'] ?? '',
+      senderPhoto: data['senderPhoto'],
+      senderType: data['senderType'] ?? 'user',
       message: data['message'] ?? '',
       type: _parseMessageType(data['type'] ?? 'text'),
       mediaUrl: data['mediaUrl'] ?? data['imageUrl'] ?? data['fileUrl'],
@@ -231,6 +270,8 @@ class ChatMessage extends Equatable {
       'chatId': chatId,
       'senderId': senderId,
       'senderName': senderName,
+      'senderPhoto': senderPhoto,
+      'senderType': senderType,
       'message': message,
       'type': type.name,
       'mediaUrl': mediaUrl,
@@ -243,20 +284,41 @@ class ChatMessage extends Equatable {
   }
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    // Helper to parse timestamp (supports both ISO8601 string and milliseconds int)
+    DateTime parseTimestamp(dynamic value) {
+      if (value == null) return DateTime.now();
+      if (value is int) {
+        return DateTime.fromMillisecondsSinceEpoch(value);
+      }
+      if (value is String) {
+        try {
+          return DateTime.parse(value);
+        } catch (e) {
+          // Try parsing as milliseconds
+          final ms = int.tryParse(value);
+          if (ms != null) {
+            return DateTime.fromMillisecondsSinceEpoch(ms);
+          }
+          return DateTime.now();
+        }
+      }
+      return DateTime.now();
+    }
+
     return ChatMessage(
       id: json['id'] ?? '',
       chatId: json['chatId'] ?? '',
       senderId: json['senderId'] ?? '',
       senderName: json['senderName'] ?? '',
+      senderPhoto: json['senderPhoto'],
+      senderType: json['senderType'] ?? 'user',
       message: json['message'] ?? '',
       type: _parseMessageType(json['type'] ?? 'text'),
       mediaUrl: json['mediaUrl'],
       fileName: json['fileName'],
       fileSize: json['fileSize'],
       isRead: json['isRead'] ?? false,
-      timestamp: json['timestamp'] != null 
-          ? DateTime.parse(json['timestamp']) 
-          : DateTime.now(),
+      timestamp: parseTimestamp(json['timestamp']),
       messageId: json['messageId'],
     );
   }
@@ -267,6 +329,8 @@ class ChatMessage extends Equatable {
       'chatId': chatId,
       'senderId': senderId,
       'senderName': senderName,
+      'senderPhoto': senderPhoto,
+      'senderType': senderType,
       'message': message,
       'type': type.name,
       'mediaUrl': mediaUrl,
@@ -283,6 +347,8 @@ class ChatMessage extends Equatable {
     String? chatId,
     String? senderId,
     String? senderName,
+    String? senderPhoto,
+    String? senderType,
     String? message,
     MessageType? type,
     String? mediaUrl,
@@ -297,6 +363,8 @@ class ChatMessage extends Equatable {
       chatId: chatId ?? this.chatId,
       senderId: senderId ?? this.senderId,
       senderName: senderName ?? this.senderName,
+      senderPhoto: senderPhoto ?? this.senderPhoto,
+      senderType: senderType ?? this.senderType,
       message: message ?? this.message,
       type: type ?? this.type,
       mediaUrl: mediaUrl ?? this.mediaUrl,
@@ -314,6 +382,8 @@ class ChatMessage extends Equatable {
         chatId,
         senderId,
         senderName,
+        senderPhoto,
+        senderType,
         message,
         type,
         mediaUrl,

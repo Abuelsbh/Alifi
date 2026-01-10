@@ -6,6 +6,10 @@ import 'chat_service.dart';
 
 
 class AuthService {
+  // Cache for veterinarian status to avoid repeated async calls
+  static bool? _cachedIsVeterinarian;
+  static String? _cachedUserIdForVetCheck;
+  
   static FirebaseAuth get _auth {
     if (FirebaseConfig.isDemoMode) {
       throw Exception('Authentication not available in demo mode');
@@ -18,6 +22,41 @@ class AuthService {
       throw Exception('Firestore not available in demo mode');
     }
     return FirebaseConfig.firestore;
+  }
+  
+  // Initialize veterinarian status cache
+  static Future<void> _initializeVeterinarianStatus() async {
+    final currentUserId = userId;
+    if (currentUserId == null) {
+      _cachedIsVeterinarian = false;
+      _cachedUserIdForVetCheck = null;
+      return;
+    }
+    
+    // If we already cached for this user, don't check again
+    if (_cachedUserIdForVetCheck == currentUserId && _cachedIsVeterinarian != null) {
+      return;
+    }
+    
+    try {
+      final doc = await _firestore.collection('users').doc(currentUserId).get();
+      if (doc.exists) {
+        final data = doc.data();
+        _cachedIsVeterinarian = data?['userType'] == 'veterinarian';
+      } else {
+        _cachedIsVeterinarian = false;
+      }
+      _cachedUserIdForVetCheck = currentUserId;
+    } catch (e) {
+      _cachedIsVeterinarian = false;
+      _cachedUserIdForVetCheck = currentUserId;
+    }
+  }
+  
+  // Clear cache when user changes
+  static void _clearVeterinarianCache() {
+    _cachedIsVeterinarian = null;
+    _cachedUserIdForVetCheck = null;
   }
 
   // Get current user
@@ -92,6 +131,10 @@ class AuthService {
       // Update last login time
       await _updateLastLogin(credential.safeUser.uid);
       
+      // Initialize veterinarian status cache after login
+      _clearVeterinarianCache();
+      _initializeVeterinarianStatus();
+      
       // Clear chat cache after successful login
       try {
         ChatService.clearAllCaches();
@@ -142,6 +185,10 @@ class AuthService {
         // Continue anyway - Firebase Auth succeeded
       }
 
+      // Initialize veterinarian status cache after account creation
+      _clearVeterinarianCache();
+      _initializeVeterinarianStatus();
+
       // Clear chat cache after successful login
       try {
         ChatService.clearAllCaches();
@@ -167,6 +214,9 @@ class AuthService {
       } catch (e) {
         print('⚠️ Could not clear chat cache: $e');
       }
+      
+      // Clear veterinarian status cache
+      _clearVeterinarianCache();
       
       await ImprovedFirebaseWrapper.signOut();
     } catch (e) {
@@ -362,14 +412,45 @@ class AuthService {
   static bool get isEmailVerified => currentUser?.emailVerified ?? false;
 
   // Check if current user is admin
+  // Note: Veterinarians are always treated as regular users, not admins
   static bool get isAdmin {
     if (FirebaseConfig.isDemoMode) {
       return false;
     }
+    
+    // If user is a veterinarian, they are never an admin (treated as regular user)
+    if (_cachedIsVeterinarian == true) {
+      return false;
+    }
+    
     final email = userEmail ?? '';
     return email.contains('admin') || 
            email == 'doctor@gmail.com' || 
            email == 'admin@alifi.com';
+  }
+  
+  // Check if user should see admin features (excludes veterinarians)
+  // Veterinarians are always treated as regular users
+  static Future<bool> canSeeAdminFeatures() async {
+    if (FirebaseConfig.isDemoMode) {
+      return false;
+    }
+    
+    // Initialize cache if needed
+    await _initializeVeterinarianStatus();
+    
+    // If user is a veterinarian, they're always regular users (not admin)
+    if (_cachedIsVeterinarian == true) {
+      return false;
+    }
+    
+    // If not a veterinarian, use normal admin check
+    return isAdmin;
+  }
+  
+  // Check if user should see unapproved animals (only admins, not veterinarians)
+  static Future<bool> canSeeUnapprovedAnimals() async {
+    return await canSeeAdminFeatures();
   }
 
   // Send email verification

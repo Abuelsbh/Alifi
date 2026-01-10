@@ -341,15 +341,10 @@ class _UnifiedChatListScreenState extends State<UnifiedChatListScreen>
                 children: [
                   FutureBuilder<DocumentSnapshot>(
                     future: _getOtherUserId(chat) != null 
-                        ? (isVeterinaryChat
-                            ? FirebaseFirestore.instance
-                                .collection('veterinarians')
-                                .doc(_getOtherUserId(chat))
-                                .get()
-                            : FirebaseFirestore.instance
-                                .collection('users')
-                                .doc(_getOtherUserId(chat))
-                                .get())
+                        ? FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(_getOtherUserId(chat))
+                            .get()
                         : null,
                     builder: (context, snapshot) {
                       String? profilePhoto;
@@ -358,9 +353,8 @@ class _UnifiedChatListScreenState extends State<UnifiedChatListScreen>
                       if (snapshot.hasData && snapshot.data!.exists) {
                         final data = snapshot.data!.data() as Map<String, dynamic>?;
                         if (data != null) {
-                          profilePhoto = isVeterinaryChat
-                              ? data['profilePhoto'] as String?
-                              : (data['profileImageUrl'] as String?) ?? (data['profilePhoto'] as String?);
+                          // Get profile photo from users collection
+                          profilePhoto = data['profileImageUrl'] as String? ?? data['profilePhoto'] as String?;
                           // isOnline is not used but kept for future use
                           // ignore: unused_local_variable
                           final isOnline = data['isOnline'] as bool? ?? false;
@@ -375,31 +369,13 @@ class _UnifiedChatListScreenState extends State<UnifiedChatListScreen>
                             : null,
                         child: profilePhoto == null || profilePhoto.isEmpty
                             ? Icon(
-                                isVeterinaryChat ? Icons.medical_services : Icons.person,
+                                Icons.person,
                                 size: 25.sp,
                                 color: AppTheme.primaryGreen,
                               )
                             : null,
                       );
                     },
-                  ),
-                  // Type badge
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: EdgeInsets.all(4.w),
-                      decoration: BoxDecoration(
-                        color: isVeterinaryChat ? AppTheme.primaryGreen : AppTheme.primaryOrange,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: Icon(
-                        isVeterinaryChat ? Icons.medical_services : Icons.person,
-                        size: 10.sp,
-                        color: Colors.white,
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -414,29 +390,34 @@ class _UnifiedChatListScreenState extends State<UnifiedChatListScreen>
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            participantName,
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: isUnread ? FontWeight.w600 : FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        // Chat type label
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                          decoration: BoxDecoration(
-                            color: isVeterinaryChat 
-                                ? AppTheme.primaryGreen.withOpacity(0.1)
-                                : AppTheme.primaryOrange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4.r),
-                          ),
-                          child: Text(
-                            isVeterinaryChat ? 'طبيب' : 'مستخدم',
-                            style: TextStyle(
-                              fontSize: 10.sp,
-                              color: isVeterinaryChat ? AppTheme.primaryGreen : AppTheme.primaryOrange,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          child: FutureBuilder<DocumentSnapshot>(
+                            future: _getOtherUserId(chat) != null 
+                                ? FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(_getOtherUserId(chat))
+                                    .get()
+                                : null,
+                            builder: (context, snapshot) {
+                              String displayName = participantName;
+                              
+                              if (snapshot.hasData && snapshot.data!.exists) {
+                                final data = snapshot.data!.data() as Map<String, dynamic>?;
+                                if (data != null) {
+                                  // Get name from users collection
+                                  final name = data['name'] as String? ?? data['username'] as String?;
+                                  if (name != null && name.isNotEmpty && name != 'المستخدم' && name != 'مستخدم') {
+                                    displayName = name;
+                                  }
+                                }
+                              }
+                              
+                              return Text(
+                                displayName,
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  fontWeight: isUnread ? FontWeight.w600 : FontWeight.w500,
+                                ),
+                              );
+                            },
                           ),
                         ),
                         SizedBox(width: 8.w),

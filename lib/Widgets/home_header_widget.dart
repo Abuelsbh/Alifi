@@ -150,80 +150,88 @@ class HomeHeaderWidget extends StatelessWidget {
             ),
           ),
           // Bell Icon with notification badge (or Admin Reports for admins)
+          // Note: Veterinarians always see regular notifications icon, not admin icon
           StreamBuilder<int>(
             stream: NotificationService.getUnreadMessagesCountFromNotifications(),
             builder: (context, snapshot) {
               final unreadCount = snapshot.data ?? 0;
-              final isAdmin = AuthService.isAdmin;
-
-              return GestureDetector(
-                onTap: () {
-                  if (isAdmin) {
-                    // Navigate to Admin Reports Screen
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AdminReportsScreen(),
-                      ),
-                    );
-                  } else {
-                    // Navigate to Notifications Screen
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const NotificationsScreen(),
-                      ),
-                    );
-                  }
-                },
-                child: Stack(
-                  children: [
-                    Container(
-                      width: 40.w,
-                      height: 40.h,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        isAdmin
-                            ? Icons.admin_panel_settings
-                            : Icons.notifications_outlined,
-                        color: isAdmin
-                            ? AppTheme.primaryGreen
-                            : (unreadCount > 0
-                            ? AppTheme.primaryOrange
-                            : Colors.grey[600]),
-                        size: 20.sp,
-                      ),
-                    ),
-                    if (unreadCount > 0)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: EdgeInsets.all(1.w),
+              // Use FutureBuilder to ensure veterinarian status is checked
+              return FutureBuilder<bool>(
+                future: AuthService.canSeeAdminFeatures(),
+                builder: (context, adminSnapshot) {
+                  // Default to regular user icon if check is still loading
+                  final canSeeAdmin = adminSnapshot.data ?? false;
+                  
+                  return GestureDetector(
+                    onTap: () {
+                      if (canSeeAdmin) {
+                        // Navigate to Admin Reports Screen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AdminReportsScreen(),
+                          ),
+                        );
+                      } else {
+                        // Navigate to Notifications Screen (for regular users and veterinarians)
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const NotificationsScreen(),
+                          ),
+                        );
+                      }
+                    },
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 40.w,
+                          height: 40.h,
                           decoration: BoxDecoration(
-                            color: AppTheme.error,
-                            borderRadius: BorderRadius.circular(8.r),
+                            color: Colors.grey[100],
+                            shape: BoxShape.circle,
                           ),
-                          constraints: BoxConstraints(
-                            minWidth: 14.w,
-                            minHeight: 14.h,
-                          ),
-                          child: Text(
-                            unreadCount > 9 ? '9+' : unreadCount.toString(),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 8.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
+                          child: Icon(
+                            canSeeAdmin
+                                ? Icons.admin_panel_settings
+                                : Icons.notifications_outlined,
+                            color: canSeeAdmin
+                                ? AppTheme.primaryGreen
+                                : (unreadCount > 0
+                                ? AppTheme.primaryOrange
+                                : Colors.grey[600]),
+                            size: 20.sp,
                           ),
                         ),
-                      ),
-                  ],
-                ),
+                        if (unreadCount > 0)
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              padding: EdgeInsets.all(1.w),
+                              decoration: BoxDecoration(
+                                color: AppTheme.error,
+                                borderRadius: BorderRadius.circular(8.r),
+                              ),
+                              constraints: BoxConstraints(
+                                minWidth: 14.w,
+                                minHeight: 14.h,
+                              ),
+                              child: Text(
+                                unreadCount > 9 ? '9+' : unreadCount.toString(),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
               );
             },
           ),

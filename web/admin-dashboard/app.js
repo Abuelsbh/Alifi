@@ -626,11 +626,12 @@ function getActivityIcon(type) {
 function setupRealtimeListeners() {
     // Listen to veterinarians changes
     unsubscribeVets = FirebaseService.onVeterinariansChange((vets) => {
+        console.log('📋 Veterinarians updated:', vets.length, 'vets');
         veterinariansData = vets;
         displayVeterinarians(vets);
         
         // Update statistics
-        totalVetsEl.textContent = vets.length;
+        if (totalVetsEl) totalVetsEl.textContent = vets.length;
     });
     
     // Listen to pet stores changes
@@ -645,8 +646,27 @@ function setupRealtimeListeners() {
 
 // Veterinarians management
 function loadVeterinarians() {
+    console.log('🔄 Loading veterinarians, current data:', veterinariansData.length);
     if (veterinariansData.length > 0) {
         displayVeterinarians(veterinariansData);
+    } else {
+        // If no data yet, try to fetch it
+        FirebaseService.getVeterinarians().then(result => {
+            if (result.success) {
+                console.log('✅ Loaded veterinarians:', result.data.length);
+                veterinariansData = result.data;
+                displayVeterinarians(result.data);
+            } else {
+                console.error('❌ Failed to load veterinarians:', result.error);
+                if (vetsTableBody) {
+                    vetsTableBody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center">Error loading veterinarians: ${result.error}</td>
+                        </tr>
+                    `;
+                }
+            }
+        });
     }
 }
 

@@ -121,8 +121,8 @@ const FirebaseService = {
     // Veterinarians CRUD operations
     async getVeterinarians() {
         try {
-            const snapshot = await db.collection('veterinarians')
-                .orderBy('createdAt', 'desc')
+            const snapshot = await db.collection('users')
+                .where('userType', '==', 'veterinarian')
                 .get();
             
             const vets = [];
@@ -132,9 +132,19 @@ const FirebaseService = {
                 if (!data.isDeleted) {
                     vets.push({
                         id: doc.id,
-                        ...data
+                        ...data,
+                        // Map fields for compatibility
+                        name: data.name || data.username || 'طبيب بيطري',
+                        profilePhoto: data.profileImageUrl || data.profilePhoto
                     });
                 }
+            });
+            
+            // Sort by createdAt descending (client-side)
+            vets.sort((a, b) => {
+                const aTime = a.createdAt?.toMillis?.() || (a.createdAt?.seconds || 0) * 1000 || 0;
+                const bTime = b.createdAt?.toMillis?.() || (b.createdAt?.seconds || 0) * 1000 || 0;
+                return bTime - aTime;
             });
             
             return { success: true, data: vets };
@@ -144,10 +154,10 @@ const FirebaseService = {
         }
     },
 
-    // Listen to veterinarians in real-time
+    // Listen to veterinarians in real-time from users collection
     onVeterinariansChange(callback) {
-        return db.collection('veterinarians')
-            .orderBy('createdAt', 'desc')
+        return db.collection('users')
+            .where('userType', '==', 'veterinarian')
             .onSnapshot(snapshot => {
                 const vets = [];
                 snapshot.forEach(doc => {
@@ -156,11 +166,23 @@ const FirebaseService = {
                     if (!data.isDeleted) {
                         vets.push({
                             id: doc.id,
-                            ...data
+                            ...data,
+                            // Map fields for compatibility
+                            name: data.name || data.username || 'طبيب بيطري',
+                            profilePhoto: data.profileImageUrl || data.profilePhoto
                         });
                     }
                 });
+                // Sort by createdAt descending (client-side)
+                vets.sort((a, b) => {
+                    const aTime = a.createdAt?.toMillis?.() || 0;
+                    const bTime = b.createdAt?.toMillis?.() || 0;
+                    return bTime - aTime;
+                });
                 callback(vets);
+            }, error => {
+                console.error('Error listening to veterinarians:', error);
+                callback([]);
             });
     },
 
@@ -175,12 +197,14 @@ const FirebaseService = {
             
             const uid = userCredential.user.uid;
             
-            // Create veterinarian document
-            await db.collection('veterinarians').doc(uid).set({
+            // Create veterinarian document in users collection with all veterinarian data
+            await db.collection('users').doc(uid).set({
                 uid: uid,
-                name: vetData.name,
                 email: vetData.email,
+                username: vetData.name,
+                name: vetData.name, // Also store as name
                 phone: vetData.phone,
+                phoneNumber: vetData.phone || null, // Also store as phoneNumber
                 specialization: vetData.specialization,
                 experience: vetData.experience,
                 license: vetData.license || '',
@@ -189,9 +213,10 @@ const FirebaseService = {
                 rating: 0.0,
                 totalRatings: 0,
                 isVerified: true,
-                userType: 'veterinarian',
+                userType: 'veterinarian', // Flag to identify veterinarian
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastLoginAt: null,
                 joinDate: new Date().toISOString()
             });
 
@@ -227,10 +252,12 @@ const FirebaseService = {
 
     async updateVeterinarian(vetId, vetData) {
         try {
-            await db.collection('veterinarians').doc(vetId).update({
+            await db.collection('users').doc(vetId).update({
                 name: vetData.name,
+                username: vetData.name, // Also update username
                 email: vetData.email,
                 phone: vetData.phone,
+                phoneNumber: vetData.phone, // Also update phoneNumber
                 specialization: vetData.specialization,
                 experience: vetData.experience,
                 license: vetData.license || '',
@@ -246,7 +273,7 @@ const FirebaseService = {
 
     async toggleVeterinarianStatus(vetId, isActive) {
         try {
-            await db.collection('veterinarians').doc(vetId).update({
+            await db.collection('users').doc(vetId).update({
                 isActive: isActive,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
@@ -260,9 +287,10 @@ const FirebaseService = {
 
     async deleteVeterinarian(vetId) {
         try {
-            // Instead of deleting, mark as deleted with flag
-            await db.collection('veterinarians').doc(vetId).update({
+            // Instead of deleting, mark as deleted with flag in users collection
+            await db.collection('users').doc(vetId).update({
                 isDeleted: true,
+                isActive: false,
                 deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
@@ -287,8 +315,10 @@ const FirebaseService = {
                 totalChats: 0
             };
 
-            // Get veterinarians count (excluding deleted)
-            const vetsSnapshot = await db.collection('veterinarians').get();
+            // Get veterinarians count from users collection (excluding deleted)
+            const vetsSnapshot = await db.collection('users')
+                .where('userType', '==', 'veterinarian')
+                .get();
             stats.totalVets = vetsSnapshot.docs.filter(doc => {
                 const data = doc.data();
                 return !data.isDeleted;
@@ -478,8 +508,9 @@ const FirebaseService = {
         try {
             const activities = [];
             
-            // Get recent veterinarians
-            const vetsSnapshot = await db.collection('veterinarians')
+            // Get recent veterinarians from users collection
+            const vetsSnapshot = await db.collection('users')
+                .where('userType', '==', 'veterinarian')
                 .orderBy('createdAt', 'desc')
                 .limit(3)
                 .get();
@@ -488,8 +519,8 @@ const FirebaseService = {
                 const data = doc.data();
                 activities.push({
                     type: 'new',
-                    title: `New veterinarian: ${data.name}`,
-                    description: `Added ${data.specialization} specialist`,
+                    title: `New veterinarian: ${data.name || data.username}`,
+                    description: `Added ${data.specialization || 'General'} specialist`,
                     timestamp: data.createdAt
                 });
             });

@@ -1,113 +1,146 @@
 import 'dart:io';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_database/firebase_database.dart' hide Query;
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../firebase/firebase_config.dart';
 import '../../Models/chat_model.dart';
 import '../../Models/user_model.dart';
+import 'auth_service.dart';
 
 class ChatService {
-  static final FirebaseFirestore _firestore = FirebaseConfig.firestore;
+  static final FirebaseDatabase _database = FirebaseConfig.database;
   static final FirebaseStorage _storage = FirebaseConfig.storage;
+  static final FirebaseFirestore _firestore = FirebaseConfig.firestore; // Still needed for veterinarians and users
   static final ImagePicker _picker = ImagePicker();
   
-  // Cache for chat and message streams
-  static final Map<String, Stream<List<ChatModel>>> _chatStreamsCache = {};
-  static final Map<String, Stream<List<ChatMessage>>> _messageStreamsCache = {};
-  static final Map<String, Stream<List<Map<String, dynamic>>>> _veterinariansStreamCache = {};
+  // Database references
+  static DatabaseReference get _veterinaryChatsRef => _database.ref('veterinary_chats');
+  static DatabaseReference get _veterinaryMessagesRef => _database.ref('veterinary_messages');
+  static DatabaseReference get _userChatsRef => _database.ref('user_chats');
+  static DatabaseReference get _userMessagesRef => _database.ref('user_messages');
 
   // Throttling for markMessagesAsRead
   static final Map<String, DateTime> _lastMarkAsReadCall = {};
   static const Duration _markAsReadThrottle = Duration(seconds: 3);
 
-  // Clear cache when needed
+  // Clear cache when needed (kept for compatibility)
   static void clearCache() {
-    _chatStreamsCache.clear();
-    _messageStreamsCache.clear();
-    _veterinariansStreamCache.clear();
+    // No-op for Realtime Database
   }
 
-  // Clear veterinarians cache specifically
   static void clearVeterinariansCache() {
-    _veterinariansStreamCache.clear();
+    // No-op for Realtime Database
   }
 
-  // Clear all caches
   static void clearAllCaches() {
-    _chatStreamsCache.clear();
-    _messageStreamsCache.clear();
-    _veterinariansStreamCache.clear();
+    // No-op for Realtime Database
   }
 
-  // Get user's chats stream with caching
+  // Get user's chats stream for veterinary chats
   static Stream<List<ChatModel>> getUserChatsStream(String userId) {
-    // Always create a fresh stream from Firebase - don't cache to ensure real-time updates
-    // If in demo mode, return empty stream
     if (FirebaseConfig.isDemoMode) {
       return Stream.value(<ChatModel>[]);
     }
     
-    final stream = _firestore
-        .collection('veterinary_chats')
-        .where('participants', arrayContains: userId)
-        .where('isActive', isEqualTo: true)
-        .orderBy('lastMessageAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-          final chats = snapshot.docs
-              .map((doc) => ChatModel.fromFirestore(doc))
-              .toList();
-          return chats;
-        });
-    
-    return stream;
+    return _veterinaryChatsRef.onValue.map((event) {
+      if (event.snapshot.value == null) {
+        return <ChatModel>[];
+      }
+      
+      final Map<dynamic, dynamic> chatsMap = event.snapshot.value as Map<dynamic, dynamic>;
+      final List<ChatModel> chats = [];
+      
+      chatsMap.forEach((chatId, chatData) {
+        try {
+          final chatDataMap = Map<String, dynamic>.from(chatData as Map);
+          // Filter by isActive and participants
+          if (chatDataMap['isActive'] == true) {
+            final participants = List<String>.from(chatDataMap['participants'] ?? []);
+            if (participants.contains(userId)) {
+              final chatModel = ChatModel.fromJson({
+                'id': chatId.toString(),
+                ...chatDataMap,
+              });
+              chats.add(chatModel);
+            }
+          }
+        } catch (e) {
+          print('Error parsing chat $chatId: $e');
+        }
+      });
+      
+      // Sort by lastMessageAt descending
+      chats.sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
+      return chats;
+    });
   }
 
-  // Get chat messages stream - always fresh from Firebase
+  // Get chat messages stream for veterinary chats
   static Stream<List<ChatMessage>> getChatMessagesStream(String chatId) {
-    // Always create a fresh stream from Firebase - don't cache to ensure real-time updates
     if (FirebaseConfig.isDemoMode) {
       return Stream.value(<ChatMessage>[]);
     }
     
-    final stream = _firestore
-        .collection('veterinary_chats')
-        .doc(chatId)
-        .collection('messages')
-        .orderBy('timestamp', descending: false) // ترتيب من الأقدم إلى الأحدث
-        .limit(50) // Optimized limit for better performance
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs
-              .map((doc) => ChatMessage.fromFirestore(doc))
-              .toList();
+    return _veterinaryMessagesRef
+        .child(chatId)
+        .orderByChild('timestamp')
+        .limitToLast(50)
+        .onValue
+        .map((event) {
+          if (event.snapshot.value == null) {
+            return <ChatMessage>[];
+          }
+          
+          final Map<dynamic, dynamic> messagesMap = event.snapshot.value as Map<dynamic, dynamic>;
+          final List<ChatMessage> messages = [];
+          
+          messagesMap.forEach((messageId, messageData) {
+            try {
+              final message = ChatMessage.fromJson({
+                'id': messageId.toString(),
+                ...Map<String, dynamic>.from(messageData as Map),
+              });
+              messages.add(message);
+            } catch (e) {
+              print('Error parsing message $messageId: $e');
+            }
+          });
+          
+          // Sort by timestamp ascending (oldest first)
+          messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+          return messages;
         });
-    
-    return stream;
   }
 
-  // Get veterinarians stream - always fresh from Firebase
+  // Get veterinarians stream - using users collection with userType filter
   static Stream<List<Map<String, dynamic>>> getVeterinariansStream() {
-    // Always create a fresh stream from Firebase - don't cache to ensure real-time updates
     if (FirebaseConfig.isDemoMode) {
       return Stream.value(<Map<String, dynamic>>[]);
     }
     
     try {
-      final stream = _firestore
-          .collection('veterinarians')
+      // Get current user ID to exclude from the list
+      final currentUserId = AuthService.userId;
+      
+      return _firestore
+          .collection('users')
+          .where('userType', isEqualTo: 'veterinarian')
+          .where('isActive', isEqualTo: true)
           .snapshots()
           .map((snapshot) {
             return snapshot.docs
                 .map((doc) {
                   final data = doc.data();
-                  // Filter veterinarians who are verified or don't have isVerified field (backward compatibility)
-                  // AND filter out deleted veterinarians
-                  if ((data['isVerified'] == true || data['isVerified'] == null) && 
-                      data['isDeleted'] != true) {
+                  // Filter out deleted veterinarians and current user if they are a veterinarian
+                  if (data['isDeleted'] != true && doc.id != currentUserId) {
                     return {
                       'id': doc.id,
                       ...data,
+                      // Map username to name for compatibility
+                      'name': data['name'] ?? data['username'] ?? 'طبيب بيطري',
+                      // Map profileImageUrl to profilePhoto for compatibility
+                      'profilePhoto': data['profileImageUrl'] ?? data['profilePhoto'],
                     };
                   }
                   return null;
@@ -120,8 +153,6 @@ class ChatService {
             print('Error in getVeterinariansStream: $error');
             return <Map<String, dynamic>>[];
           });
-      
-      return stream;
     } catch (e) {
       print('Error creating veterinarians stream: $e');
       return Stream.value(<Map<String, dynamic>>[]);
@@ -135,99 +166,143 @@ class ChatService {
     String? initialMessage,
   }) async {
     try {
-      // Check if chat already exists
-      final existingChats = await _firestore
-          .collection('veterinary_chats')
-          .where('participants', arrayContains: userId)
-          .where('isActive', isEqualTo: true)
-          .get();
+      if (FirebaseConfig.isDemoMode) {
+        throw Exception('Firebase is in demo mode');
+      }
 
-      for (var doc in existingChats.docs) {
-        final participants = List<String>.from(doc.data()['participants'] ?? []);
-        if (participants.contains(veterinarianId)) {
-          return doc.id;
+      // Check if chat already exists
+      DataSnapshot snapshot;
+      try {
+        snapshot = await _veterinaryChatsRef.get();
+      } catch (e) {
+        // Handle web-specific Realtime Database errors
+        if (e.toString().contains('MissingPluginException') || 
+            e.toString().contains('No implementation found')) {
+          throw Exception(
+            'خطأ في إعداد قاعدة البيانات. يرجى:\n'
+            '1. التأكد من تفعيل Realtime Database في Firebase Console\n'
+            '2. الحصول على عنوان قاعدة البيانات من Firebase Console\n'
+            '3. إعادة بناء التطبيق (flutter clean && flutter pub get)\n'
+            '4. إعادة تشغيل التطبيق'
+          );
+        }
+        rethrow;
+      }
+
+      if (snapshot.exists) {
+        final chatsMap = snapshot.value as Map<dynamic, dynamic>?;
+        if (chatsMap != null) {
+          for (var entry in chatsMap.entries) {
+            final chatData = Map<String, dynamic>.from(entry.value as Map);
+            if (chatData['isActive'] == true) {
+              final participants = List<String>.from(chatData['participants'] ?? []);
+              if (participants.contains(userId) && participants.contains(veterinarianId)) {
+                return entry.key.toString();
+              }
+            }
+          }
         }
       }
 
-      // Get user and veterinarian names
+      // Get user and veterinarian names, photos, and types from users collection
       String userName = 'المستخدم';
       String vetName = 'الدكتور';
+      String? userPhoto;
+      String? vetPhoto;
       
       try {
         final userDoc = await _firestore.collection('users').doc(userId).get();
         if (userDoc.exists) {
-          userName = userDoc.data()?['name'] ?? 'المستخدم';
+          final userData = userDoc.data();
+          userName = userData?['username'] ?? userData?['name'] ?? 'المستخدم';
+          userPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
         }
         
-        final vetDoc = await _firestore.collection('veterinarians').doc(veterinarianId).get();
+        // Get veterinarian from users collection
+        final vetDoc = await _firestore.collection('users').doc(veterinarianId).get();
         if (vetDoc.exists) {
-          vetName = vetDoc.data()?['name'] ?? 'الدكتور';
+          final vetData = vetDoc.data();
+          // Check if user is actually a veterinarian
+          if (vetData?['userType'] == 'veterinarian') {
+            vetName = vetData?['name'] ?? vetData?['username'] ?? 'الدكتور';
+            vetPhoto = vetData?['profileImageUrl'] ?? vetData?['profilePhoto'];
+          } else {
+            throw Exception('المستخدم المحدد ليس طبيباً بيطرياً');
+          }
+        } else {
+          throw Exception('الطبيب البيطري غير موجود');
         }
       } catch (e) {
-        print('Warning: Could not fetch user/vet names: $e');
+        print('Warning: Could not fetch user/vet data: $e');
+        rethrow;
       }
 
       // Create new chat
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final chatId = _veterinaryChatsRef.push().key!;
+      
       final chatData = {
         'participants': [userId, veterinarianId],
         'participantNames': {
           userId: userName,
           veterinarianId: vetName,
         },
+        'participantPhotos': {
+          userId: userPhoto,
+          veterinarianId: vetPhoto,
+        },
+        'participantTypes': {
+          userId: 'user',
+          veterinarianId: 'veterinarian',
+        },
         'lastMessage': initialMessage ?? 'محادثة جديدة',
-        'lastMessageAt': FieldValue.serverTimestamp(),
+        'lastMessageAt': now,
         'lastMessageSender': userId,
         'isActive': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
+        'createdAt': now,
+        'updatedAt': now,
         'unreadCount': {
           userId: 0,
           veterinarianId: 1,
         },
       };
 
-      final chatRef = await _firestore
-          .collection('veterinary_chats')
-          .add(chatData);
-
-      // Wait for document to be fully created
-      await chatRef.get();
+      await _veterinaryChatsRef.child(chatId).set(chatData);
 
       // Add initial message if provided
       if (initialMessage != null && initialMessage.isNotEmpty) {
         try {
           await sendTextMessage(
-            chatId: chatRef.id,
+            chatId: chatId,
             senderId: userId,
             message: initialMessage,
           );
-          print('✅ Initial message sent successfully to veterinary chat: ${chatRef.id}');
+          print('✅ Initial message sent successfully to veterinary chat: $chatId');
         } catch (e) {
           print('⚠️ Error sending initial message to veterinary chat: $e');
-          // Don't throw - chat was created successfully, message can be sent later
         }
       }
 
-      return chatRef.id;
+      return chatId;
     } catch (e) {
       throw Exception('فشل في إنشاء المحادثة: $e');
     }
   }
 
-  // Send text message with optimized batch operations
+  // Send text message
   static Future<void> sendTextMessage({
     required String chatId,
     required String senderId,
     required String message,
   }) async {
     try {
-      // First, get the chat document to know the participants
-      final chatDoc = await _firestore.collection('veterinary_chats').doc(chatId).get();
-      if (!chatDoc.exists) {
+      // Get chat data
+      final chatSnapshot = await _veterinaryChatsRef.child(chatId).get();
+      if (!chatSnapshot.exists) {
         throw Exception('المحادثة غير موجودة');
       }
       
-      final chatData = chatDoc.data()!;
+      final chatData = Map<String, dynamic>.from(chatSnapshot.value as Map);
       final participants = List<String>.from(chatData['participants'] ?? []);
       final currentUnreadCount = Map<String, dynamic>.from(chatData['unreadCount'] ?? {});
       
@@ -240,57 +315,69 @@ class ChatService {
         }
       }
       
+      // Get sender name, photo, and type from users collection
+      String senderName = 'المستخدم';
+      String? senderPhoto;
+      String senderType = 'user';
+      try {
+        final userDoc = await _firestore.collection('users').doc(senderId).get();
+        if (userDoc.exists) {
+          final userData = userDoc.data();
+          // Check if user is a veterinarian
+          if (userData?['userType'] == 'veterinarian') {
+            senderName = userData?['name'] ?? userData?['username'] ?? 'الدكتور';
+            senderPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
+            senderType = 'veterinarian';
+          } else {
+            senderName = userData?['username'] ?? userData?['name'] ?? 'المستخدم';
+            senderPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
+            senderType = 'user';
+          }
+        }
+      } catch (e) {
+        print('Warning: Could not fetch sender data: $e');
+      }
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final messageId = now.toString();
+      
       final messageData = {
         'chatId': chatId,
         'senderId': senderId,
         'message': message,
-        'timestamp': FieldValue.serverTimestamp(),
+        'timestamp': now,
         'type': MessageType.text.name,
         'isRead': false,
-        'messageId': DateTime.now().millisecondsSinceEpoch.toString(),
-        'senderName': 'المستخدم',
+        'messageId': messageId,
+        'senderName': senderName,
+        'senderPhoto': senderPhoto,
+        'senderType': senderType,
       };
-
-      // Use batch write for atomicity
-      final batch = _firestore.batch();
-
-      // Add message
-      final messageRef = _firestore
-          .collection('veterinary_chats')
-          .doc(chatId)
-          .collection('messages')
-          .doc();
-
-      batch.set(messageRef, messageData);
 
       // Prepare updated unread counts
       Map<String, dynamic> updatedUnreadCounts = Map<String, dynamic>.from(currentUnreadCount);
-      
-      // Reset sender's unread count to 0
       updatedUnreadCounts[senderId] = 0;
-      
-      // Increment receiver's unread count
       if (receiverId != null) {
         updatedUnreadCounts[receiverId] = (updatedUnreadCounts[receiverId] ?? 0) + 1;
       }
 
-      // Update chat metadata
-      final chatRef = _firestore.collection('veterinary_chats').doc(chatId);
-      batch.update(chatRef, {
-        'lastMessage': message,
-        'lastMessageAt': FieldValue.serverTimestamp(),
-        'lastMessageSender': senderId,
-        'updatedAt': FieldValue.serverTimestamp(),
-        'unreadCount': updatedUnreadCounts,
-      });
+      // Update chat metadata and add message atomically
+      final updates = <String, dynamic>{
+        'veterinary_chats/$chatId/lastMessage': message,
+        'veterinary_chats/$chatId/lastMessageAt': now,
+        'veterinary_chats/$chatId/lastMessageSender': senderId,
+        'veterinary_chats/$chatId/updatedAt': now,
+        'veterinary_chats/$chatId/unreadCount': updatedUnreadCounts,
+        'veterinary_messages/$chatId/$messageId': messageData,
+      };
 
-      await batch.commit();
+      await _database.ref().update(updates);
     } catch (e) {
       throw Exception('فشل في إرسال الرسالة: $e');
     }
   }
 
-  // Send image message with optimized upload
+  // Send image message
   static Future<void> sendImageMessage({
     required String chatId,
     required String senderId,
@@ -298,17 +385,15 @@ class ChatService {
     String? caption,
   }) async {
     try {
-      // First, get the chat document to know the participants
-      final chatDoc = await _firestore.collection('veterinary_chats').doc(chatId).get();
-      if (!chatDoc.exists) {
+      final chatSnapshot = await _veterinaryChatsRef.child(chatId).get();
+      if (!chatSnapshot.exists) {
         throw Exception('المحادثة غير موجودة');
       }
       
-      final chatData = chatDoc.data()!;
+      final chatData = Map<String, dynamic>.from(chatSnapshot.value as Map);
       final participants = List<String>.from(chatData['participants'] ?? []);
       final currentUnreadCount = Map<String, dynamic>.from(chatData['unreadCount'] ?? {});
       
-      // Find the other participant (receiver)
       String? receiverId;
       for (String participant in participants) {
         if (participant != senderId) {
@@ -317,53 +402,65 @@ class ChatService {
         }
       }
       
-      // Upload image with compression
+      String senderName = 'المستخدم';
+      String? senderPhoto;
+      String senderType = 'user';
+      try {
+        // Get sender data from users collection
+        final userDoc = await _firestore.collection('users').doc(senderId).get();
+        if (userDoc.exists) {
+          final userData = userDoc.data();
+          // Check if user is a veterinarian
+          if (userData?['userType'] == 'veterinarian') {
+            senderName = userData?['name'] ?? userData?['username'] ?? 'الدكتور';
+            senderPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
+            senderType = 'veterinarian';
+          } else {
+            senderName = userData?['username'] ?? userData?['name'] ?? 'المستخدم';
+            senderPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
+            senderType = 'user';
+          }
+        }
+      } catch (e) {
+        print('Warning: Could not fetch sender data: $e');
+      }
+      
+      // Upload image
       final imageUrl = await _uploadImage(imageFile, 'chat_images/$chatId');
 
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final messageId = now.toString();
+      
       final messageData = {
         'chatId': chatId,
         'senderId': senderId,
         'message': caption ?? 'صورة',
-        'timestamp': FieldValue.serverTimestamp(),
+        'timestamp': now,
         'type': MessageType.image.name,
         'mediaUrl': imageUrl,
         'isRead': false,
-        'messageId': DateTime.now().millisecondsSinceEpoch.toString(),
-        'senderName': 'المستخدم',
+        'messageId': messageId,
+        'senderName': senderName,
+        'senderPhoto': senderPhoto,
+        'senderType': senderType,
       };
 
-      // Use batch write
-      final batch = _firestore.batch();
-      
-      final messageRef = _firestore
-          .collection('veterinary_chats')
-          .doc(chatId)
-          .collection('messages')
-          .doc();
-      
-      batch.set(messageRef, messageData);
-
-      // Prepare updated unread counts
       Map<String, dynamic> updatedUnreadCounts = Map<String, dynamic>.from(currentUnreadCount);
-      
-      // Reset sender's unread count to 0
       updatedUnreadCounts[senderId] = 0;
-      
-      // Increment receiver's unread count
       if (receiverId != null) {
         updatedUnreadCounts[receiverId] = (updatedUnreadCounts[receiverId] ?? 0) + 1;
       }
 
-      final chatRef = _firestore.collection('veterinary_chats').doc(chatId);
-      batch.update(chatRef, {
-        'lastMessage': caption ?? '📷 صورة',
-        'lastMessageAt': FieldValue.serverTimestamp(),
-        'lastMessageSender': senderId,
-        'updatedAt': FieldValue.serverTimestamp(),
-        'unreadCount': updatedUnreadCounts,
-      });
+      final updates = <String, dynamic>{
+        'veterinary_chats/$chatId/lastMessage': caption ?? '📷 صورة',
+        'veterinary_chats/$chatId/lastMessageAt': now,
+        'veterinary_chats/$chatId/lastMessageSender': senderId,
+        'veterinary_chats/$chatId/updatedAt': now,
+        'veterinary_chats/$chatId/unreadCount': updatedUnreadCounts,
+        'veterinary_messages/$chatId/$messageId': messageData,
+      };
 
-      await batch.commit();
+      await _database.ref().update(updates);
     } catch (e) {
       throw Exception('فشل في إرسال الصورة: $e');
     }
@@ -379,38 +476,37 @@ class ChatService {
     try {
       final videoUrl = await _uploadVideo(videoFile, 'chat_videos/$chatId');
       
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final messageId = now.toString();
+      
       final messageData = {
         'chatId': chatId,
         'senderId': senderId,
         'message': caption ?? 'فيديو',
-        'timestamp': FieldValue.serverTimestamp(),
+        'timestamp': now,
         'type': MessageType.video.name,
         'mediaUrl': videoUrl,
         'isRead': false,
-        'messageId': DateTime.now().millisecondsSinceEpoch.toString(),
+        'messageId': messageId,
         'senderName': 'المستخدم',
       };
 
-      final batch = _firestore.batch();
-      
-      final messageRef = _firestore
-          .collection('veterinary_chats')
-          .doc(chatId)
-          .collection('messages')
-          .doc();
-      
-      batch.set(messageRef, messageData);
+      final chatSnapshot = await _veterinaryChatsRef.child(chatId).get();
+      final chatData = chatSnapshot.exists 
+          ? Map<String, dynamic>.from(chatSnapshot.value as Map)
+          : <String, dynamic>{};
+      final currentUnreadCount = Map<String, dynamic>.from(chatData['unreadCount'] ?? {});
 
-      final chatRef = _firestore.collection('veterinary_chats').doc(chatId);
-      batch.update(chatRef, {
-        'lastMessage': caption ?? '🎥 فيديو',
-        'lastMessageAt': FieldValue.serverTimestamp(),
-        'lastMessageSender': senderId,
-        'updatedAt': FieldValue.serverTimestamp(),
-        'unreadCount.$senderId': 0,
-      });
+      final updates = <String, dynamic>{
+        'veterinary_chats/$chatId/lastMessage': caption ?? '🎥 فيديو',
+        'veterinary_chats/$chatId/lastMessageAt': now,
+        'veterinary_chats/$chatId/lastMessageSender': senderId,
+        'veterinary_chats/$chatId/updatedAt': now,
+        'veterinary_chats/$chatId/unreadCount/$senderId': 0,
+        'veterinary_messages/$chatId/$messageId': messageData,
+      };
 
-      await batch.commit();
+      await _database.ref().update(updates);
     } catch (e) {
       throw Exception('فشل في إرسال الفيديو: $e');
     }
@@ -427,52 +523,49 @@ class ChatService {
       final fileUrl = await _uploadFile(file, 'chat_files/$chatId', fileName);
       final fileSize = await file.length();
       
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final messageId = now.toString();
+      
       final messageData = {
         'chatId': chatId,
         'senderId': senderId,
         'message': fileName ?? 'ملف',
-        'timestamp': FieldValue.serverTimestamp(),
+        'timestamp': now,
         'type': MessageType.file.name,
         'mediaUrl': fileUrl,
         'fileName': fileName ?? file.path.split('/').last,
         'fileSize': fileSize,
         'isRead': false,
-        'messageId': DateTime.now().millisecondsSinceEpoch.toString(),
+        'messageId': messageId,
         'senderName': 'المستخدم',
       };
 
-      final batch = _firestore.batch();
-      
-      final messageRef = _firestore
-          .collection('veterinary_chats')
-          .doc(chatId)
-          .collection('messages')
-          .doc();
-      
-      batch.set(messageRef, messageData);
+      final chatSnapshot = await _veterinaryChatsRef.child(chatId).get();
+      final chatData = chatSnapshot.exists 
+          ? Map<String, dynamic>.from(chatSnapshot.value as Map)
+          : <String, dynamic>{};
 
-      final chatRef = _firestore.collection('veterinary_chats').doc(chatId);
-      batch.update(chatRef, {
-        'lastMessage': fileName ?? '📎 ملف',
-        'lastMessageAt': FieldValue.serverTimestamp(),
-        'lastMessageSender': senderId,
-        'updatedAt': FieldValue.serverTimestamp(),
-        'unreadCount.$senderId': 0,
-      });
+      final updates = <String, dynamic>{
+        'veterinary_chats/$chatId/lastMessage': fileName ?? '📎 ملف',
+        'veterinary_chats/$chatId/lastMessageAt': now,
+        'veterinary_chats/$chatId/lastMessageSender': senderId,
+        'veterinary_chats/$chatId/updatedAt': now,
+        'veterinary_chats/$chatId/unreadCount/$senderId': 0,
+        'veterinary_messages/$chatId/$messageId': messageData,
+      };
 
-      await batch.commit();
+      await _database.ref().update(updates);
     } catch (e) {
       throw Exception('فشل في إرسال الملف: $e');
     }
   }
 
-  // Optimized image upload with compression
+  // Upload image
   static Future<String> _uploadImage(File imageFile, String folder) async {
     try {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_${imageFile.path.split('/').last}';
       final ref = _storage.ref().child('$folder/$fileName');
       
-      // Set metadata for better compression
       final metadata = SettableMetadata(
         contentType: 'image/jpeg',
         customMetadata: {
@@ -491,7 +584,7 @@ class ChatService {
     }
   }
 
-  // Optimized video upload
+  // Upload video
   static Future<String> _uploadVideo(File videoFile, String folder) async {
     try {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_${videoFile.path.split('/').last}';
@@ -514,7 +607,7 @@ class ChatService {
     }
   }
 
-  // Optimized file upload
+  // Upload file
   static Future<String> _uploadFile(File file, String folder, String? fileName) async {
     try {
       final name = fileName ?? '${DateTime.now().millisecondsSinceEpoch}_${file.path.split('/').last}';
@@ -536,7 +629,7 @@ class ChatService {
     }
   }
 
-  // Mark messages as read with batch operation - Optimized
+  // Mark messages as read
   static Future<void> markMessagesAsRead({
     required String chatId,
     required String userId,
@@ -552,98 +645,82 @@ class ChatService {
     _lastMarkAsReadCall[chatId] = now;
 
     try {
-      // Use a simpler approach to avoid composite index requirement
-      // First get all messages, then filter in memory for better performance
-      final messagesQuery = await _firestore
-          .collection('veterinary_chats')
-          .doc(chatId)
-          .collection('messages')
-          .where('isRead', isEqualTo: false)
-          .limit(100) // Limit to avoid excessive reads
-          .get();
+      final messagesSnapshot = await _veterinaryMessagesRef.child(chatId).get();
 
-      if (messagesQuery.docs.isNotEmpty) {
-        final batch = _firestore.batch();
-        int updatedCount = 0;
-        
-        // Filter messages from other senders in memory to avoid composite index
-        for (var doc in messagesQuery.docs) {
-          final data = doc.data();
-          final senderId = data['senderId'] as String?;
+      if (messagesSnapshot.exists) {
+        final messagesMap = messagesSnapshot.value as Map<dynamic, dynamic>?;
+        if (messagesMap != null) {
+          final updates = <String, dynamic>{};
+          int updatedCount = 0;
           
-          // Only mark messages from other users as read
-          if (senderId != null && senderId != userId) {
-            batch.update(doc.reference, {'isRead': true});
-            updatedCount++;
+          messagesMap.forEach((messageId, messageData) {
+            final data = Map<String, dynamic>.from(messageData as Map);
+            final senderId = data['senderId'] as String?;
+            final isRead = data['isRead'] ?? false;
+            
+            // Only update unread messages from other users
+            if (senderId != null && senderId != userId && isRead == false) {
+              updates['veterinary_messages/$chatId/$messageId/isRead'] = true;
+              updatedCount++;
+            }
+          });
+
+          if (updatedCount > 0) {
+            updates['veterinary_chats/$chatId/unreadCount/$userId'] = 0;
+            await _database.ref().update(updates);
           }
-        }
-
-        // Only commit if there are messages to update
-        if (updatedCount > 0) {
-          // Reset unread count
-          batch.update(
-            _firestore.collection('veterinary_chats').doc(chatId),
-            {'unreadCount.$userId': 0},
-          );
-
-          await batch.commit();
         }
       }
     } catch (e) {
-      // Don't throw exception to avoid breaking the chat flow
       print('Warning: Failed to mark messages as read: $e');
     }
   }
 
   // Get unread message count stream
   static Stream<int> getUnreadMessageCountStream(String userId) {
-    return _firestore
-        .collection('veterinary_chats')
-        .where('participants', arrayContains: userId)
-        .where('isActive', isEqualTo: true)
-        .snapshots()
-        .map((snapshot) {
-      int totalUnread = 0;
-      for (var doc in snapshot.docs) {
-        final unreadCount = Map<String, dynamic>.from(doc.data()['unreadCount'] ?? {});
-        final count = unreadCount[userId];
-        totalUnread += (count is int) ? count : (count as num?)?.toInt() ?? 0;
+    return _veterinaryChatsRef.onValue.map((event) {
+      if (event.snapshot.value == null) {
+        return 0;
       }
+          
+      int totalUnread = 0;
+      final chatsMap = event.snapshot.value as Map<dynamic, dynamic>;
+          
+      chatsMap.forEach((chatId, chatData) {
+        try {
+          final chatDataMap = Map<String, dynamic>.from(chatData as Map);
+          if (chatDataMap['isActive'] == true) {
+            final participants = List<String>.from(chatDataMap['participants'] ?? []);
+            if (participants.contains(userId)) {
+              final unreadCount = Map<String, dynamic>.from(chatDataMap['unreadCount'] ?? {});
+              final count = unreadCount[userId];
+              totalUnread += (count is int) ? count : (count as num?)?.toInt() ?? 0;
+            }
+          }
+        } catch (e) {
+          print('Error parsing unread count for chat $chatId: $e');
+        }
+      });
+          
       return totalUnread;
     });
   }
 
-  // Delete chat with cleanup
+  // Delete chat
   static Future<void> deleteChat(String chatId) async {
     try {
-      // Delete all messages
-      final messagesQuery = await _firestore
-          .collection('veterinary_chats')
-          .doc(chatId)
-          .collection('messages')
-          .get();
-
-      final batch = _firestore.batch();
-      for (var doc in messagesQuery.docs) {
-        batch.delete(doc.reference);
-      }
+      final updates = <String, dynamic>{
+        'veterinary_chats/$chatId/isActive': false,
+        'veterinary_chats/$chatId/updatedAt': DateTime.now().millisecondsSinceEpoch,
+      };
       
-      // Mark chat as inactive instead of deleting
-      batch.update(
-        _firestore.collection('veterinary_chats').doc(chatId),
-        {'isActive': false, 'updatedAt': FieldValue.serverTimestamp()},
-      );
-
-      await batch.commit();
-
-      // Clear cache
-      _messageStreamsCache.remove(chatId);
+      await _database.ref().update(updates);
     } catch (e) {
       throw Exception('فشل في حذف المحادثة: $e');
     }
   }
 
-  // Pick image from gallery with optimization
+  // Pick image from gallery
   static Future<File?> pickImageFromGallery() async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -659,7 +736,7 @@ class ChatService {
     }
   }
 
-  // Take photo with camera with optimization
+  // Take photo with camera
   static Future<File?> takePhotoWithCamera() async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -675,27 +752,20 @@ class ChatService {
     }
   }
 
-  // Get chat participants with caching
+  // Get chat participants
   static Future<List<UserModel>> getChatParticipants(String chatId) async {
     try {
-      final chatDoc = await _firestore
-          .collection('veterinary_chats')
-          .doc(chatId)
-          .get();
-
-      if (!chatDoc.exists) {
+      final chatSnapshot = await _veterinaryChatsRef.child(chatId).get();
+      if (!chatSnapshot.exists) {
         return [];
       }
 
-      final participants = List<String>.from(chatDoc.data()!['participants'] ?? []);
+      final chatData = Map<String, dynamic>.from(chatSnapshot.value as Map);
+      final participants = List<String>.from(chatData['participants'] ?? []);
       final users = <UserModel>[];
 
       for (final userId in participants) {
-        final userDoc = await _firestore
-            .collection('users')
-            .doc(userId)
-            .get();
-
+        final userDoc = await _firestore.collection('users').doc(userId).get();
         if (userDoc.exists) {
           users.add(UserModel.fromFirestore(userDoc));
         }
@@ -707,7 +777,7 @@ class ChatService {
     }
   }
 
-  // Search veterinarians with optimization
+  // Search veterinarians - still using Firestore
   static Future<List<VeterinarianModel>> searchVeterinarians({
     String? name,
     String? specialization,
@@ -715,9 +785,9 @@ class ChatService {
   }) async {
     try {
       Query query = _firestore
-          .collection('veterinarians')
-          .where('isActive', isEqualTo: true)
-          .where('isAvailable', isEqualTo: true);
+          .collection('users')
+          .where('userType', isEqualTo: 'veterinarian')
+          .where('isActive', isEqualTo: true);
 
       if (specialization != null && specialization.isNotEmpty) {
         query = query.where('specialization', isEqualTo: specialization);
@@ -725,10 +795,28 @@ class ChatService {
 
       final snapshot = await query.get();
       List<VeterinarianModel> veterinarians = snapshot.docs
-          .map((doc) => VeterinarianModel.fromFirestore(doc))
+          .map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            // Create VeterinarianModel from users collection data
+            return VeterinarianModel(
+              id: doc.id,
+              name: data['name'] ?? data['username'] ?? '',
+              email: data['email'] ?? '',
+              profilePhoto: data['profileImageUrl'] ?? data['profilePhoto'],
+              specialization: data['specialization'] ?? '',
+              phoneNumber: data['phone'] ?? data['phoneNumber'],
+              address: data['address'],
+              rating: ((data['rating'] ?? 0.0) as num).toDouble(),
+              reviewCount: (data['reviewCount'] ?? data['totalRatings'] ?? 0) as int,
+              isOnline: (data['isOnline'] ?? false) as bool,
+              isAvailable: (data['isAvailable'] ?? true) as bool,
+              isActive: (data['isActive'] ?? true) as bool,
+              createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+              updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+            );
+          })
           .toList();
 
-      // Filter by name and location
       if (name != null && name.isNotEmpty) {
         veterinarians = veterinarians.where((vet) =>
             vet.name.toLowerCase().contains(name.toLowerCase()) ||
@@ -746,33 +834,43 @@ class ChatService {
     }
   }
 
-  // Get chat statistics with optimization
+  // Get chat statistics
   static Future<Map<String, dynamic>> getChatStatistics(String userId) async {
     try {
-      final userChats = await _firestore
-          .collection('veterinary_chats')
-          .where('participants', arrayContains: userId)
-          .where('isActive', isEqualTo: true)
-          .get();
+      final snapshot = await _veterinaryChatsRef.get();
 
-      int totalChats = userChats.docs.length;
+      int totalChats = 0;
       int activeChats = 0;
       int totalMessages = 0;
       int unreadMessages = 0;
 
-      for (var chatDoc in userChats.docs) {
-        final chatData = chatDoc.data();
-        if (chatData['isActive'] == true) {
-          activeChats++;
+      if (snapshot.exists) {
+        final chatsMap = snapshot.value as Map<dynamic, dynamic>;
+        
+        for (var entry in chatsMap.entries) {
+          final chatData = Map<String, dynamic>.from(entry.value as Map);
+          if (chatData['isActive'] == true) {
+            final participants = List<String>.from(chatData['participants'] ?? []);
+            
+            if (participants.contains(userId)) {
+              totalChats++;
+              activeChats++;
+
+              final unreadCount = Map<String, dynamic>.from(chatData['unreadCount'] ?? {});
+              final count = unreadCount[userId];
+              unreadMessages += (count is int) ? count : (count as num?)?.toInt() ?? 0;
+
+              // Count messages in this chat
+              final messagesSnapshot = await _veterinaryMessagesRef.child(entry.key.toString()).get();
+              if (messagesSnapshot.exists) {
+                final messagesMap = messagesSnapshot.value as Map<dynamic, dynamic>?;
+                if (messagesMap != null) {
+                  totalMessages += messagesMap.length;
+                }
+              }
+            }
+          }
         }
-
-        final unreadCount = Map<String, dynamic>.from(chatData['unreadCount'] ?? {});
-        final count = unreadCount[userId];
-        unreadMessages += (count is int) ? count : (count as num?)?.toInt() ?? 0;
-
-        // Count messages in this chat
-        final messagesQuery = await chatDoc.reference.collection('messages').get();
-        totalMessages += messagesQuery.docs.length;
       }
 
       return {
@@ -788,50 +886,77 @@ class ChatService {
 
   // ========== USER TO USER CHAT METHODS ==========
 
-  // Get user's chats with other users stream - always fresh from Firebase
+  // Get user's chats with other users stream
   static Stream<List<ChatModel>> getUserToUserChatsStream(String userId) {
-    // Always create a fresh stream from Firebase - don't cache to ensure real-time updates
     if (FirebaseConfig.isDemoMode) {
       return Stream.value(<ChatModel>[]);
     }
     
-    final stream = _firestore
-        .collection('user_chats')
-        .where('participants', arrayContains: userId)
-        .where('isActive', isEqualTo: true)
-        .orderBy('lastMessageAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-          final chats = snapshot.docs
-              .map((doc) => ChatModel.fromFirestore(doc))
-              .toList();
-          return chats;
-        });
-    
-    return stream;
+    return _userChatsRef.onValue.map((event) {
+      if (event.snapshot.value == null) {
+        return <ChatModel>[];
+      }
+          
+      final Map<dynamic, dynamic> chatsMap = event.snapshot.value as Map<dynamic, dynamic>;
+      final List<ChatModel> chats = [];
+          
+      chatsMap.forEach((chatId, chatData) {
+        try {
+          final chatDataMap = Map<String, dynamic>.from(chatData as Map);
+          if (chatDataMap['isActive'] == true) {
+            final participants = List<String>.from(chatDataMap['participants'] ?? []);
+            if (participants.contains(userId)) {
+              final chatModel = ChatModel.fromJson({
+                'id': chatId.toString(),
+                ...chatDataMap,
+              });
+              chats.add(chatModel);
+            }
+          }
+        } catch (e) {
+          print('Error parsing user chat $chatId: $e');
+        }
+      });
+          
+      chats.sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
+      return chats;
+    });
   }
 
-  // Get chat messages stream for user-to-user chats - always fresh from Firebase
+  // Get chat messages stream for user-to-user chats
   static Stream<List<ChatMessage>> getUserChatMessagesStream(String chatId) {
-    // Always create a fresh stream from Firebase - don't cache to ensure real-time updates
     if (FirebaseConfig.isDemoMode) {
       return Stream.value(<ChatMessage>[]);
     }
     
-    final stream = _firestore
-        .collection('user_chats')
-        .doc(chatId)
-        .collection('messages')
-        .orderBy('timestamp', descending: false)
-        .limit(50)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs
-              .map((doc) => ChatMessage.fromFirestore(doc))
-              .toList();
+    return _userMessagesRef
+        .child(chatId)
+        .orderByChild('timestamp')
+        .limitToLast(50)
+        .onValue
+        .map((event) {
+          if (event.snapshot.value == null) {
+            return <ChatMessage>[];
+          }
+          
+          final Map<dynamic, dynamic> messagesMap = event.snapshot.value as Map<dynamic, dynamic>;
+          final List<ChatMessage> messages = [];
+          
+          messagesMap.forEach((messageId, messageData) {
+            try {
+              final message = ChatMessage.fromJson({
+                'id': messageId.toString(),
+                ...Map<String, dynamic>.from(messageData as Map),
+              });
+              messages.add(message);
+            } catch (e) {
+              print('Error parsing user message $messageId: $e');
+            }
+          });
+          
+          messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+          return messages;
         });
-    
-    return stream;
   }
 
   // Create or get existing chat with another user
@@ -843,51 +968,103 @@ class ChatService {
     String? petReportType,
   }) async {
     try {
-      // Check if chat already exists
-      final existingChats = await _firestore
-          .collection('user_chats')
-          .where('participants', arrayContains: userId)
-          .where('isActive', isEqualTo: true)
-          .get();
+      if (FirebaseConfig.isDemoMode) {
+        throw Exception('Firebase is in demo mode');
+      }
 
-      for (var doc in existingChats.docs) {
-        final participants = List<String>.from(doc.data()['participants'] ?? []);
-        if (participants.contains(otherUserId)) {
-          return doc.id;
+      // Check if chat already exists
+      DataSnapshot snapshot;
+      try {
+        snapshot = await _userChatsRef.get();
+      } catch (e) {
+        // Handle web-specific Realtime Database errors
+        if (e.toString().contains('MissingPluginException') || 
+            e.toString().contains('No implementation found')) {
+          throw Exception(
+            'خطأ في إعداد قاعدة البيانات. يرجى:\n'
+            '1. التأكد من تفعيل Realtime Database في Firebase Console\n'
+            '2. الحصول على عنوان قاعدة البيانات من Firebase Console\n'
+            '3. إعادة بناء التطبيق (flutter clean && flutter pub get)\n'
+            '4. إعادة تشغيل التطبيق'
+          );
+        }
+        rethrow;
+      }
+
+      if (snapshot.exists) {
+        final chatsMap = snapshot.value as Map<dynamic, dynamic>?;
+        if (chatsMap != null) {
+          for (var entry in chatsMap.entries) {
+            final chatData = Map<String, dynamic>.from(entry.value as Map);
+            if (chatData['isActive'] == true) {
+              final participants = List<String>.from(chatData['participants'] ?? []);
+              if (participants.contains(userId) && participants.contains(otherUserId)) {
+                return entry.key.toString();
+              }
+            }
+          }
         }
       }
 
-      // Get user names
+      // Get user names, photos, and types
       String userName = 'المستخدم';
       String otherUserName = 'المستخدم';
+      String? userPhoto;
+      String? otherUserPhoto;
+      String userType = 'user';
+      String otherUserType = 'user';
       
       try {
         final userDoc = await _firestore.collection('users').doc(userId).get();
         if (userDoc.exists) {
-          userName = userDoc.data()?['name'] ?? userDoc.data()?['username'] ?? 'المستخدم';
+          final userData = userDoc.data();
+          userName = userData?['name'] ?? userData?['username'] ?? 'المستخدم';
+          userPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
         }
         
+        // Get other user data from users collection
         final otherUserDoc = await _firestore.collection('users').doc(otherUserId).get();
         if (otherUserDoc.exists) {
-          otherUserName = otherUserDoc.data()?['name'] ?? otherUserDoc.data()?['username'] ?? 'المستخدم';
+          final otherUserData = otherUserDoc.data();
+          // Check if user is a veterinarian
+          if (otherUserData?['userType'] == 'veterinarian') {
+            otherUserName = otherUserData?['name'] ?? otherUserData?['username'] ?? 'الدكتور';
+            otherUserPhoto = otherUserData?['profileImageUrl'] ?? otherUserData?['profilePhoto'];
+            otherUserType = 'veterinarian';
+          } else {
+            otherUserName = otherUserData?['name'] ?? otherUserData?['username'] ?? 'المستخدم';
+            otherUserPhoto = otherUserData?['profileImageUrl'] ?? otherUserData?['profilePhoto'];
+            otherUserType = 'user';
+          }
         }
       } catch (e) {
-        print('Warning: Could not fetch user names: $e');
+        print('Warning: Could not fetch user data: $e');
       }
 
       // Create new chat
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final chatId = _userChatsRef.push().key!;
+      
       final chatData = {
         'participants': [userId, otherUserId],
         'participantNames': {
           userId: userName,
           otherUserId: otherUserName,
         },
+        'participantPhotos': {
+          userId: userPhoto,
+          otherUserId: otherUserPhoto,
+        },
+        'participantTypes': {
+          userId: userType,
+          otherUserId: otherUserType,
+        },
         'lastMessage': initialMessage ?? 'محادثة جديدة',
-        'lastMessageAt': FieldValue.serverTimestamp(),
+        'lastMessageAt': now,
         'lastMessageSender': userId,
         'isActive': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
+        'createdAt': now,
+        'updatedAt': now,
         'unreadCount': {
           userId: 0,
           otherUserId: 1,
@@ -896,50 +1073,25 @@ class ChatService {
         if (petReportType != null) 'petReportType': petReportType,
       };
 
-      final chatRef = await _firestore
-          .collection('user_chats')
-          .add(chatData);
-
-      // Wait for document to be fully created and ensure it's persisted
-      final chatDoc = await chatRef.get();
-      if (!chatDoc.exists) {
-        throw Exception('فشل في إنشاء المحادثة');
-      }
+      await _userChatsRef.child(chatId).set(chatData);
 
       // Add initial message if provided
       if (initialMessage != null && initialMessage.isNotEmpty) {
         try {
-          // Wait a bit to ensure chat document is fully written
           await Future.delayed(const Duration(milliseconds: 300));
           
           await sendUserTextMessage(
-            chatId: chatRef.id,
+            chatId: chatId,
             senderId: userId,
             message: initialMessage,
           );
-          print('✅ Initial message sent successfully to chat: ${chatRef.id}');
-          
-          // Verify message was saved
-          final messagesSnapshot = await _firestore
-              .collection('user_chats')
-              .doc(chatRef.id)
-              .collection('messages')
-              .orderBy('timestamp', descending: true)
-              .limit(1)
-              .get();
-          
-          if (messagesSnapshot.docs.isEmpty) {
-            print('⚠️ Warning: Initial message might not have been saved');
-          } else {
-            print('✅ Verified: Initial message exists in chat: ${chatRef.id}');
-          }
+          print('✅ Initial message sent successfully to chat: $chatId');
         } catch (e) {
           print('⚠️ Error sending initial message: $e');
-          // Don't throw - chat was created successfully, message can be sent later
         }
       }
 
-      return chatRef.id;
+      return chatId;
     } catch (e) {
       throw Exception('فشل في إنشاء المحادثة: $e');
     }
@@ -954,19 +1106,18 @@ class ChatService {
     try {
       print('📤 Sending user-to-user message to chat: $chatId, from: $senderId');
       
-      final chatDoc = await _firestore.collection('user_chats').doc(chatId).get();
-      if (!chatDoc.exists) {
+      final chatSnapshot = await _userChatsRef.child(chatId).get();
+      if (!chatSnapshot.exists) {
         print('❌ Chat document does not exist: $chatId');
         throw Exception('المحادثة غير موجودة');
       }
       
       print('✅ Chat document exists, proceeding with message send');
       
-      final chatData = chatDoc.data()!;
+      final chatData = Map<String, dynamic>.from(chatSnapshot.value as Map);
       final participants = List<String>.from(chatData['participants'] ?? []);
       final currentUnreadCount = Map<String, dynamic>.from(chatData['unreadCount'] ?? {});
       
-      // Find the other participant (receiver)
       String? receiverId;
       for (String participant in participants) {
         if (participant != senderId) {
@@ -975,74 +1126,62 @@ class ChatService {
         }
       }
       
-      // Get sender name
       String senderName = 'المستخدم';
+      String? senderPhoto;
+      String senderType = 'user';
       try {
+        // Get sender data from users collection
         final userDoc = await _firestore.collection('users').doc(senderId).get();
         if (userDoc.exists) {
-          senderName = userDoc.data()?['name'] ?? userDoc.data()?['username'] ?? 'المستخدم';
+          final userData = userDoc.data();
+          // Check if user is a veterinarian
+          if (userData?['userType'] == 'veterinarian') {
+            senderName = userData?['name'] ?? userData?['username'] ?? 'الدكتور';
+            senderPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
+            senderType = 'veterinarian';
+          } else {
+            senderName = userData?['name'] ?? userData?['username'] ?? 'المستخدم';
+            senderPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
+            senderType = 'user';
+          }
         }
       } catch (e) {
-        print('Warning: Could not fetch sender name: $e');
+        print('Warning: Could not fetch sender data: $e');
       }
       
-      // Create message document with explicit ID for better tracking
-      final messageId = DateTime.now().millisecondsSinceEpoch.toString();
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final messageId = now.toString();
       
       final messageData = {
         'chatId': chatId,
         'senderId': senderId,
         'message': message,
-        'timestamp': FieldValue.serverTimestamp(),
+        'timestamp': now,
         'type': MessageType.text.name,
         'isRead': false,
         'messageId': messageId,
         'senderName': senderName,
+        'senderPhoto': senderPhoto,
+        'senderType': senderType,
       };
 
-      final batch = _firestore.batch();
-
-      final messageRef = _firestore
-          .collection('user_chats')
-          .doc(chatId)
-          .collection('messages')
-          .doc(messageId);
-
-      batch.set(messageRef, messageData);
-
-      // Prepare updated unread counts
       Map<String, dynamic> updatedUnreadCounts = Map<String, dynamic>.from(currentUnreadCount);
-      
       updatedUnreadCounts[senderId] = 0;
-      
       if (receiverId != null) {
         updatedUnreadCounts[receiverId] = (updatedUnreadCounts[receiverId] ?? 0) + 1;
       }
 
-      final chatRef = _firestore.collection('user_chats').doc(chatId);
-      batch.update(chatRef, {
-        'lastMessage': message,
-        'lastMessageAt': FieldValue.serverTimestamp(),
-        'lastMessageSender': senderId,
-        'updatedAt': FieldValue.serverTimestamp(),
-        'unreadCount': updatedUnreadCounts,
-      });
+      final updates = <String, dynamic>{
+        'user_chats/$chatId/lastMessage': message,
+        'user_chats/$chatId/lastMessageAt': now,
+        'user_chats/$chatId/lastMessageSender': senderId,
+        'user_chats/$chatId/updatedAt': now,
+        'user_chats/$chatId/unreadCount': updatedUnreadCounts,
+        'user_messages/$chatId/$messageId': messageData,
+      };
 
-      await batch.commit();
+      await _database.ref().update(updates);
       print('✅ User-to-user message sent successfully to chat: $chatId, messageId: $messageId');
-      
-      // Verify message was saved (with a small delay to allow Firestore to process)
-      try {
-        await Future.delayed(const Duration(milliseconds: 200));
-        final savedMessage = await messageRef.get();
-        if (savedMessage.exists) {
-          print('✅ Verified: Message saved successfully in chat: $chatId');
-        } else {
-          print('⚠️ Warning: Message might not have been saved properly');
-        }
-      } catch (e) {
-        print('⚠️ Warning: Could not verify message save: $e');
-      }
     } catch (e) {
       print('❌ Error sending user-to-user message: $e');
       throw Exception('فشل في إرسال الرسالة: $e');
@@ -1057,12 +1196,12 @@ class ChatService {
     String? caption,
   }) async {
     try {
-      final chatDoc = await _firestore.collection('user_chats').doc(chatId).get();
-      if (!chatDoc.exists) {
+      final chatSnapshot = await _userChatsRef.child(chatId).get();
+      if (!chatSnapshot.exists) {
         throw Exception('المحادثة غير موجودة');
       }
       
-      final chatData = chatDoc.data()!;
+      final chatData = Map<String, dynamic>.from(chatSnapshot.value as Map);
       final participants = List<String>.from(chatData['participants'] ?? []);
       final currentUnreadCount = Map<String, dynamic>.from(chatData['unreadCount'] ?? {});
       
@@ -1074,59 +1213,64 @@ class ChatService {
         }
       }
       
-      // Get sender name
       String senderName = 'المستخدم';
+      String? senderPhoto;
+      String senderType = 'user';
       try {
+        // Get sender data from users collection
         final userDoc = await _firestore.collection('users').doc(senderId).get();
         if (userDoc.exists) {
-          senderName = userDoc.data()?['name'] ?? userDoc.data()?['username'] ?? 'المستخدم';
+          final userData = userDoc.data();
+          // Check if user is a veterinarian
+          if (userData?['userType'] == 'veterinarian') {
+            senderName = userData?['name'] ?? userData?['username'] ?? 'الدكتور';
+            senderPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
+            senderType = 'veterinarian';
+          } else {
+            senderName = userData?['name'] ?? userData?['username'] ?? 'المستخدم';
+            senderPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
+            senderType = 'user';
+          }
         }
       } catch (e) {
-        print('Warning: Could not fetch sender name: $e');
+        print('Warning: Could not fetch sender data: $e');
       }
       
       final imageUrl = await _uploadImage(imageFile, 'user_chat_images/$chatId');
 
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final messageId = now.toString();
+      
       final messageData = {
         'chatId': chatId,
         'senderId': senderId,
         'message': caption ?? 'صورة',
-        'timestamp': FieldValue.serverTimestamp(),
+        'timestamp': now,
         'type': MessageType.image.name,
         'mediaUrl': imageUrl,
         'isRead': false,
-        'messageId': DateTime.now().millisecondsSinceEpoch.toString(),
+        'messageId': messageId,
         'senderName': senderName,
+        'senderPhoto': senderPhoto,
+        'senderType': senderType,
       };
 
-      final batch = _firestore.batch();
-      
-      final messageRef = _firestore
-          .collection('user_chats')
-          .doc(chatId)
-          .collection('messages')
-          .doc();
-      
-      batch.set(messageRef, messageData);
-
       Map<String, dynamic> updatedUnreadCounts = Map<String, dynamic>.from(currentUnreadCount);
-      
       updatedUnreadCounts[senderId] = 0;
-      
       if (receiverId != null) {
         updatedUnreadCounts[receiverId] = (updatedUnreadCounts[receiverId] ?? 0) + 1;
       }
 
-      final chatRef = _firestore.collection('user_chats').doc(chatId);
-      batch.update(chatRef, {
-        'lastMessage': caption ?? '📷 صورة',
-        'lastMessageAt': FieldValue.serverTimestamp(),
-        'lastMessageSender': senderId,
-        'updatedAt': FieldValue.serverTimestamp(),
-        'unreadCount': updatedUnreadCounts,
-      });
+      final updates = <String, dynamic>{
+        'user_chats/$chatId/lastMessage': caption ?? '📷 صورة',
+        'user_chats/$chatId/lastMessageAt': now,
+        'user_chats/$chatId/lastMessageSender': senderId,
+        'user_chats/$chatId/updatedAt': now,
+        'user_chats/$chatId/unreadCount': updatedUnreadCounts,
+        'user_messages/$chatId/$messageId': messageData,
+      };
 
-      await batch.commit();
+      await _database.ref().update(updates);
     } catch (e) {
       throw Exception('فشل في إرسال الصورة: $e');
     }
@@ -1148,35 +1292,30 @@ class ChatService {
     _lastMarkAsReadCall['user_$chatId'] = now;
 
     try {
-      final messagesQuery = await _firestore
-          .collection('user_chats')
-          .doc(chatId)
-          .collection('messages')
-          .where('isRead', isEqualTo: false)
-          .limit(100)
-          .get();
+      final messagesSnapshot = await _userMessagesRef.child(chatId).get();
 
-      if (messagesQuery.docs.isNotEmpty) {
-        final batch = _firestore.batch();
-        int updatedCount = 0;
-        
-        for (var doc in messagesQuery.docs) {
-          final data = doc.data();
-          final senderId = data['senderId'] as String?;
+      if (messagesSnapshot.exists) {
+        final messagesMap = messagesSnapshot.value as Map<dynamic, dynamic>?;
+        if (messagesMap != null) {
+          final updates = <String, dynamic>{};
+          int updatedCount = 0;
           
-          if (senderId != null && senderId != userId) {
-            batch.update(doc.reference, {'isRead': true});
-            updatedCount++;
+          messagesMap.forEach((messageId, messageData) {
+            final data = Map<String, dynamic>.from(messageData as Map);
+            final senderId = data['senderId'] as String?;
+            final isRead = data['isRead'] ?? false;
+            
+            // Only update unread messages from other users
+            if (senderId != null && senderId != userId && isRead == false) {
+              updates['user_messages/$chatId/$messageId/isRead'] = true;
+              updatedCount++;
+            }
+          });
+
+          if (updatedCount > 0) {
+            updates['user_chats/$chatId/unreadCount/$userId'] = 0;
+            await _database.ref().update(updates);
           }
-        }
-
-        if (updatedCount > 0) {
-          batch.update(
-            _firestore.collection('user_chats').doc(chatId),
-            {'unreadCount.$userId': 0},
-          );
-
-          await batch.commit();
         }
       }
     } catch (e) {
@@ -1186,19 +1325,31 @@ class ChatService {
 
   // Get unread message count stream for user-to-user chats
   static Stream<int> getUserUnreadMessageCountStream(String userId) {
-    return _firestore
-        .collection('user_chats')
-        .where('participants', arrayContains: userId)
-        .where('isActive', isEqualTo: true)
-        .snapshots()
-        .map((snapshot) {
-      int totalUnread = 0;
-      for (var doc in snapshot.docs) {
-        final unreadCount = Map<String, dynamic>.from(doc.data()['unreadCount'] ?? {});
-        final count = unreadCount[userId];
-        totalUnread += (count is int) ? count : (count as num?)?.toInt() ?? 0;
+    return _userChatsRef.onValue.map((event) {
+      if (event.snapshot.value == null) {
+        return 0;
       }
+          
+      int totalUnread = 0;
+      final chatsMap = event.snapshot.value as Map<dynamic, dynamic>;
+          
+      chatsMap.forEach((chatId, chatData) {
+        try {
+          final chatDataMap = Map<String, dynamic>.from(chatData as Map);
+          if (chatDataMap['isActive'] == true) {
+            final participants = List<String>.from(chatDataMap['participants'] ?? []);
+            if (participants.contains(userId)) {
+              final unreadCount = Map<String, dynamic>.from(chatDataMap['unreadCount'] ?? {});
+              final count = unreadCount[userId];
+              totalUnread += (count is int) ? count : (count as num?)?.toInt() ?? 0;
+            }
+          }
+        } catch (e) {
+          print('Error parsing unread count for user chat $chatId: $e');
+        }
+      });
+          
       return totalUnread;
     });
   }
-} 
+}

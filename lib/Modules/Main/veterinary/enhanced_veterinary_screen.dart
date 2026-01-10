@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:alifi/Utilities/text_style_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../Widgets/bottom_navbar_widget.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/auth_service.dart';
@@ -167,6 +169,10 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
       // veterinarians stream
       _veterinariansSubscription = ChatService.getVeterinariansStream().listen((vets) {
         if (!mounted) return;
+        // Debug: Print veterinarians data to check profilePhoto
+        for (var vet in vets) {
+          print('🔍 Vet: ${vet['name']}, profilePhoto: ${vet['profilePhoto']}');
+        }
         setState(() {
           _veterinarians = vets;
           _filteredVeterinarians = vets;
@@ -269,10 +275,11 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => EnhancedChatScreen(
+            builder: (context) => UserChatScreen(
               chatId: chatId,
-              veterinarianId: vetId,
-              veterinarianName: vet['name'] ?? 'طبيب بيطري',
+              otherUserId: vetId,
+              otherUserName: vet['name'] ?? 'طبيب بيطري',
+              isVeterinaryChat: true,
             ),
           ),
         );
@@ -437,7 +444,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
                   onPressed: () {
                     _tabController.animateTo(0); // Switch to veterinarians tab
                   },
-                  icon: Icon(Icons.medical_services),
+                  icon: Icon(Icons.person),
                   label: Text('عرض الأطباء البيطريين'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryGreen,
@@ -476,7 +483,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.medical_services_outlined,
+            Icons.person,
             size: 64.sp,
             color: Colors.grey,
           ),
@@ -536,19 +543,34 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
                   CircleAvatar(
                     radius: 30.r,
                     backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
-                    backgroundImage: vet['profilePhoto'] != null && vet['profilePhoto'].isNotEmpty
-                        ? NetworkImage(vet['profilePhoto'])
+                    backgroundImage: (vet['profilePhoto'] != null && 
+                            vet['profilePhoto'].toString().isNotEmpty)
+                        ? CachedNetworkImageProvider(vet['profilePhoto'].toString())
                         : null,
-                    child: vet['profilePhoto'] == null || vet['profilePhoto'].isEmpty
+                    child: (vet['profilePhoto'] == null || 
+                            vet['profilePhoto'].toString().isEmpty)
                         ? Icon(
-                      Icons.person,
-                      size: 30.sp,
-                      color: AppTheme.primaryGreen,
-                    )
+                            Icons.person,
+                            size: 30.sp,
+                            color: AppTheme.primaryGreen,
+                          )
                         : null,
                   ),
                   // Online indicator
-
+                  if (vet['isOnline'] == true)
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 12.w,
+                        height: 12.h,
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
+                    ),
                 ],
               ),
               SizedBox(width: 12.w),
@@ -628,33 +650,42 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
           // Avatar with type indicator
           Stack(
             children: [
-              CircleAvatar(
-                radius: 28.r,
-                backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
-                child: Icon(
-                  isVeterinaryChat ? Icons.medical_services : Icons.person,
-                  size: 28.sp,
-                  color: AppTheme.primaryGreen,
-                ),
+              FutureBuilder<DocumentSnapshot>(
+                future: otherUserId != null 
+                    ? FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(otherUserId)
+                        .get()
+                    : null,
+                builder: (context, snapshot) {
+                  String? profilePhoto;
+                  
+                  if (snapshot.hasData && snapshot.data!.exists) {
+                    final data = snapshot.data!.data() as Map<String, dynamic>?;
+                    if (data != null) {
+                      // Get profile photo from users collection
+                      profilePhoto = data['profileImageUrl'] as String? ?? data['profilePhoto'] as String?;
+                    }
+                  }
+                  
+                  return CircleAvatar(
+                    radius: 28.r,
+                    backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+                    backgroundImage: profilePhoto != null && profilePhoto.isNotEmpty
+                        ? CachedNetworkImageProvider(profilePhoto)
+                        : null,
+                    child: profilePhoto == null || profilePhoto.isEmpty
+                        ? Icon(
+                            isVeterinaryChat ? Icons.person : Icons.person,
+                            size: 28.sp,
+                            color: AppTheme.primaryGreen,
+                          )
+                        : null,
+                  );
+                },
               ),
               // Type badge
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  padding: EdgeInsets.all(4.w),
-                  decoration: BoxDecoration(
-                    color: isVeterinaryChat ? AppTheme.primaryGreen : AppTheme.primaryOrange,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: Icon(
-                    isVeterinaryChat ? Icons.medical_services : Icons.person,
-                    size: 10.sp,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+
             ],
           ),
           SizedBox(width: 12.w),
@@ -665,30 +696,36 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        participantName,
-                        style: TextStyleHelper.of(context).s16RegTextStyle.copyWith(
-                          fontWeight: isUnread ? FontWeight.w700 : FontWeight.w600,
-                          color: AppTheme.primaryGreen,
-                        ),
-                      ),
-                    ),
-                    // Chat type label
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                      decoration: BoxDecoration(
-                        color: isVeterinaryChat 
-                            ? AppTheme.primaryGreen.withOpacity(0.1)
-                            : AppTheme.primaryOrange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4.r),
-                      ),
-                      child: Text(
-                        isVeterinaryChat ? 'طبيب' : 'مستخدم',
-                        style: TextStyle(
-                          fontSize: 10.sp,
-                          color: isVeterinaryChat ? AppTheme.primaryGreen : AppTheme.primaryOrange,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      child: FutureBuilder<DocumentSnapshot>(
+                        future: otherUserId != null 
+                            ? FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(otherUserId)
+                                .get()
+                            : null,
+                        builder: (context, snapshot) {
+                          String displayName = participantName;
+                          
+                          if (snapshot.hasData && snapshot.data!.exists) {
+                            final data = snapshot.data!.data() as Map<String, dynamic>?;
+                            if (data != null) {
+                              final name = isVeterinaryChat
+                                  ? (data['name'] as String?)
+                                  : (data['username'] as String?) ?? (data['name'] as String?);
+                              if (name != null && name.isNotEmpty && name != 'المستخدم' && name != 'مستخدم') {
+                                displayName = name;
+                              }
+                            }
+                          }
+                          
+                          return Text(
+                            displayName,
+                            style: TextStyleHelper.of(context).s16RegTextStyle.copyWith(
+                              fontWeight: isUnread ? FontWeight.w700 : FontWeight.w600,
+                              color: AppTheme.primaryGreen,
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],
