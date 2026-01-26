@@ -324,6 +324,10 @@
                             <button class="filter-btn" data-filter="adoption">Adoption</button>
                             <button class="filter-btn" data-filter="breeding">Breeding</button>
                             <button class="filter-btn" data-filter="urgent">Urgent</button>
+                            <span class="filter-separator" aria-hidden="true">|</span>
+                            <button class="filter-btn" data-filter="approved">Approved</button>
+                            <button class="filter-btn" data-filter="pending">Pending</button>
+                            <button class="filter-btn" data-filter="rejected">Rejected</button>
                         </div>
                     </div>
 
@@ -999,6 +1003,22 @@
                         <label for="vet-password">Password *</label>
                         <input type="password" id="vet-password" minlength="6">
                     </div>
+                </div>
+                <div class="form-group">
+                    <label>Locations *</label>
+                    <div id="vet-locations-container" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 12px;">
+                        <div style="margin-bottom: 8px;">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="vet-location-all" checked>
+                                <span class="checkmark"></span>
+                                All Locations
+                            </label>
+                        </div>
+                        <div id="vet-locations-list">
+                            <!-- Locations will be loaded here -->
+                        </div>
+                    </div>
+                    <small>Select the locations where this veterinarian will be available</small>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>

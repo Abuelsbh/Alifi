@@ -197,18 +197,20 @@ class _AdoptionSeekingTabState extends State<AdoptionSeekingTab> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Pet Name
+                    // Report Title or Pet Name
                     Text(
-                      pet.petName,
+                      pet.title?.isNotEmpty == true ? pet.title! : pet.petName,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: 4.h),
-                    // Pet Type, Gender, Age
+                    // Publication Date
                     Text(
-                      '${pet.petType} • ${pet.gender} • ${pet.age} سنة',
+                      _formatDate(pet.createdAt),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context)
                             .colorScheme
@@ -252,26 +254,31 @@ class _AdoptionSeekingTabState extends State<AdoptionSeekingTab> {
                   bottomRight: Radius.circular(24.r),
                   topRight: Radius.circular(24.r),
                 ),
-                child: CachedNetworkImage(
-                  imageUrl: imageUrls.first,
-                  fit: BoxFit.cover,
-                  memCacheWidth: 121.w.toInt(),
-                  memCacheHeight: 83.h.toInt(),
-                  maxWidthDiskCache: 500,
-                  maxHeightDiskCache: 500,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[300],
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppTheme.primaryGreen,
+                child: Container(
+                  color: Colors.grey[300],
+                  child: CachedNetworkImage(
+                    imageUrl: imageUrls.first,
+                    fit: BoxFit.contain,
+                    width: double.infinity,
+                    height: double.infinity,
+                    memCacheWidth: 121.w.toInt(),
+                    memCacheHeight: 83.h.toInt(),
+                    maxWidthDiskCache: 500,
+                    maxHeightDiskCache: 500,
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey[300],
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.primaryGreen,
+                        ),
                       ),
                     ),
-                  ),
-                  errorWidget: (context, url, error) => Icon(
-                    Icons.pets,
-                    size: 40.sp,
-                    color: AppTheme.primaryGreen,
+                    errorWidget: (context, url, error) => Icon(
+                      Icons.pets,
+                      size: 40.sp,
+                      color: AppTheme.primaryGreen,
+                    ),
                   ),
                 ),
               )
@@ -285,6 +292,42 @@ class _AdoptionSeekingTabState extends State<AdoptionSeekingTab> {
         ],
       ),
     );
+  }
+
+  String _formatDate(dynamic date) {
+    if (date == null) return '';
+    
+    try {
+      DateTime dateTime;
+      if (date is Timestamp) {
+        dateTime = date.toDate();
+      } else if (date is DateTime) {
+        dateTime = date;
+      } else {
+        return '';
+      }
+      
+      final now = DateTime.now();
+      final difference = now.difference(dateTime);
+      
+      if (difference.inDays == 0) {
+        if (difference.inHours == 0) {
+          if (difference.inMinutes == 0) {
+            return 'الآن';
+          }
+          return 'منذ ${difference.inMinutes} دقيقة';
+        }
+        return 'منذ ${difference.inHours} ساعة';
+      } else if (difference.inDays == 1) {
+        return 'أمس';
+      } else if (difference.inDays < 7) {
+        return 'منذ ${difference.inDays} أيام';
+      } else {
+        return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+      }
+    } catch (e) {
+      return '';
+    }
   }
 }
 

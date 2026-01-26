@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:ui' as ui;
 
 import '../../Utilities/shared_preferences.dart';
 import 'translation_service.dart';
@@ -22,8 +23,11 @@ class AppLanguage extends ChangeNotifier {
 
   Future fetchLocale() async {
     try {
-      // تحميل اللغة المحفوظة من خدمة الترجمة بشكل آمن
-      await _translationService.loadSavedLanguage();
+      // الحصول على لغة الجهاز
+      final deviceLocale = ui.PlatformDispatcher.instance.locale;
+      
+      // تحميل اللغة المحفوظة من خدمة الترجمة بشكل آمن مع تمرير لغة الجهاز
+      await _translationService.loadSavedLanguage(deviceLocale: deviceLocale);
       
       // تحديث اللغة المحلية بناءً على خدمة الترجمة
       _appLanguage = Languages.values.firstWhere(

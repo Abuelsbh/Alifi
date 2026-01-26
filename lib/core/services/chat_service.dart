@@ -7,6 +7,7 @@ import '../firebase/firebase_config.dart';
 import '../../Models/chat_model.dart';
 import '../../Models/user_model.dart';
 import 'auth_service.dart';
+import 'location_service.dart';
 
 class ChatService {
   static final FirebaseDatabase _database = FirebaseConfig.database;
@@ -123,6 +124,9 @@ class ChatService {
       // Get current user ID to exclude from the list
       final currentUserId = AuthService.userId;
       
+      // Get user's selected location
+      final userLocationId = LocationService.getUserLocation();
+      
       return _firestore
           .collection('users')
           .where('userType', isEqualTo: 'veterinarian')
@@ -134,6 +138,16 @@ class ChatService {
                   final data = doc.data();
                   // Filter out deleted veterinarians and current user if they are a veterinarian
                   if (data['isDeleted'] != true && doc.id != currentUserId) {
+                    // Filter by location if user has selected a location
+                    if (userLocationId != null && userLocationId.isNotEmpty) {
+                      final vetLocations = data['locations'] as List<dynamic>? ?? [];
+                      // If vet has no locations specified, show to all (backward compatibility)
+                      // If vet has locations, check if user's location is included
+                      if (vetLocations.isNotEmpty && !vetLocations.contains(userLocationId)) {
+                        return null; // Don't show this vet
+                      }
+                    }
+                    
                     return {
                       'id': doc.id,
                       ...data,
@@ -645,32 +659,26 @@ class ChatService {
     _lastMarkAsReadCall[chatId] = now;
 
     try {
-      final messagesSnapshot = await _veterinaryMessagesRef.child(chatId).get();
+      final updates = <String, dynamic>{};
+      // دائماً عند الدخول للمحادثة: جعل isUnread = false (unreadCount = 0)
+      updates['veterinary_chats/$chatId/unreadCount/$userId'] = 0;
 
+      final messagesSnapshot = await _veterinaryMessagesRef.child(chatId).get();
       if (messagesSnapshot.exists) {
         final messagesMap = messagesSnapshot.value as Map<dynamic, dynamic>?;
         if (messagesMap != null) {
-          final updates = <String, dynamic>{};
-          int updatedCount = 0;
-          
           messagesMap.forEach((messageId, messageData) {
             final data = Map<String, dynamic>.from(messageData as Map);
             final senderId = data['senderId'] as String?;
             final isRead = data['isRead'] ?? false;
-            
-            // Only update unread messages from other users
             if (senderId != null && senderId != userId && isRead == false) {
               updates['veterinary_messages/$chatId/$messageId/isRead'] = true;
-              updatedCount++;
             }
           });
-
-          if (updatedCount > 0) {
-            updates['veterinary_chats/$chatId/unreadCount/$userId'] = 0;
-            await _database.ref().update(updates);
-          }
         }
       }
+
+      await _database.ref().update(updates);
     } catch (e) {
       print('Warning: Failed to mark messages as read: $e');
     }
@@ -1292,32 +1300,26 @@ class ChatService {
     _lastMarkAsReadCall['user_$chatId'] = now;
 
     try {
-      final messagesSnapshot = await _userMessagesRef.child(chatId).get();
+      final updates = <String, dynamic>{};
+      // دائماً عند الدخول للمحادثة: جعل isUnread = false (unreadCount = 0)
+      updates['user_chats/$chatId/unreadCount/$userId'] = 0;
 
+      final messagesSnapshot = await _userMessagesRef.child(chatId).get();
       if (messagesSnapshot.exists) {
         final messagesMap = messagesSnapshot.value as Map<dynamic, dynamic>?;
         if (messagesMap != null) {
-          final updates = <String, dynamic>{};
-          int updatedCount = 0;
-          
           messagesMap.forEach((messageId, messageData) {
             final data = Map<String, dynamic>.from(messageData as Map);
             final senderId = data['senderId'] as String?;
             final isRead = data['isRead'] ?? false;
-            
-            // Only update unread messages from other users
             if (senderId != null && senderId != userId && isRead == false) {
               updates['user_messages/$chatId/$messageId/isRead'] = true;
-              updatedCount++;
             }
           });
-
-          if (updatedCount > 0) {
-            updates['user_chats/$chatId/unreadCount/$userId'] = 0;
-            await _database.ref().update(updates);
-          }
         }
       }
+
+      await _database.ref().update(updates);
     } catch (e) {
       print('Warning: Failed to mark user messages as read: $e');
     }

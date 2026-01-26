@@ -2,6 +2,7 @@ import 'package:alifi/Utilities/text_style_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../Utilities/theme_helper.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../Widgets/custom_card.dart';
@@ -23,7 +24,10 @@ class UnifiedPetCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final petDetails = pet['petDetails'] as Map<String, dynamic>? ?? {};
+    // Get title first, then fallback to pet name
+    final reportTitle = pet['title']?.toString() ?? '';
     final petName = petDetails['name'] ?? pet['petName'] ?? 'حيوان ${reportType == 'lost' ? 'مفقود' : 'موجود'}';
+    final displayTitle = reportTitle.isNotEmpty ? reportTitle : petName;
     final petType = petDetails['type'] ?? pet['petType'] ?? 'غير محدد';
     final imageUrls = pet['imageUrls'] as List<dynamic>? ?? [];
 
@@ -64,13 +68,16 @@ class UnifiedPetCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      petName,
+                      displayTitle,
                       style: TextStyleHelper.of(context).s18RegTextStyle.copyWith(
                         color: ThemeClass.of(context).backGroundColor,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                    // Show publication date instead of pet type
                     Text(
-                      petType,
+                      _formatDate(pet['createdAt']),
                       style: TextStyleHelper.of(context).s10RegTextStyle.copyWith(
                         color: ThemeClass.of(context).backGroundColor,
                       ),
@@ -109,30 +116,35 @@ class UnifiedPetCard extends StatelessWidget {
                   bottomRight: Radius.circular(24.r),
                   topRight: Radius.circular(24.r),
                 ),
-                child: CachedNetworkImage(
-                  imageUrl: imageUrls.first.toString(),
-                  fit: BoxFit.cover,
-                  memCacheWidth: 121.w.toInt(),
-                  memCacheHeight: 83.h.toInt(),
-                  maxWidthDiskCache: 500,
-                  maxHeightDiskCache: 500,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[300],
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: reportType == 'lost'
-                            ? AppTheme.primaryGreen
-                            : AppTheme.success,
+                child: Container(
+                  color: Colors.grey[300],
+                  child: CachedNetworkImage(
+                    imageUrl: imageUrls.first.toString(),
+                    fit: BoxFit.contain,
+                    width: double.infinity,
+                    height: double.infinity,
+                    memCacheWidth: 121.w.toInt(),
+                    memCacheHeight: 83.h.toInt(),
+                    maxWidthDiskCache: 500,
+                    maxHeightDiskCache: 500,
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey[300],
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: reportType == 'lost'
+                              ? AppTheme.primaryGreen
+                              : AppTheme.success,
+                        ),
                       ),
                     ),
-                  ),
-                  errorWidget: (context, url, error) => Icon(
-                    Icons.pets,
-                    size: 40.sp,
-                    color: reportType == 'lost'
-                        ? AppTheme.primaryGreen
-                        : AppTheme.success,
+                    errorWidget: (context, url, error) => Icon(
+                      Icons.pets,
+                      size: 40.sp,
+                      color: reportType == 'lost'
+                          ? AppTheme.primaryGreen
+                          : AppTheme.success,
+                    ),
                   ),
                 ),
               )
@@ -148,5 +160,41 @@ class UnifiedPetCard extends StatelessWidget {
         ],
       )
     );
+  }
+
+  String _formatDate(dynamic date) {
+    if (date == null) return '';
+    
+    try {
+      DateTime dateTime;
+      if (date is Timestamp) {
+        dateTime = date.toDate();
+      } else if (date is DateTime) {
+        dateTime = date;
+      } else {
+        return '';
+      }
+      
+      final now = DateTime.now();
+      final difference = now.difference(dateTime);
+      
+      if (difference.inDays == 0) {
+        if (difference.inHours == 0) {
+          if (difference.inMinutes == 0) {
+            return 'الآن';
+          }
+          return 'منذ ${difference.inMinutes} دقيقة';
+        }
+        return 'منذ ${difference.inHours} ساعة';
+      } else if (difference.inDays == 1) {
+        return 'أمس';
+      } else if (difference.inDays < 7) {
+        return 'منذ ${difference.inDays} أيام';
+      } else {
+        return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+      }
+    } catch (e) {
+      return '';
+    }
   }
 }

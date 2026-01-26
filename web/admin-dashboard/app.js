@@ -747,12 +747,15 @@ function filterVeterinarians() {
 }
 
 // Veterinarian modal functions
-function openVetModal(vet = null) {
+async function openVetModal(vet = null) {
     currentEditingVet = vet;
     
     const modalTitle = document.getElementById('modal-title');
     const passwordRow = document.getElementById('password-row');
     const vetPassword = document.getElementById('vet-password');
+    
+    // Load locations
+    await loadVetLocations();
     
     if (vet) {
         // Edit mode
@@ -767,6 +770,20 @@ function openVetModal(vet = null) {
         document.getElementById('vet-specialization').value = vet.specialization || '';
         document.getElementById('vet-experience').value = vet.experience || '';
         document.getElementById('vet-license').value = vet.license || '';
+        
+        // Set location checkboxes
+        const locations = vet.locations || [];
+        if (locations.includes('all') || !locations || locations.length === 0) {
+            document.getElementById('vet-location-all').checked = true;
+            toggleVetLocationCheckboxes(false);
+        } else {
+            document.getElementById('vet-location-all').checked = false;
+            toggleVetLocationCheckboxes(false);
+            locations.forEach(locId => {
+                const checkbox = document.querySelector(`.vet-location-checkbox[value="${locId}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+        }
     } else {
         // Add mode
         modalTitle.textContent = 'Add Veterinarian';
@@ -775,10 +792,56 @@ function openVetModal(vet = null) {
         
         // Clear form
         vetForm.reset();
+        document.getElementById('vet-location-all').checked = true;
+        toggleVetLocationCheckboxes(false);
     }
     
     vetModal.classList.add('show');
 }
+
+async function loadVetLocations() {
+    try {
+        const result = await FirebaseService.getAllLocations();
+        if (result.success && result.data) {
+            const locationsList = document.getElementById('vet-locations-list');
+            if (!locationsList) return;
+            
+            locationsList.innerHTML = result.data
+                .filter(loc => loc.isActive !== false)
+                .map(loc => `
+                    <div style="margin-bottom: 8px;">
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="vet-location-checkbox" value="${loc.id}" data-location-name="${loc.name}">
+                            <span class="checkmark"></span>
+                            ${loc.name}
+                        </label>
+                    </div>
+                `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading locations:', error);
+        document.getElementById('vet-locations-list').innerHTML = '<p style="color: #f44336;">Failed to load locations</p>';
+    }
+}
+
+function toggleVetLocationCheckboxes(disabled) {
+    const checkboxes = document.querySelectorAll('.vet-location-checkbox');
+    checkboxes.forEach(cb => cb.disabled = disabled);
+}
+
+// Add event listener for "All Locations" checkbox
+document.addEventListener('DOMContentLoaded', () => {
+    const allLocationsCheckbox = document.getElementById('vet-location-all');
+    if (allLocationsCheckbox) {
+        allLocationsCheckbox.addEventListener('change', function() {
+            toggleVetLocationCheckboxes(this.checked);
+            if (this.checked) {
+                // Uncheck all individual locations
+                document.querySelectorAll('.vet-location-checkbox').forEach(cb => cb.checked = false);
+            }
+        });
+    }
+});
 
 function closeVetModal() {
     vetModal.classList.remove('show');
@@ -794,13 +857,30 @@ async function handleVetSubmit(e) {
     saveBtn.disabled = true;
     
     try {
+        // Get selected locations
+        const allLocationsChecked = document.getElementById('vet-location-all')?.checked;
+        let locations = [];
+        if (allLocationsChecked) {
+            locations = ['all'];
+        } else {
+            const selectedCheckboxes = document.querySelectorAll('.vet-location-checkbox:checked');
+            locations = Array.from(selectedCheckboxes).map(cb => cb.value);
+            if (locations.length === 0) {
+                alert('Please select at least one location or "All Locations"');
+                saveBtn.classList.remove('loading');
+                saveBtn.disabled = false;
+                return;
+            }
+        }
+        
         const formData = {
             name: document.getElementById('vet-name').value.trim(),
             email: document.getElementById('vet-email').value.trim(),
             phone: document.getElementById('vet-phone').value.trim(),
             specialization: document.getElementById('vet-specialization').value.trim(),
             experience: document.getElementById('vet-experience').value.trim(),
-            license: document.getElementById('vet-license').value.trim()
+            license: document.getElementById('vet-license').value.trim(),
+            locations: locations
         };
         
         let result;

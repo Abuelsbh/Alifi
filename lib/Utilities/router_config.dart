@@ -2,7 +2,6 @@ import 'package:alifi/Modules/Main/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../Modules/Splash/splash_screen.dart';
-import '../Modules/Main/main_screen.dart';
 import '../Modules/Main/lost_found/lost_found_screen.dart';
 import '../Modules/Main/veterinary/enhanced_veterinary_screen.dart';
 import '../Modules/Main/profile/simple_profile_screen.dart';
@@ -13,6 +12,7 @@ import '../Modules/Auth/demo_mode_screen.dart';
 import '../Modules/Auth/simple_register_test.dart';
 import '../Modules/Admin/admin_dashboard_screen.dart';
 import '../Modules/Main/lost_found/post_report_screen.dart';
+import '../Modules/Main/location/location_selection_screen.dart';
 
 BuildContext? get currentContext_ =>
     GoRouterConfig.router.routerDelegate.navigatorKey.currentContext;
@@ -28,6 +28,18 @@ class GoRouterConfig{
           return getCustomTransitionPage(
             state: state,
             child: const SplashScreen(),
+          );
+        },
+        routes: const <RouteBase>[],
+      ),
+      GoRoute(
+        path: LocationSelectionScreen.routeName,
+        name: 'locationSelection',
+        pageBuilder: (_, GoRouterState state) {
+          final isFirstTime = state.queryParameters['firstTime'] == 'true';
+          return getCustomTransitionPage(
+            state: state,
+            child: LocationSelectionScreen(isFirstTime: isFirstTime),
           );
         },
         routes: const <RouteBase>[],
@@ -162,18 +174,10 @@ class GoRouterConfig{
     },
   );
 
-  static CustomTransitionPage getCustomTransitionPage({required GoRouterState state, required Widget child}){
-    return CustomTransitionPage(
+  static MaterialPage getCustomTransitionPage({required GoRouterState state, required Widget child}){
+    return MaterialPage(
       key: state.pageKey,
       child: child,
-      transitionDuration: Duration.zero,
-      reverseTransitionDuration: Duration.zero,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
-          child: child,
-        );
-      },
     );
   }
 }

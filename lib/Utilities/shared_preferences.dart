@@ -63,5 +63,24 @@ class SharedPref{
   static Future<void> clearUserLocation() async => 
       await prefs.remove(_userLocationKey);
 
+  // First launch tracking
+  static const String _firstLaunchKey = "is_first_launch";
+
+  static bool isFirstLaunch() {
+    // If the key doesn't exist, it's the first launch
+    if (!prefs.containsKey(_firstLaunchKey)) {
+      return true;
+    }
+    // If the key exists, check its value (should be false if completed)
+    return prefs.getBool(_firstLaunchKey) ?? true;
+  }
+
+  static Future<void> setFirstLaunchCompleted() async {
+    await prefs.setBool(_firstLaunchKey, false);
+  }
+
+  static Future<void> resetFirstLaunch() async {
+    await prefs.remove(_firstLaunchKey);
+  }
 
 }

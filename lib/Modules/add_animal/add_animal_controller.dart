@@ -6,6 +6,7 @@ import 'package:state_extended/state_extended.dart';
 import 'package:alifi/Models/pet_report_model.dart';
 import 'package:alifi/core/services/pet_reports_service.dart';
 import 'package:alifi/core/services/auth_service.dart';
+import 'package:alifi/core/services/location_service.dart';
 
 class AddAnimalController extends StateXController {
   AddAnimalController();
@@ -40,6 +41,7 @@ class AddAnimalController extends StateXController {
   late TextEditingController vetContactController;
   
   // Step 1 Controllers
+  late TextEditingController titleController;
   late TextEditingController descriptionController;
   late TextEditingController colorController;
   String? selectedPetType; // Changed from typeController to dropdown selection
@@ -67,6 +69,7 @@ class AddAnimalController extends StateXController {
     super.initState();
     
     // Initialize Step 1 Controllers
+    titleController = TextEditingController();
     descriptionController = TextEditingController();
     colorController = TextEditingController();
     selectedPetType = null; // Initialize to null for dropdown
@@ -94,6 +97,7 @@ class AddAnimalController extends StateXController {
   @override
   void dispose() {
     // Dispose Step 1 Controllers
+    titleController.dispose();
     descriptionController.dispose();
     colorController.dispose();
     
@@ -124,6 +128,7 @@ class AddAnimalController extends StateXController {
     activeStep = 0;
     
     // Reset Step 1
+    titleController.clear();
     descriptionController.clear();
     colorController.clear();
     selectedPetType = null;
@@ -187,8 +192,11 @@ class AddAnimalController extends StateXController {
         throw Exception('Pet type is required');
       }
       
-      if (selectedImages.isEmpty) {
-        throw Exception('At least one image is required');
+      // Skip image validation for adoption seeking reports
+      if (reportType != ReportType.adoption || adoptionType != 'seeking') {
+        if (selectedImages.isEmpty) {
+          throw Exception('At least one image is required');
+        }
       }
 
       // Get user profile for contact info
@@ -197,12 +205,19 @@ class AddAnimalController extends StateXController {
       final userPhone = userProfile?['phoneNumber'] ?? userProfile?['phone'] ?? '';
       final userEmail = userProfile?['email'] ?? AuthService.userEmail ?? '';
 
+      // Get user's selected location
+      final userLocation = await LocationService.getUserLocationModel();
+      final locationName = userLocation?.name ?? '';
+      final locationId = userLocation?.id ?? '';
+      print('📍 User location: $locationName (ID: $locationId)');
+
       // Convert image paths to File objects
       final List<File> imageFiles = selectedImages.map((path) => File(path)).toList();
 
       // Prepare base report data
       final Map<String, dynamic> baseReport = {
         'userId': user.uid,
+        'title': titleController.text.trim(),
         'petName': '', // Removed - no longer required
         'petType': selectedPetType ?? '',
         'breed': '', // Could be extracted from type or added as separate field
@@ -214,11 +229,12 @@ class AddAnimalController extends StateXController {
         'contactName': userName,
         'contactPhone': userPhone,
         'contactEmail': userEmail,
-        'address': '',
-        'locationLink': '',
+        'address': addressController.text.trim(),
+        'locationLink': locationLinkController.text.trim(),
         'coordinates': null, // Could be added later with location service
-        'area': '', // Could be extracted from address
+        'area': locationName, // User's selected location name
         'landmark': '', // Could be extracted from address
+        'locationId': locationId, // User's selected location ID
       };
 
       String? reportId;
@@ -231,6 +247,7 @@ class AddAnimalController extends StateXController {
           print('📤 Submitting lost pet report');
           baseReport.addAll({
             'lastSeenDate': lostDate ?? DateTime.now(),
+            'lastSeenLocation': addressController.text.trim(), // Location where pet was last seen
             'isUrgent': isUrgent,
             'reward': reward,
             'preferredContact': 'phone',
@@ -244,6 +261,7 @@ class AddAnimalController extends StateXController {
         case ReportType.found:
           baseReport.addAll({
             'foundDate': foundDate ?? DateTime.now(),
+            'foundLocation': addressController.text.trim(), // Location where pet was found
             'isInShelter': false,
             'shelterInfo': '',
             'temperament': medicalStatus, // Map medical status to temperament

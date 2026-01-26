@@ -208,6 +208,7 @@ const FirebaseService = {
                 specialization: vetData.specialization,
                 experience: vetData.experience,
                 license: vetData.license || '',
+                locations: vetData.locations || [], // Store list of location IDs
                 isActive: true,
                 isOnline: false,
                 rating: 0.0,
@@ -252,7 +253,7 @@ const FirebaseService = {
 
     async updateVeterinarian(vetId, vetData) {
         try {
-            await db.collection('users').doc(vetId).update({
+            const updateData = {
                 name: vetData.name,
                 username: vetData.name, // Also update username
                 email: vetData.email,
@@ -261,8 +262,11 @@ const FirebaseService = {
                 specialization: vetData.specialization,
                 experience: vetData.experience,
                 license: vetData.license || '',
+                locations: vetData.locations || [],
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            };
+            
+            await db.collection('users').doc(vetId).update(updateData);
 
             return { success: true };
         } catch (error) {
@@ -824,13 +828,16 @@ const FirebaseService = {
                     // IMPORTANT: Use doc.id as the document ID (Firestore auto-generated ID)
                     // The 'id' field in data might be a timestamp, but we need the actual Firestore document ID
                     // Put ...data first, then override 'id' with doc.id to ensure correct ID
+                    // Include ALL reports (active and inactive) for admin
                     const reportData = {
                         ...data,
                         id: doc.id, // Override any 'id' field from data with the actual Firestore doc.id
                         collection: collectionName,
                         type: collectionName.replace('_pets', ''),
                         createdAt: data.createdAt?.toDate() || new Date(),
-                        updatedAt: data.updatedAt?.toDate() || null
+                        updatedAt: data.updatedAt?.toDate() || null,
+                        isActive: data.isActive !== false, // Default to true if not set
+                        approvalStatus: data.approvalStatus || 'pending'
                     };
                     reports.push(reportData);
                 });
@@ -925,6 +932,81 @@ const FirebaseService = {
             return { success: true };
         } catch (error) {
             console.error('Error deleting report:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async permanentlyDeleteReport(reportId, collection) {
+        try {
+            console.log('🗑️ Permanently deleting report:', { reportId, collection });
+            
+            // Get the report first to access image URLs
+            const doc = await db.collection(collection).doc(reportId).get();
+            
+            if (!doc.exists) {
+                console.error('❌ Report not found:', { reportId, collection });
+                return { success: false, error: 'Report not found' };
+            }
+            
+            const data = doc.data();
+            const imageUrls = data.imageUrls || [];
+            
+            console.log(`📷 Found ${imageUrls.length} images to delete`);
+            
+            // Delete images from Firebase Storage
+            if (imageUrls.length > 0 && storage) {
+                for (const imageUrl of imageUrls) {
+                    try {
+                        // Extract the path from the URL
+                        // Firebase Storage URLs format: https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{path}?alt=media&token={token}
+                        const urlParts = imageUrl.split('/o/');
+                        if (urlParts.length > 1) {
+                            const pathWithParams = urlParts[1].split('?')[0];
+                            const decodedPath = decodeURIComponent(pathWithParams);
+                            const imageRef = storage.ref(decodedPath);
+                            await imageRef.delete();
+                            console.log('✅ Deleted image:', decodedPath);
+                        } else {
+                            // Try refFromURL if available
+                            try {
+                                const imageRef = storage.refFromURL(imageUrl);
+                                await imageRef.delete();
+                                console.log('✅ Deleted image using refFromURL:', imageUrl);
+                            } catch (refError) {
+                                console.warn('⚠️ Could not delete image (refFromURL failed):', imageUrl, refError);
+                                // Try alternative method - extract path manually
+                                try {
+                                    const bucketMatch = imageUrl.match(/\/b\/([^\/]+)\/o\/([^?]+)/);
+                                    if (bucketMatch) {
+                                        const filePath = decodeURIComponent(bucketMatch[2]);
+                                        const imageRef = storage.ref(filePath);
+                                        await imageRef.delete();
+                                        console.log('✅ Deleted image using manual path:', filePath);
+                                    }
+                                } catch (manualError) {
+                                    console.warn('⚠️ Could not delete image (all methods failed):', imageUrl, manualError);
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ Could not delete image:', imageUrl, e);
+                        // Continue even if image deletion fails
+                    }
+                }
+            } else {
+                if (imageUrls.length > 0) {
+                    console.warn('⚠️ Firebase Storage not available, skipping image deletion');
+                }
+            }
+            
+            // Permanently delete the document
+            await db.collection(collection).doc(reportId).delete();
+            console.log('✅ Report permanently deleted from database:', reportId);
+            
+            return { success: true };
+        } catch (error) {
+            console.error('❌ Error permanently deleting report:', error);
+            console.error('Error details:', { reportId, collection, error: error.message, stack: error.stack });
             return { success: false, error: error.message };
         }
     },

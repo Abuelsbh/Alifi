@@ -35,6 +35,8 @@ class _LoginWidgetState extends State<LoginWidget> {
 
   bool _obscurePassword = true;
 
+  String? _errorMessage;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -42,10 +44,82 @@ class _LoginWidgetState extends State<LoginWidget> {
     super.dispose();
   }
 
-  Future<void> _login() async {
+  // Convert error to translation key
+  String _getErrorTranslationKey(dynamic e) {
+    String errorString = e.toString();
+    
+    // Remove "Exception: " prefix if present
+    if (errorString.startsWith('Exception: ')) {
+      errorString = errorString.substring(11);
+    }
+    
+    // Check for Firebase Auth error codes
+    if (errorString.contains('user-not-found') || 
+        errorString.contains('No user found')) {
+      return 'auth.errors.user_not_found';
+    }
+    if (errorString.contains('wrong-password') || 
+        errorString.contains('Wrong password')) {
+      return 'auth.errors.wrong_password';
+    }
+    if (errorString.contains('email-already-in-use') || 
+        errorString.contains('already exists')) {
+      return 'auth.errors.email_already_in_use';
+    }
+    if (errorString.contains('weak-password') || 
+        errorString.contains('too weak')) {
+      return 'auth.errors.weak_password';
+    }
+    if (errorString.contains('invalid-email') || 
+        errorString.contains('not valid')) {
+      return 'auth.errors.invalid_email';
+    }
+    if (errorString.contains('user-disabled') || 
+        errorString.contains('disabled')) {
+      return 'auth.errors.user_disabled';
+    }
+    if (errorString.contains('too-many-requests') || 
+        errorString.contains('Too many requests')) {
+      return 'auth.errors.too_many_requests';
+    }
+    if (errorString.contains('operation-not-allowed') || 
+        errorString.contains('not allowed')) {
+      return 'auth.errors.operation_not_allowed';
+    }
+    if (errorString.contains('network-request-failed') || 
+        errorString.contains('Network error') ||
+        errorString.contains('network')) {
+      return 'auth.errors.network_request_failed';
+    }
+    if (errorString.contains('channel-error') || 
+        errorString.contains('channel')) {
+      return 'auth.errors.channel_error';
+    }
+    if (errorString.contains('تم حذف') || 
+        errorString.contains('deleted')) {
+      return 'auth.errors.account_deleted';
+    }
+    if (errorString.contains('تم حظر') || 
+        errorString.contains('banned')) {
+      return 'auth.errors.account_banned';
+    }
+    if (errorString.contains('تم توقيف') || 
+        errorString.contains('suspended')) {
+      return 'auth.errors.account_suspended';
+    }
+    if (errorString.contains('Authentication failed') || 
+        errorString.contains('فشل')) {
+      return 'auth.errors.authentication_failed';
+    }
+    
+    // Default to unknown error
+    return 'auth.errors.unknown_error';
+  }
 
+  Future<void> _login() async {
     setState(() {
       _isLoading = true;
+      _errorMessage = null;
     });
 
     try {
@@ -56,23 +130,15 @@ class _LoginWidgetState extends State<LoginWidget> {
 
       if (mounted) {
         context.pop();
-        // Call the callback to refresh the parent screen
         widget.onLoginSuccess?.call();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: AppTheme.error,
-          ),
-        );
+        setState(() => _errorMessage = _getErrorTranslationKey(e));
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -99,9 +165,10 @@ class _LoginWidgetState extends State<LoginWidget> {
       }
     } catch (e) {
       if (mounted) {
+        final errorKey = _getErrorTranslationKey(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: TranslatedText(errorKey),
             backgroundColor: AppTheme.error,
           ),
         );
@@ -112,17 +179,19 @@ class _LoginWidgetState extends State<LoginWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 450.h,
+      height: 520.h,
       decoration: BoxDecoration(
         image: DecorationImage(
           image: AssetImage(Assets.imagesBackground), // replace with your image
           fit: BoxFit.contain, // makes it cover the whole area
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
+      child: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(vertical: 12.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
           Center(
             child: Column(
               children: [
@@ -262,9 +331,24 @@ class _LoginWidgetState extends State<LoginWidget> {
             },
             child: TranslatedText(
               'auth.signup',
-                style: TextStyleHelper.of(context).s14RegTextStyle.copyWith(color: ThemeClass.of(context).primaryColor)
+                style: TextStyleHelper.of(context).s18RegTextStyle.copyWith(color: ThemeClass.of(context).primaryColor)
             ),
           ),
+
+          SizedBox(height: 16.h),
+          SizedBox(
+            height: 40.h,
+            child: _errorMessage != null
+                ? Center(
+                    child: TranslatedText(
+                      _errorMessage!,
+                      style: TextStyle(color: AppTheme.error, fontSize: 12.sp),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+          SizedBox(height: 8.h),
 
           // SizedBox(height: 16.h),
           //
@@ -295,6 +379,7 @@ class _LoginWidgetState extends State<LoginWidget> {
           //   ],
           // ),
         ],
+        ),
       ),
     );
   }

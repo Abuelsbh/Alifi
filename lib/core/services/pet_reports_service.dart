@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../firebase/firebase_config.dart';
 import '../../Models/pet_report_model.dart';
 import 'auth_service.dart';
+import 'location_service.dart';
 
 
 class PetReportsService {
@@ -114,7 +115,9 @@ class PetReportsService {
           print('📱 Real-time update: ${snapshot.docs.length} lost pets received');
           final isAdmin = AuthService.isAdmin;
           final userEmail = AuthService.userEmail ?? 'no email';
-          print('👤 User check - Is Admin: $isAdmin, Email: $userEmail');
+          // Get user's selected location
+          final userLocationId = LocationService.getUserLocation();
+          print('👤 User check - Is Admin: $isAdmin, Email: $userEmail, Location: $userLocationId');
           return snapshot.docs
               .where((doc) {
                 final data = doc.data() as Map<String, dynamic>;
@@ -130,10 +133,21 @@ class PetReportsService {
                   final isApproved = approvalStatus == 'approved';
                   if (!isApproved) {
                     print('❌ REJECTING lost pet ${doc.id} - status: "$approvalStatus" (not approved)');
-                  } else {
-                    print('✅ APPROVING lost pet ${doc.id} - status: "$approvalStatus"');
+                    return false;
                   }
-                  return isApproved;
+                  print('✅ APPROVING lost pet ${doc.id} - status: "$approvalStatus"');
+                  
+                  // Filter by location if user has selected a location
+                  if (userLocationId != null && userLocationId.isNotEmpty) {
+                    final reportLocationId = data['location']?['locationId'] as String? ?? '';
+                    // If report has no location specified, show to all (backward compatibility)
+                    // If report has location, check if it matches user's location
+                    if (reportLocationId.isNotEmpty && reportLocationId != userLocationId) {
+                      print('❌ REJECTING lost pet ${doc.id} - location mismatch: report="$reportLocationId", user="$userLocationId"');
+                      return false;
+                    }
+                    print('✅ Location match for lost pet ${doc.id}: "$reportLocationId"');
+                  }
                 }
                 print('✅ Admin: showing pet ${doc.id}');
                 return true; // Admin sees all (pending + approved)
@@ -147,6 +161,15 @@ class PetReportsService {
                   if (approvalStatus != 'approved') {
                     print('⚠️ FINAL CHECK: Lost pet ${doc.id} has status "$approvalStatus" - REMOVING');
                     return null;
+                  }
+                  // Final location check
+                  final userLocationId = LocationService.getUserLocation();
+                  if (userLocationId != null && userLocationId.isNotEmpty) {
+                    final reportLocationId = data['location']?['locationId'] as String? ?? '';
+                    if (reportLocationId.isNotEmpty && reportLocationId != userLocationId) {
+                      print('⚠️ FINAL CHECK: Lost pet ${doc.id} location mismatch - REMOVING');
+                      return null;
+                    }
                   }
                 }
                 return {
@@ -260,7 +283,9 @@ class PetReportsService {
           print('📱 Real-time update: ${snapshot.docs.length} found pets received');
           final isAdmin = AuthService.isAdmin;
           final userEmail = AuthService.userEmail ?? 'no email';
-          print('👤 User check - Is Admin: $isAdmin, Email: $userEmail');
+          // Get user's selected location
+          final userLocationId = LocationService.getUserLocation();
+          print('👤 User check - Is Admin: $isAdmin, Email: $userEmail, Location: $userLocationId');
           return snapshot.docs
               .where((doc) {
                 final data = doc.data() as Map<String, dynamic>;
@@ -276,10 +301,21 @@ class PetReportsService {
                   final isApproved = approvalStatus == 'approved';
                   if (!isApproved) {
                     print('❌ REJECTING found pet ${doc.id} - status: "$approvalStatus" (not approved)');
-                  } else {
-                    print('✅ APPROVING found pet ${doc.id} - status: "$approvalStatus"');
+                    return false;
                   }
-                  return isApproved;
+                  print('✅ APPROVING found pet ${doc.id} - status: "$approvalStatus"');
+                  
+                  // Filter by location if user has selected a location
+                  if (userLocationId != null && userLocationId.isNotEmpty) {
+                    final reportLocationId = data['location']?['locationId'] as String? ?? '';
+                    // If report has no location specified, show to all (backward compatibility)
+                    // If report has location, check if it matches user's location
+                    if (reportLocationId.isNotEmpty && reportLocationId != userLocationId) {
+                      print('❌ REJECTING found pet ${doc.id} - location mismatch: report="$reportLocationId", user="$userLocationId"');
+                      return false;
+                    }
+                    print('✅ Location match for found pet ${doc.id}: "$reportLocationId"');
+                  }
                 }
                 print('✅ Admin: showing found pet ${doc.id}');
                 return true; // Admin sees all (pending + approved)
@@ -292,6 +328,15 @@ class PetReportsService {
                   if (approvalStatus != 'approved') {
                     print('⚠️ WARNING: Found pet ${doc.id} passed filter but status is "$approvalStatus" - removing it');
                     return null; // This will be filtered out
+                  }
+                  // Final location check
+                  final userLocationId = LocationService.getUserLocation();
+                  if (userLocationId != null && userLocationId.isNotEmpty) {
+                    final reportLocationId = data['location']?['locationId'] as String? ?? '';
+                    if (reportLocationId.isNotEmpty && reportLocationId != userLocationId) {
+                      print('⚠️ FINAL CHECK: Found pet ${doc.id} location mismatch - REMOVING');
+                      return null;
+                    }
                   }
                 }
                 return {
@@ -352,6 +397,76 @@ class PetReportsService {
       
       print('📱 User reports update: ${reports.length} reports for user');
       return reports;
+    });
+  }
+
+  /// All animals added by user: lost, found, adoption, breeding.
+  /// Returns List<Map> with 'type' (lost|found|adoption|breeding), 'collection', 'id'.
+  /// Uses where('userId') only (no orderBy) to avoid composite index; sorts in app.
+  static Stream<List<Map<String, dynamic>>> getUserAllAnimalsStream(String userId) {
+    print('📱 Starting user all-animals stream: $userId');
+
+    final lostStream = _firestore
+        .collection('lost_pets')
+        .where('userId', isEqualTo: userId)
+        .snapshots();
+
+    return lostStream.asyncMap((lostSnap) async {
+      // Create fresh queries each time (cannot reuse .first() on same stream).
+      final foundSnap = await _firestore
+          .collection('found_pets')
+          .where('userId', isEqualTo: userId)
+          .get();
+      final adoptionSnap = await _firestore
+          .collection('adoption_pets')
+          .where('userId', isEqualTo: userId)
+          .get();
+      final breedingSnap = await _firestore
+          .collection('breeding_pets')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      final list = <Map<String, dynamic>>[];
+
+      for (var d in lostSnap.docs) {
+        final data = d.data() as Map<String, dynamic>;
+        data['id'] = d.id;
+        data['type'] = 'lost';
+        data['collection'] = 'lost_pets';
+        list.add(data);
+      }
+      for (var d in foundSnap.docs) {
+        final data = d.data() as Map<String, dynamic>;
+        data['id'] = d.id;
+        data['type'] = 'found';
+        data['collection'] = 'found_pets';
+        list.add(data);
+      }
+      for (var d in adoptionSnap.docs) {
+        final data = d.data() as Map<String, dynamic>;
+        if (data['isActive'] == false) continue;
+        data['id'] = d.id;
+        data['type'] = 'adoption';
+        data['collection'] = 'adoption_pets';
+        list.add(data);
+      }
+      for (var d in breedingSnap.docs) {
+        final data = d.data() as Map<String, dynamic>;
+        if (data['isActive'] == false) continue;
+        data['id'] = d.id;
+        data['type'] = 'breeding';
+        data['collection'] = 'breeding_pets';
+        list.add(data);
+      }
+
+      list.sort((a, b) {
+        final aT = (a['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+        final bT = (b['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+        return bT.compareTo(aT);
+      });
+
+      print('📱 User all-animals update: ${list.length} (lost: ${lostSnap.docs.length}, found: ${foundSnap.docs.length}, adoption: ${adoptionSnap.docs.length}, breeding: ${breedingSnap.docs.length})');
+      return list;
     });
   }
 
@@ -463,10 +578,11 @@ class PetReportsService {
           'preferredContact': report['preferredContact'] ?? 'phone',
         },
         'location': {
-          'address': report['lastSeenLocation'] ?? '',
+          'address': report['lastSeenLocation'] ?? report['address'] ?? '',
           'coordinates': report['coordinates'] ?? null,
           'area': report['area'] ?? '',
           'landmark': report['landmark'] ?? '',
+          'locationId': report['locationId'] ?? '', // User's selected location ID
         },
         'petDetails': {
           'name': report['petName'] ?? '',
@@ -533,10 +649,11 @@ class PetReportsService {
           'preferredContact': report['preferredContact'] ?? 'phone',
         },
         'location': {
-          'address': report['foundLocation'] ?? '',
+          'address': report['foundLocation'] ?? report['address'] ?? '',
           'coordinates': report['coordinates'] ?? null,
           'area': report['area'] ?? '',
           'landmark': report['landmark'] ?? '',
+          'locationId': report['locationId'] ?? '', // User's selected location ID
         },
         'petDetails': {
           'type': report['petType'] ?? '',
@@ -610,6 +727,7 @@ class PetReportsService {
           'coordinates': report['coordinates'] ?? null,
           'area': report['area'] ?? '',
           'landmark': report['landmark'] ?? '',
+          'locationId': report['locationId'] ?? '', // User's selected location ID
         },
         'petDetails': {
           'name': report['petName'] ?? '',
@@ -668,7 +786,9 @@ class PetReportsService {
           // Filter and sort manually in app
           final isAdmin = AuthService.isAdmin;
           final userEmail = AuthService.userEmail ?? 'no email';
-          print('👤 User check - Is Admin: $isAdmin, Email: $userEmail');
+          // Get user's selected location
+          final userLocationId = LocationService.getUserLocation();
+          print('👤 User check - Is Admin: $isAdmin, Email: $userEmail, Location: $userLocationId');
           final docs = snapshot.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
             if (data['isActive'] != true) return false;
@@ -681,7 +801,18 @@ class PetReportsService {
                 return false;
               }
               print('✅ APPROVING adoption pet ${doc.id} - status: "$approvalStatus"');
-              return true;
+              
+              // Filter by location if user has selected a location
+              if (userLocationId != null && userLocationId.isNotEmpty) {
+                final reportLocationId = data['location']?['locationId'] as String? ?? '';
+                // If report has no location specified, show to all (backward compatibility)
+                // If report has location, check if it matches user's location
+                if (reportLocationId.isNotEmpty && reportLocationId != userLocationId) {
+                  print('❌ REJECTING adoption pet ${doc.id} - location mismatch: report="$reportLocationId", user="$userLocationId"');
+                  return false;
+                }
+                print('✅ Location match for adoption pet ${doc.id}: "$reportLocationId"');
+              }
             }
             return true; // Admin sees all (pending + approved)
           }).toList();
@@ -705,6 +836,15 @@ class PetReportsService {
                   if (approvalStatus != 'approved') {
                     print('⚠️ FINAL CHECK: Adoption pet ${doc.id} has status "$approvalStatus" - REMOVING');
                     return null; // This will be filtered out
+                  }
+                  // Final location check
+                  final userLocationId = LocationService.getUserLocation();
+                  if (userLocationId != null && userLocationId.isNotEmpty) {
+                    final reportLocationId = data['location']?['locationId'] as String? ?? '';
+                    if (reportLocationId.isNotEmpty && reportLocationId != userLocationId) {
+                      print('⚠️ FINAL CHECK: Adoption pet ${doc.id} location mismatch - REMOVING');
+                      return null;
+                    }
                   }
                   print('✅ FINAL CHECK: Adoption pet ${doc.id} is approved - KEEPING');
                 }
@@ -766,7 +906,7 @@ class PetReportsService {
     }
   }
 
-  // Delete report
+  // Delete report (soft delete - sets isActive to false)
   static Future<void> deleteReport({
     required String reportId,
     required String collection,
@@ -781,6 +921,45 @@ class PetReportsService {
       });
     } catch (e) {
       throw Exception('Failed to delete report: $e');
+    }
+  }
+
+  // Permanently delete report from database (Admin only)
+  static Future<void> permanentlyDeleteReport({
+    required String reportId,
+    required String collection,
+  }) async {
+    try {
+      print('🗑️ Permanently deleting report: $reportId from $collection');
+      
+      // Get the report first to access image URLs for deletion
+      final doc = await _firestore.collection(collection).doc(reportId).get();
+      
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final imageUrls = data['imageUrls'] as List<dynamic>? ?? [];
+        
+        // Delete images from Firebase Storage
+        for (String imageUrl in imageUrls) {
+          try {
+            final ref = _storage.refFromURL(imageUrl);
+            await ref.delete();
+            print('✅ Deleted image: $imageUrl');
+          } catch (e) {
+            print('⚠️ Warning: Could not delete image: $e');
+            // Continue even if image deletion fails
+          }
+        }
+        
+        // Permanently delete the document
+        await _firestore.collection(collection).doc(reportId).delete();
+        print('✅ Report permanently deleted: $reportId');
+      } else {
+        throw Exception('Report not found');
+      }
+    } catch (e) {
+      print('❌ Error permanently deleting report: $e');
+      throw Exception('Failed to permanently delete report: $e');
     }
   }
 
@@ -903,7 +1082,7 @@ class PetReportsService {
     }
   }
 
-  // Get all reports for admin (including pending)
+  // Get all reports for admin (including pending and inactive)
   static Stream<List<Map<String, dynamic>>> getAllReportsForAdmin() {
     print('📱 Starting admin reports stream');
     
@@ -917,14 +1096,11 @@ class PetReportsService {
           .snapshots()
           .map((snapshot) {
             return snapshot.docs
-                .where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  return data['isActive'] == true;
-                })
                 .map((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   // IMPORTANT: Put ...data first, then override with doc.id and collection
                   // This ensures we use the actual Firestore document ID, not the 'id' field from data
+                  // Include ALL reports (active and inactive) for admin
                   return {
                     ...data,
                     'id': doc.id, // Override any 'id' field from data with actual Firestore doc.id
@@ -1450,6 +1626,7 @@ class PetReportsService {
           'address': report['address'] ?? '',
           'area': report['area'] ?? '',
           'landmark': report['landmark'] ?? '',
+          'locationId': report['locationId'] ?? '', // User's selected location ID
         },
       });
 
@@ -1476,7 +1653,9 @@ class PetReportsService {
         // Filter and sort manually to avoid Firebase index issues
         final isAdmin = AuthService.isAdmin;
         final userEmail = AuthService.userEmail ?? 'no email';
-        print('👤 User check - Is Admin: $isAdmin, Email: $userEmail');
+        // Get user's selected location
+        final userLocationId = LocationService.getUserLocation();
+        print('👤 User check - Is Admin: $isAdmin, Email: $userEmail, Location: $userLocationId');
         final activeDocs = snapshot.docs.where((doc) {
           try {
             final data = doc.data();
@@ -1490,7 +1669,18 @@ class PetReportsService {
                 return false;
               }
               print('✅ APPROVING breeding pet ${doc.id} - status: "$approvalStatus"');
-              return true;
+              
+              // Filter by location if user has selected a location
+              if (userLocationId != null && userLocationId.isNotEmpty) {
+                final reportLocationId = data['locationInfo']?['locationId'] as String? ?? '';
+                // If report has no location specified, show to all (backward compatibility)
+                // If report has location, check if it matches user's location
+                if (reportLocationId.isNotEmpty && reportLocationId != userLocationId) {
+                  print('❌ REJECTING breeding pet ${doc.id} - location mismatch: report="$reportLocationId", user="$userLocationId"');
+                  return false;
+                }
+                print('✅ Location match for breeding pet ${doc.id}: "$reportLocationId"');
+              }
             }
             return true; // Admin sees all (pending + approved)
           } catch (e) {
@@ -1525,6 +1715,15 @@ class PetReportsService {
               if (approvalStatus != 'approved') {
                 print('⚠️ FINAL CHECK: Breeding pet ${doc.id} has status "$approvalStatus" - SKIPPING');
                 continue; // Skip this pet
+              }
+              // Final location check
+              final userLocationId = LocationService.getUserLocation();
+              if (userLocationId != null && userLocationId.isNotEmpty) {
+                final reportLocationId = data['locationInfo']?['locationId'] as String? ?? '';
+                if (reportLocationId.isNotEmpty && reportLocationId != userLocationId) {
+                  print('⚠️ FINAL CHECK: Breeding pet ${doc.id} location mismatch - SKIPPING');
+                  continue; // Skip this pet
+                }
               }
             }
             final pet = BreedingPetModel.fromFirestore(doc);

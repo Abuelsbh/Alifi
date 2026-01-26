@@ -315,26 +315,31 @@ class _BreedingPetsScreenState extends State<BreedingPetsScreen> {
                   bottomRight: Radius.circular(24.r),
                   topRight: Radius.circular(24.r),
                 ),
-                child: CachedNetworkImage(
-                  imageUrl: imageUrls.first,
-                  fit: BoxFit.cover,
-                  memCacheWidth: 121.w.toInt(),
-                  memCacheHeight: 83.h.toInt(),
-                  maxWidthDiskCache: 500,
-                  maxHeightDiskCache: 500,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[300],
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppTheme.primaryGreen,
+                child: Container(
+                  color: Colors.grey[300],
+                  child: CachedNetworkImage(
+                    imageUrl: imageUrls.first,
+                    fit: BoxFit.contain,
+                    width: double.infinity,
+                    height: double.infinity,
+                    memCacheWidth: 121.w.toInt(),
+                    memCacheHeight: 83.h.toInt(),
+                    maxWidthDiskCache: 500,
+                    maxHeightDiskCache: 500,
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey[300],
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.primaryGreen,
+                        ),
                       ),
                     ),
-                  ),
-                  errorWidget: (context, url, error) => Icon(
-                    Icons.pets,
-                    size: 40.sp,
-                    color: AppTheme.primaryGreen,
+                    errorWidget: (context, url, error) => Icon(
+                      Icons.pets,
+                      size: 40.sp,
+                      color: AppTheme.primaryGreen,
+                    ),
                   ),
                 ),
               )

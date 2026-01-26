@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../core/Theme/app_theme.dart';
 import '../../core/services/veterinary_service.dart';
+import '../../core/services/location_service.dart';
 import '../../core/Language/translation_service.dart';
 import '../../Widgets/custom_textfield_widget.dart';
 import '../../Widgets/custom_button.dart';
 import '../../Widgets/translated_text.dart';
+import '../../Models/location_model.dart';
 
 class AddVeterinarianDialog extends StatefulWidget {
   final Map<String, dynamic>? veterinarian;
@@ -33,6 +35,8 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
   
   bool _isLoading = false;
   bool _isEditing = false;
+  List<LocationModel> _locations = [];
+  List<String> _selectedLocationIds = [];
 
   @override
   void initState() {
@@ -46,6 +50,20 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
       _specializationController.text = widget.veterinarian!['specialization'] ?? '';
       _experienceController.text = widget.veterinarian!['experience'] ?? '';
       _licenseController.text = widget.veterinarian!['license'] ?? '';
+      _selectedLocationIds = List<String>.from(widget.veterinarian!['locations'] ?? []);
+    }
+    
+    _loadLocations();
+  }
+
+  Future<void> _loadLocations() async {
+    try {
+      final locations = await LocationService.getAllLocations();
+      setState(() {
+        _locations = locations;
+      });
+    } catch (e) {
+      print('Error loading locations: $e');
     }
   }
 
@@ -240,6 +258,44 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
                   icon: Icons.verified,
                 ),
                 
+                SizedBox(height: 24.h),
+                
+                _buildSectionTitle('الموقع/المواقع'),
+                SizedBox(height: 12.h),
+                
+                // Location Selection
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: _locations.isEmpty
+                      ? Padding(
+                          padding: EdgeInsets.all(16.w),
+                          child: const Center(child: CircularProgressIndicator()),
+                        )
+                      : Column(
+                          children: [
+                            ..._locations.map((location) {
+                              final isSelected = _selectedLocationIds.contains(location.id);
+                              return CheckboxListTile(
+                                title: Text(location.name),
+                                value: isSelected,
+                                onChanged: (value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      _selectedLocationIds.add(location.id);
+                                    } else {
+                                      _selectedLocationIds.remove(location.id);
+                                    }
+                                  });
+                                },
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                ),
+                
                 SizedBox(height: 32.h),
                 
                 // Action Buttons
@@ -371,6 +427,7 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
           specialization: _specializationController.text.trim(),
           experience: _experienceController.text.trim(),
           license: _licenseController.text.trim(),
+          locations: _selectedLocationIds,
         );
       } else {
         // Create new veterinarian
@@ -382,6 +439,7 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
           experience: _experienceController.text.trim(),
           phone: _phoneController.text.trim(),
           license: _licenseController.text.trim(),
+          locations: _selectedLocationIds,
         );
       }
 

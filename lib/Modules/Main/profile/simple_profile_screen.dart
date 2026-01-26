@@ -22,6 +22,8 @@ import '../lost_found/adoption_pets_screen.dart';
 import '../lost_found/breeding_pets_screen.dart';
 import '../stores/pet_stores_screen.dart';
 import 'edit_account_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'my_animals_screen.dart';
 
 
 class SimpleProfileScreen extends StatefulWidget {
@@ -105,66 +107,6 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
            email == 'admin@alifi.com';
   }
 
-  Future<void> _pickAndUploadImage() async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 80,
-      );
-
-      if (image == null) return;
-
-      setState(() => _isLoading = true);
-
-      final userId = AuthService.userId;
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
-
-      // Upload to Firebase Storage
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('user_profiles')
-          .child('$userId.jpg');
-
-      await ref.putFile(File(image.path));
-      final imageUrl = await ref.getDownloadURL();
-
-      // Update user profile in Firestore
-      await FirebaseConfig.firestore
-          .collection('users')
-          .doc(userId)
-          .update({'profileImageUrl': imageUrl});
-
-      // Reload user data
-      await _loadUserData();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(Provider.of<AppLanguage>(context).translate('profile.image_updated')),
-            backgroundColor: AppTheme.success,
-          ),
-        );
-      }
-    } catch (e) {
-      print('Error uploading image: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${Provider.of<AppLanguage>(context).translate('profile.image_error')}: $e'),
-            backgroundColor: AppTheme.error,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -173,41 +115,15 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
       bottomNavigationBar: BottomNavBarWidget(
         selected: SelectedBottomNavBar.profile,
       ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              Expanded(flex: 1, child: Container()),
-              Expanded(
-                flex: 9,
-                child: Image.asset(
-                  Assets.imagesBackground3,
-                  fit: BoxFit.contain,
-                  width: double.infinity,
-                ),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryOrange),
               ),
-              Expanded(
-                flex: 1,
-                child: Image.asset(
-                  Assets.imagesAlifi2,
-                  height: 100,
-                  width: 200,
-                ),
-              ),
-            ],
-          ),
-
-          // المحتوى فوق الخلفية
-          Container(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _user == null
-                ? _buildLoginPrompt()
-                : _buildUserProfile(),
-          ),
-        ],
-      )
-
+            )
+          : _user == null
+              ? _buildLoginPrompt()
+              : _buildUserProfile(),
     );
   }
 
@@ -255,130 +171,571 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
     
     return Column(
       children: [
-        SizedBox(height: 40.h),
-        // Profile Picture
-        CircleAvatar(
-          radius: 60.r,
-          backgroundColor: Colors.grey[300],
-          backgroundImage: profileImageUrl != null
-              ? NetworkImage(profileImageUrl)
-              : null,
-          child: profileImageUrl == null
-              ? Icon(
-            Icons.person,
-            size: 60.sp,
-            color: Colors.grey[600],
-          )
-              : null,
-        ),
+        // Modern Header with Gradient
+        Container(
+          height: 204.h,
+          child: SafeArea(
+            child: Column(
+              children: [
 
-        SizedBox(height: 16.h),
+                // Profile Picture with Modern Design
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Middle circle
+                    Container(
+                      width: 130.w,
+                      height: 130.w,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Profile image
+                    GestureDetector(
+                      child: Container(
+                        width: 120.w,
+                        height: 120.w,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 4,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 15,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: profileImageUrl != null
+                              ? Image.network(
+                                  profileImageUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(
+                                      Icons.person,
+                                      size: 60.sp,
+                                      color: AppTheme.primaryGreen,
+                                    );
+                                  },
+                                )
+                              : Container(
+                                  color: Colors.grey[200],
+                                  child: Icon(
+                                    Icons.person,
+                                    size: 60.sp,
+                                    color: AppTheme.primaryGreen,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
 
-        // User Name in Green
-        Text(
-          username,
-          style: TextStyle(
-            fontSize: 20.sp,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.primaryGreen,
+                  ],
+                ),
+                // User Name with Modern Style
+                Text(
+                  username,
+                  style: TextStyle(
+                    fontSize: 24.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    letterSpacing: 0.5,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                ),
+                // SizedBox(height: 4.h),
+                // // Email if available
+                // if (_user?['email'] != null)
+                //   Text(
+                //     _user!['email'],
+                //     style: TextStyle(
+                //       fontSize: 14.sp,
+                //       color: Colors.white.withOpacity(0.9),
+                //       fontWeight: FontWeight.w400,
+                //     ),
+                //   ),
+              ],
+            ),
           ),
         ),
 
-        Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildServicesSection(),
-
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w),
-              width: 120,
-              child: Divider(
-                color: Colors.grey,
-                thickness: 1,
+        // Content Section
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(25.r),
+                topRight: Radius.circular(25.r),
               ),
             ),
-
-
-            // Chats Section
-            _buildSection(
-              title: Provider.of<AppLanguage>(context).translate('profile.my_chats') ?? 'Chats',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const EnhancedVeterinaryScreen(),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Services Section with Modern Card
+                  _buildModernServicesSection(),
+                  Gap(16.h),
+                  
+                  // Menu Items as Modern Cards
+                  _buildModernMenuCard(
+                    icon: Icons.chat_bubble_outline,
+                    title: Provider.of<AppLanguage>(context).translate('profile.my_chats') ?? 'My Chats',
+                    subtitle: 'View your conversations',
+                    gradient: [AppTheme.primaryOrange, AppTheme.lightOrange],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EnhancedVeterinaryScreen(),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w),
-              width: 120,
-              child: Divider(
-                color: Colors.grey,
-                thickness: 1,
-              ),
-            ),
-            // Account Section
-            _buildSection(
-              title: Provider.of<AppLanguage>(context).translate('profile.account') ?? 'Account',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const EditAccountScreen(),
+                  Gap(12.h),
+                  
+                  _buildModernMenuCard(
+                    icon: Icons.pets,
+                    title: Provider.of<AppLanguage>(context).translate('profile.my_animals') ?? 'My Animals',
+                    subtitle: 'Manage your pets',
+                    gradient: [AppTheme.primaryGreen, AppTheme.lightGreen],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MyAnimalsScreen(),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w),
-              width: 120,
-              child: Divider(
-                color: Colors.grey,
-                thickness: 1,
+                  Gap(12.h),
+                  
+                  _buildModernMenuCard(
+                    icon: Icons.account_circle_outlined,
+                    title: Provider.of<AppLanguage>(context).translate('profile.account') ?? 'Account',
+                    subtitle: 'Edit your profile',
+                    gradient: [AppTheme.primaryGreen.withOpacity(0.8), AppTheme.primaryOrange.withOpacity(0.6)],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EditAccountScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  Gap(12.h),
+                  
+                  _buildModernMenuCard(
+                    icon: Icons.privacy_tip_outlined,
+                    title: Provider.of<AppLanguage>(context).translate('profile.privacy_policy') ?? 'Privacy Policy',
+                    subtitle: 'Read our privacy policy',
+                    gradient: [Colors.grey.shade600, Colors.grey.shade400],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PrivacyPolicyScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  Gap(12.h),
+                  
+                  _buildModernMenuCard(
+                    icon: Icons.language,
+                    title: Provider.of<AppLanguage>(context).translate('profile.language') ?? 'Language',
+                    subtitle: 'Change app language',
+                    gradient: [Colors.blue.shade600, Colors.blue.shade400],
+                    onTap: () => _showLanguageBottomSheet(),
+                  ),
+                  Gap(20.h),
+                  
+                  // Sign Out Button
+                  _buildModernSignOutButton(),
+                  Gap(24.h),
+                ],
               ),
             ),
-            // Language Section
-            _buildLanguageSection(),
-
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w),
-              width: 120,
-              child: Divider(
-                color: Colors.grey,
-                thickness: 1,
-              ),
-            ),
-            
-            // Sign Out Section
-            _buildSignOutSection(),
-
-          ],
-        )
-
+          ),
+        ),
       ],
     );
   }
+
+  Widget _buildDivider() {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4.h),
+      child: Divider(color: Colors.grey.shade300, thickness: 1, height: 1),
+    );
+  }
   
-  Widget _buildSignOutSection() {
-    return Center(
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 20.w),
+  Widget _buildModernSignOutButton() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.error.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
         child: InkWell(
           onTap: _showSignOutDialog,
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 16.h),
-            child: Text(
-              Provider.of<AppLanguage>(context).translate('profile.sign_out') ?? 'Sign Out',
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.error,
+          borderRadius: BorderRadius.circular(16.r),
+          child: Container(
+            padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 24.w),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.error,
+                  AppTheme.error.withOpacity(0.8),
+                ],
               ),
+              borderRadius: BorderRadius.circular(16.r),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.logout,
+                  color: Colors.white,
+                  size: 22.sp,
+                ),
+                Gap(12.w),
+                Text(
+                  Provider.of<AppLanguage>(context).translate('profile.sign_out') ?? 'Sign Out',
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildModernServicesSection() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryOrange.withOpacity(0.1),
+            AppTheme.primaryGreen.withOpacity(0.1),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(
+          color: AppTheme.primaryOrange.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              _servicesExpanded = !_servicesExpanded;
+            });
+          },
+          borderRadius: BorderRadius.circular(20.r),
+          child: Padding(
+            padding: EdgeInsets.all(16.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(10.w),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppTheme.primaryOrange, AppTheme.lightOrange],
+                        ),
+                        borderRadius: BorderRadius.circular(12.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primaryOrange.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.grid_view,
+                        color: Colors.white,
+                        size: 24.sp,
+                      ),
+                    ),
+                    Gap(16.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            Provider.of<AppLanguage>(context).translate('profile.services') ?? 'Services',
+                            style: TextStyle(
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryOrange,
+                            ),
+                          ),
+                          Text(
+                            'Explore all services',
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: EdgeInsets.all(8.w),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryOrange.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _servicesExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        color: AppTheme.primaryOrange,
+                        size: 24.sp,
+                      ),
+                    ),
+                  ],
+                ),
+                if (_servicesExpanded) ...[
+                  Gap(16.h),
+                  _buildModernServiceItem(
+                    icon: Icons.search,
+                    title: Provider.of<AppLanguage>(context).translate('profile.lost_animals') ?? 'Lost Animals',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LostFoundScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  Gap(8.h),
+                  _buildModernServiceItem(
+                    icon: Icons.favorite_outline,
+                    title: Provider.of<AppLanguage>(context).translate('profile.animal_for_adoption') ?? 'Adoption',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdoptionPetsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  Gap(8.h),
+                  _buildModernServiceItem(
+                    icon: Icons.favorite,
+                    title: Provider.of<AppLanguage>(context).translate('profile.animals_for_mating') ?? 'Breeding',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const BreedingPetsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  Gap(8.h),
+                  _buildModernServiceItem(
+                    icon: Icons.store,
+                    title: Provider.of<AppLanguage>(context).translate('profile.pet_supply_stores') ?? 'Pet Stores',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PetStoresScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildModernServiceItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12.r),
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 12.w),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 20.sp,
+                color: AppTheme.primaryGreen,
+              ),
+              Gap(12.w),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.primaryGreen,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16.sp,
+                color: AppTheme.primaryGreen.withOpacity(0.5),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildModernMenuCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required List<Color> gradient,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      // decoration: BoxDecoration(
+      //   borderRadius: BorderRadius.circular(18.r),
+      //   boxShadow: [
+      //     BoxShadow(
+      //       color: gradient[0].withOpacity(0.2),
+      //       blurRadius: 12,
+      //       offset: const Offset(0, 4),
+      //       spreadRadius: 0,
+      //     ),
+      //   ],
+      // ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18.r),
+          child: Container(
+            padding: EdgeInsets.all(18.w),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  gradient[0].withOpacity(0.1),
+                  gradient[1].withOpacity(0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(18.r),
+              border: Border.all(
+                color: gradient[0].withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(12.w),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: gradient,
+                    ),
+                    borderRadius: BorderRadius.circular(14.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: gradient[0].withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    icon,
+                    color: Colors.white,
+                    size: 24.sp,
+                  ),
+                ),
+                Gap(16.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade800,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      Gap(4.h),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 18.sp,
+                  color: gradient[0].withOpacity(0.5),
+                ),
+              ],
             ),
           ),
         ),
@@ -387,12 +744,11 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
   }
   
   Widget _buildServicesSection() {
-    return Container(
-      width: 200.w,
-      margin: EdgeInsets.symmetric(horizontal: 20.w),
-      child: Column(
-        children: [
-          InkWell(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
             onTap: () {
               setState(() {
                 _servicesExpanded = !_servicesExpanded;
@@ -467,8 +823,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
             SizedBox(height: 16.h),
           ],
         ],
-      ),
-    );
+      );
   }
   
   Widget _buildServiceItem(String title, VoidCallback onTap) {
@@ -488,20 +843,16 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
   }
   
   Widget _buildSection({required String title, required VoidCallback onTap}) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 20.w),
-
-      child: InkWell(
+    return InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 16.h),
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.primaryOrange,
-            ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 16.h),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w500,
+            color: AppTheme.primaryOrange,
           ),
         ),
       ),
@@ -509,22 +860,16 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
   }
   
   Widget _buildLanguageSection() {
-    
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 20.w),
-      child: InkWell(
-        onTap: () {
-          _showLanguageBottomSheet();
-        },
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 16.h),
-          child:  Text(
-            Provider.of<AppLanguage>(context).translate('profile.language') ?? 'Language',
-            style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.primaryOrange,
-            ),
+    return InkWell(
+      onTap: () => _showLanguageBottomSheet(),
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 16.h),
+        child: Text(
+          Provider.of<AppLanguage>(context).translate('profile.language') ?? 'Language',
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w500,
+            color: AppTheme.primaryOrange,
           ),
         ),
       ),

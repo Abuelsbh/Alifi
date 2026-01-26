@@ -35,11 +35,11 @@ class AdminFeatures {
             this.filterReports(e.target.value);
         });
 
-        document.querySelectorAll('#reports-page .filter-btn').forEach(btn => {
+        document.querySelectorAll('#reports-page .filter-btn[data-filter]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.filterReportsByType(btn.dataset.filter);
-                document.querySelectorAll('#reports-page .filter-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('#reports-page .filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
             });
         });
@@ -566,17 +566,34 @@ class AdminFeatures {
             // Ensure we use the correct document ID
             const reportId = report.id || report.docId;
             const collection = report.collection;
+            const imageUrls = report.imageUrls || [];
+            const firstImage = imageUrls.length > 0 ? imageUrls[0] : null;
+            const isActive = report.isActive !== false; // Default to true if not set
+            const approvalStatus = report.approvalStatus || 'pending';
+            
             console.log('Displaying report:', { reportId, collection, fullReport: report });
             
             return `
-            <div class="report-card" onclick="window.adminFeatures.showReportDetails('${reportId}', '${collection}')">
+            <div class="report-card ${!isActive ? 'inactive' : ''}" onclick="window.adminFeatures.showReportDetails('${reportId}', '${collection}')">
                 ${report.isUrgent ? '<div class="urgent-badge">URGENT</div>' : ''}
+                ${!isActive ? '<div class="inactive-badge">INACTIVE</div>' : ''}
                 <div class="report-header">
-                    <span class="report-type ${report.type}">${report.type.toUpperCase()}</span>
-                    <div class="report-title">${report.petDetails?.name || 'Unnamed Pet'}</div>
-                    <div class="report-meta">
-                        <i class="fas fa-calendar"></i>
-                        ${this.formatDate(report.createdAt)}
+                    ${firstImage ? `
+                        <div class="report-image">
+                            <img src="${firstImage}" alt="${report.petDetails?.name || 'Pet'}" onerror="this.style.display='none'">
+                        </div>
+                    ` : ''}
+                    <div class="report-header-content">
+                        <span class="report-type ${report.type}">${report.type.toUpperCase()}</span>
+                        <div class="report-title">${this.getReportTitle(report)}</div>
+                        <div class="report-meta">
+                            <i class="fas fa-calendar"></i>
+                            ${this.formatDate(report.createdAt)}
+                        </div>
+                        <div class="report-status-badges">
+                            <span class="status-badge ${approvalStatus}">${approvalStatus.toUpperCase()}</span>
+                            <span class="status-badge ${isActive ? 'active' : 'inactive'}">${isActive ? 'ACTIVE' : 'INACTIVE'}</span>
+                        </div>
                     </div>
                 </div>
                 <div class="report-content">
@@ -586,7 +603,7 @@ class AdminFeatures {
                     <div class="report-tags">
                         <span class="report-tag">${report.petDetails?.type || 'Unknown'}</span>
                         <span class="report-tag">${report.petDetails?.breed || 'Mixed'}</span>
-                        ${report.location ? `<span class="report-tag"><i class="fas fa-map-marker-alt"></i> ${report.location}</span>` : ''}
+                        ${this.getLocationString(report) ? `<span class="report-tag"><i class="fas fa-map-marker-alt"></i> ${this.getLocationString(report)}</span>` : ''}
                     </div>
                 </div>
                 <div class="report-actions">
@@ -598,6 +615,9 @@ class AdminFeatures {
                     </button>
                     <button class="btn-small btn-info" onclick="event.stopPropagation(); window.adminFeatures.showReportDetails('${reportId}', '${collection}')">
                         <i class="fas fa-eye"></i> Details
+                    </button>
+                    <button class="btn-small btn-danger" onclick="event.stopPropagation(); window.adminFeatures.permanentlyDeleteReport('${reportId}', '${collection}')" title="Permanently delete from database">
+                        <i class="fas fa-trash-alt"></i> Delete Permanent
                     </button>
                 </div>
             </div>
@@ -633,42 +653,125 @@ class AdminFeatures {
             const modal = document.getElementById('report-modal');
             const reportDetails = document.getElementById('report-details');
             
+            const imageUrls = report.imageUrls || [];
+            const description = report.description || report.petDetails?.description || '';
+            const color = report.petDetails?.color || '';
+            
             reportDetails.innerHTML = `
                 <div class="report-details-content">
-                    <div class="report-header">
-                        <span class="report-type ${report.type}">${report.type.toUpperCase()}</span>
-                        ${report.isUrgent ? '<span class="urgent-badge">URGENT</span>' : ''}
-                        <h3>${report.petDetails?.name || 'Unnamed Pet'}</h3>
+                    <div class="report-details-header">
+                        <div class="report-header-info">
+                            <div class="report-header-badges">
+                                <span class="report-type ${report.type}">${report.type.toUpperCase()}</span>
+                                ${report.isUrgent ? '<span class="urgent-badge">URGENT</span>' : ''}
+                                <span class="status-badge ${report.approvalStatus || 'pending'}">${(report.approvalStatus || 'pending').toUpperCase()}</span>
+                                <span class="status-badge ${report.isActive !== false ? 'active' : 'inactive'}">${report.isActive !== false ? 'ACTIVE' : 'INACTIVE'}</span>
+                            </div>
+                            <h3>${this.getReportTitle(report)}</h3>
+                            <p class="report-submitted-date">
+                                <i class="fas fa-calendar"></i>
+                                Submitted: ${this.formatDate(report.createdAt)}
+                            </p>
+                        </div>
                     </div>
+                    
+                    ${imageUrls.length > 0 ? `
+                        <div class="report-images-section">
+                            <h4><i class="fas fa-images"></i> Report Images (${imageUrls.length})</h4>
+                            <div class="report-images-grid">
+                                ${imageUrls.map((imgUrl, index) => `
+                                    <div class="report-image-item">
+                                        <img src="${imgUrl}" alt="Report Image ${index + 1}" 
+                                             onclick="window.adminFeatures.openImageModal('${imgUrl}', ${index + 1}, ${imageUrls.length})"
+                                             onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'200\\' height=\\'200\\'%3E%3Crect fill=\\'%23ddd\\' width=\\'200\\' height=\\'200\\'/%3E%3Ctext fill=\\'%23999\\' font-family=\\'sans-serif\\' font-size=\\'14\\' x=\\'50%25\\' y=\\'50%25\\' text-anchor=\\'middle\\' dominant-baseline=\\'middle\\'%3EImage ${index + 1}%3C/text%3E%3C/svg%3E';">
+                                        <div class="image-number">${index + 1}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="report-images-section">
+                            <h4><i class="fas fa-images"></i> Report Images</h4>
+                            <p class="no-images-message">No images available for this report.</p>
+                        </div>
+                    `}
                     
                     <div class="report-info-grid">
                         <div class="report-info-section">
-                            <h4>Pet Details</h4>
-                            <p><strong>Type:</strong> ${report.petDetails?.type || 'Unknown'}</p>
-                            <p><strong>Breed:</strong> ${report.petDetails?.breed || 'Mixed'}</p>
-                            <p><strong>Age:</strong> ${report.petDetails?.age || 'Unknown'}</p>
-                            <p><strong>Color:</strong> ${report.petDetails?.color || 'Unknown'}</p>
-                            <p><strong>Gender:</strong> ${report.petDetails?.gender || 'Unknown'}</p>
+                            <h4><i class="fas fa-paw"></i> Pet Details</h4>
+                            <div class="info-item">
+                                <span class="info-label">Type:</span>
+                                <span class="info-value">${report.petDetails?.type || 'Unknown'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Breed:</span>
+                                <span class="info-value">${report.petDetails?.breed || 'Mixed'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Age:</span>
+                                <span class="info-value">${report.petDetails?.age || report.petDetails?.approximateAge || 'Unknown'}</span>
+                            </div>
+                            ${color ? `
+                            <div class="info-item">
+                                <span class="info-label">Color:</span>
+                                <span class="info-value">${color}</span>
+                            </div>
+                            ` : ''}
+                            <div class="info-item">
+                                <span class="info-label">Gender:</span>
+                                <span class="info-value">${report.petDetails?.gender || 'Unknown'}</span>
+                            </div>
+                            ${report.petDetails?.weight ? `
+                            <div class="info-item">
+                                <span class="info-label">Weight:</span>
+                                <span class="info-value">${report.petDetails.weight} kg</span>
+                            </div>
+                            ` : ''}
                         </div>
                         
                         <div class="report-info-section">
-                            <h4>Contact Information</h4>
-                            <p><strong>Reporter:</strong> ${report.contactInfo?.name || 'Unknown'}</p>
-                            <p><strong>Phone:</strong> ${report.contactInfo?.phone || 'Not provided'}</p>
-                            <p><strong>Email:</strong> ${report.contactInfo?.email || 'Not provided'}</p>
-                            <p><strong>Location:</strong> ${report.location || report.contactInfo?.address || 'Not provided'}</p>
+                            <h4><i class="fas fa-user"></i> Contact Information</h4>
+                            <div class="info-item">
+                                <span class="info-label">Reporter:</span>
+                                <span class="info-value">${report.contactInfo?.name || report.contactName || 'Unknown'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Phone:</span>
+                                <span class="info-value">${report.contactInfo?.phone || report.contactPhone || 'Not provided'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Email:</span>
+                                <span class="info-value">${report.contactInfo?.email || report.contactEmail || 'Not provided'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Location:</span>
+                                <span class="info-value">${this.getLocationString(report) || report.contactInfo?.address || report.address || 'Not provided'}</span>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="report-description">
-                        <h4>Description</h4>
-                        <p>${report.description || report.petDetails?.description || 'No description provided'}</p>
-                    </div>
+                    ${description ? `
+                        <div class="report-description-section">
+                            <h4><i class="fas fa-align-left"></i> Description</h4>
+                            <p class="description-text">${description}</p>
+                        </div>
+                    ` : ''}
                     
-                    <div class="report-meta">
-                        <p><strong>Submitted:</strong> ${this.formatDate(report.createdAt)}</p>
-                        <p><strong>Approval Status:</strong> <span class="status-badge ${report.approvalStatus || 'pending'}">${(report.approvalStatus || 'pending').toUpperCase()}</span></p>
-                        ${report.status ? `<p><strong>Report Status:</strong> <span class="status-badge ${report.status}">${report.status.toUpperCase()}</span></p>` : ''}
+                    <div class="report-additional-info">
+                        <div class="info-item">
+                            <span class="info-label">Report ID:</span>
+                            <span class="info-value">${reportId}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Collection:</span>
+                            <span class="info-value">${collection}</span>
+                        </div>
+                        ${report.updatedAt ? `
+                        <div class="info-item">
+                            <span class="info-label">Last Updated:</span>
+                            <span class="info-value">${this.formatDate(report.updatedAt)}</span>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -773,7 +876,7 @@ class AdminFeatures {
         const filteredReports = this.currentReports.filter(report => {
             const petName = (report.petDetails?.name || '').toLowerCase();
             const description = (report.description || '').toLowerCase();
-            const location = (report.location || '').toLowerCase();
+            const location = this.getLocationString(report).toLowerCase();
             const search = searchTerm.toLowerCase();
             
             return petName.includes(search) || description.includes(search) || location.includes(search);
@@ -782,18 +885,82 @@ class AdminFeatures {
         this.displayReports(filteredReports);
     }
 
+    getLocationString(report) {
+        // Handle location as string, object, or nested object
+        if (!report.location) return '';
+        
+        if (typeof report.location === 'string') {
+            return report.location;
+        }
+        
+        if (typeof report.location === 'object') {
+            // Check if it's a nested location object
+            if (report.location.address) {
+                return report.location.address;
+            }
+            if (report.location.area) {
+                return report.location.area;
+            }
+            // If it's a GeoPoint or other object, return empty
+            return '';
+        }
+        
+        return '';
+    }
+
     filterReportsByType(type) {
         let filteredReports = this.currentReports;
         
         if (type !== 'all') {
             if (type === 'urgent') {
                 filteredReports = this.currentReports.filter(report => report.isUrgent);
+            } else if (['approved', 'pending', 'rejected'].includes(type)) {
+                const status = type;
+                filteredReports = this.currentReports.filter(
+                    report => (report.approvalStatus || 'pending') === status
+                );
             } else {
                 filteredReports = this.currentReports.filter(report => report.type === type);
             }
         }
         
         this.displayReports(filteredReports);
+    }
+
+    async permanentlyDeleteReport(reportId, collection) {
+        if (!confirm('هل أنت متأكد من حذف هذا التقرير نهائياً من قاعدة البيانات؟\n\nهذا الإجراء لا يمكن التراجع عنه وسيتم حذف التقرير والصور المرتبطة به نهائياً.\n\nAre you sure you want to permanently delete this report from the database?\n\nThis action cannot be undone and will delete the report and all associated images permanently.')) {
+            return;
+        }
+
+        try {
+            console.log('🗑️ Starting permanent delete:', { reportId, collection });
+            
+            // Show loading
+            const grid = document.getElementById('reports-grid');
+            const originalContent = grid ? grid.innerHTML : '';
+            if (grid) {
+                grid.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>Deleting report...</h3></div>';
+            }
+            
+            const result = await FirebaseService.permanentlyDeleteReport(reportId, collection);
+            
+            if (result.success) {
+                alert('تم حذف التقرير نهائياً بنجاح\nReport permanently deleted successfully');
+                this.loadReports(); // Refresh the list
+            } else {
+                alert('فشل حذف التقرير: ' + (result.error || 'Unknown error') + '\nFailed to delete report: ' + (result.error || 'Unknown error'));
+                if (grid) {
+                    grid.innerHTML = originalContent;
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error permanently deleting report:', error);
+            alert('فشل حذف التقرير: ' + error.message + '\nFailed to permanently delete report: ' + error.message);
+            const grid = document.getElementById('reports-grid');
+            if (grid) {
+                this.loadReports(); // Refresh to show current state
+            }
+        }
     }
 
     // Settings Management
@@ -932,8 +1099,28 @@ class AdminFeatures {
     }
 
     truncateText(text, maxLength) {
-        if (text.length <= maxLength) return text;
+        if (!text || text.length <= maxLength) return text || '';
         return text.substring(0, maxLength) + '...';
+    }
+
+    getReportTitle(report) {
+        // First try to get title field (like in the app)
+        if (report.title && typeof report.title === 'string' && report.title.trim() !== '') {
+            return report.title;
+        }
+        
+        // Then try petDetails.name
+        if (report.petDetails?.name && typeof report.petDetails.name === 'string' && report.petDetails.name.trim() !== '') {
+            return report.petDetails.name;
+        }
+        
+        // Fallback to petName if exists
+        if (report.petName && typeof report.petName === 'string' && report.petName.trim() !== '') {
+            return report.petName;
+        }
+        
+        // Last resort
+        return 'Unnamed Pet';
     }
 
     showModal(modalId) {
@@ -1558,6 +1745,87 @@ class AdminFeatures {
     contactReporter() {
         // This would typically open phone dialer or email client
         alert('Contact functionality would be implemented here');
+    }
+
+    openImageModal(imageUrl, currentIndex, totalImages) {
+        // Create image modal if it doesn't exist
+        let imageModal = document.getElementById('image-viewer-modal');
+        if (!imageModal) {
+            imageModal = document.createElement('div');
+            imageModal.id = 'image-viewer-modal';
+            imageModal.className = 'modal';
+            imageModal.innerHTML = `
+                <div class="modal-content image-viewer-content">
+                    <div class="modal-header">
+                        <h3>Image Viewer</h3>
+                        <button class="modal-close" onclick="window.adminFeatures.closeImageModal()">&times;</button>
+                    </div>
+                    <div class="image-viewer-body">
+                        <button class="image-nav-btn prev-btn" onclick="window.adminFeatures.navigateImage(-1)">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <div class="image-viewer-main">
+                            <img id="viewer-image" src="" alt="Report Image">
+                            <div class="image-counter">
+                                <span id="image-counter-text">1 / 1</span>
+                            </div>
+                        </div>
+                        <button class="image-nav-btn next-btn" onclick="window.adminFeatures.navigateImage(1)">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(imageModal);
+        }
+
+        // Store current image data
+        this.currentImageIndex = currentIndex - 1;
+        this.currentImages = this.currentViewingReport?.imageUrls || [];
+        
+        // Update image
+        const viewerImage = document.getElementById('viewer-image');
+        const counterText = document.getElementById('image-counter-text');
+        if (viewerImage) {
+            viewerImage.src = imageUrl;
+        }
+        if (counterText) {
+            counterText.textContent = `${currentIndex} / ${totalImages}`;
+        }
+
+        // Update navigation buttons
+        const prevBtn = imageModal.querySelector('.prev-btn');
+        const nextBtn = imageModal.querySelector('.next-btn');
+        if (prevBtn) prevBtn.style.display = totalImages > 1 ? 'flex' : 'none';
+        if (nextBtn) nextBtn.style.display = totalImages > 1 ? 'flex' : 'none';
+
+        this.showModal('image-viewer-modal');
+    }
+
+    navigateImage(direction) {
+        if (!this.currentImages || this.currentImages.length === 0) return;
+        
+        this.currentImageIndex += direction;
+        
+        if (this.currentImageIndex < 0) {
+            this.currentImageIndex = this.currentImages.length - 1;
+        } else if (this.currentImageIndex >= this.currentImages.length) {
+            this.currentImageIndex = 0;
+        }
+        
+        const viewerImage = document.getElementById('viewer-image');
+        const counterText = document.getElementById('image-counter-text');
+        
+        if (viewerImage) {
+            viewerImage.src = this.currentImages[this.currentImageIndex];
+        }
+        if (counterText) {
+            counterText.textContent = `${this.currentImageIndex + 1} / ${this.currentImages.length}`;
+        }
+    }
+
+    closeImageModal() {
+        this.closeModal('image-viewer-modal');
     }
 }
 

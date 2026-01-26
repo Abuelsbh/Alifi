@@ -317,10 +317,16 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
             
 
             
-            // TabBar
+            // TabBar — التبويب المختار مُعلّم بالكامل (خلفية) وليس خطًّا فقط
             TabBar(
               controller: _tabController,
-              indicatorColor: AppTheme.primaryGreen,
+              indicator: BoxDecoration(
+                color: AppTheme.primaryGreen.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: AppTheme.primaryGreen, width: 1.2),
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicatorPadding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 6.h),
               labelColor: AppTheme.primaryGreen,
               unselectedLabelColor: Colors.grey,
               tabs: const [
@@ -348,7 +354,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
   Widget _buildVeterinariansTab() {
     return Column(
       children: [
-        // Search bar
+        // Search bar — مع حدود واضحة
         Padding(
           padding: EdgeInsets.all(16.w),
           child: TextField(
@@ -356,10 +362,18 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
             onChanged: _filterVeterinarians,
             decoration: InputDecoration(
               hintText: 'البحث عن طبيب أو تخصص...',
-              prefixIcon: const Icon(Icons.search),
+              prefixIcon: Icon(Icons.search, color: AppTheme.primaryGreen),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide.none,
+                borderSide: BorderSide(color: Colors.grey.shade300, width: 1.2),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: BorderSide(color: Colors.grey.shade300, width: 1.2),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: const BorderSide(color: AppTheme.primaryGreen, width: 1.5),
               ),
               filled: true,
               fillColor: Theme.of(context).colorScheme.background,
@@ -762,7 +776,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
                     shape: BoxShape.circle,
                   ),
                   child: Text(
-                    '$unreadCount',
+                    '',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 10.sp,

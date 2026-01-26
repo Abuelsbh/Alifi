@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../firebase/firebase_config.dart';
+import 'location_service.dart';
 
 class VeterinaryService {
   static final FirebaseFirestore _firestore = FirebaseConfig.firestore;
@@ -124,9 +125,23 @@ class VeterinaryService {
         .where('isActive', isEqualTo: true)
         .snapshots()
         .map((snapshot) {
+      // Get user's selected location
+      final userLocationId = LocationService.getUserLocation();
+      
       return snapshot.docs
           .map((doc) {
             final data = doc.data();
+            
+            // Filter by location if user has selected a location
+            if (userLocationId != null && userLocationId.isNotEmpty) {
+              final vetLocations = data['locations'] as List<dynamic>? ?? [];
+              // If vet has no locations specified, show to all (backward compatibility)
+              // If vet has locations, check if user's location is included
+              if (vetLocations.isNotEmpty && !vetLocations.contains(userLocationId)) {
+                return null; // Don't show this vet
+              }
+            }
+            
             return {
               'id': doc.id,
               ...data,
@@ -135,7 +150,8 @@ class VeterinaryService {
               'profilePhoto': data['profileImageUrl'] ?? data['profilePhoto'],
             };
           })
-          .where((vet) => vet['isDeleted'] != true) // Filter out deleted veterinarians
+          .where((vet) => vet != null && vet['isDeleted'] != true) // Filter out deleted veterinarians
+          .cast<Map<String, dynamic>>()
           .toList();
     });
   }
@@ -173,6 +189,7 @@ class VeterinaryService {
     required String experience,
     required String phone,
     String? license,
+    List<String>? locations, // List of location IDs
   }) async {
     try {
       // Create Firebase Auth account
@@ -194,6 +211,7 @@ class VeterinaryService {
         'specialization': specialization,
         'experience': experience,
         'license': license ?? '',
+        'locations': locations ?? [], // Store list of location IDs
         'isOnline': false,
         'isActive': true,
         'rating': 0.0,
@@ -224,9 +242,10 @@ class VeterinaryService {
     required String experience,
     required String phone,
     String? license,
+    List<String>? locations, // List of location IDs
   }) async {
     try {
-      await _firestore.collection('users').doc(vetId).update({
+      final updateData = {
         'name': name,
         'username': name, // Also update username
         'email': email,
@@ -235,8 +254,11 @@ class VeterinaryService {
         'phone': phone,
         'phoneNumber': phone, // Also update phoneNumber
         if (license != null) 'license': license,
+        if (locations != null) 'locations': locations,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+      
+      await _firestore.collection('users').doc(vetId).update(updateData);
     } catch (e) {
       throw Exception('فشل في تحديث بيانات الطبيب البيطري: $e');
     }

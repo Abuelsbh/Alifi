@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TranslationService {
@@ -96,11 +97,29 @@ class TranslationService {
   }
   
   // تحميل اللغة المحفوظة مع معالجة آمنة
-  Future<void> loadSavedLanguage() async {
+  Future<void> loadSavedLanguage({Locale? deviceLocale}) async {
     try {
     final prefs = await SharedPreferences.getInstance();
-    final savedLanguage = prefs.getString('language') ?? 'en';
-    await loadTranslations(savedLanguage);
+    final savedLanguage = prefs.getString('language');
+    
+    // إذا لم تكن هناك لغة محفوظة، استخدم لغة الجهاز
+    if (savedLanguage == null) {
+      String deviceLanguage = 'en'; // افتراضي
+      if (deviceLocale != null) {
+        // تحويل locale إلى كود اللغة
+        final localeCode = deviceLocale.languageCode;
+        if (localeCode == 'ar') {
+          deviceLanguage = 'ar';
+        } else if (localeCode == 'he') {
+          deviceLanguage = 'he';
+        } else {
+          deviceLanguage = 'en';
+        }
+      }
+      await loadTranslations(deviceLanguage);
+    } else {
+      await loadTranslations(savedLanguage);
+    }
     } catch (e) {
       print('Error loading saved language: $e');
       // استخدام الإنجليزية كافتراضي

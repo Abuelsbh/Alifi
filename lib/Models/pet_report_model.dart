@@ -403,6 +403,7 @@ class AdoptionPetModel extends Equatable {
   final String id;
   final String userId;
   final String petName;
+  final String? title;
   final String petType;
   final String breed;
   final int age;
@@ -470,6 +471,7 @@ class AdoptionPetModel extends Equatable {
     this.medicalHistory = const [],
     this.microchipId = '',
     this.adoptionType = 'offering', // Default to offering (أعرض حيوان للتبني)
+    this.title,
   });
 
   factory AdoptionPetModel.fromFirestore(DocumentSnapshot doc) {
@@ -508,6 +510,7 @@ class AdoptionPetModel extends Equatable {
       medicalHistory: List<String>.from(data['medicalHistory'] ?? []),
       microchipId: data['microchipId'] ?? '',
       adoptionType: data['adoptionType'] ?? 'offering',
+      title: data['title']?.toString(),
     );
   }
 
@@ -529,6 +532,9 @@ class AdoptionPetModel extends Equatable {
     
     return const GeoPoint(0, 0);
   }
+
+  static double _toDouble(dynamic v) =>
+      v == null ? 0.0 : (v is int ? v.toDouble() : (v as num).toDouble());
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -565,6 +571,7 @@ class AdoptionPetModel extends Equatable {
       'medicalHistory': medicalHistory,
       'microchipId': microchipId,
       'adoptionType': adoptionType,
+      if (title != null) 'title': title,
     };
   }
 
@@ -607,6 +614,50 @@ class AdoptionPetModel extends Equatable {
       medicalHistory: List<String>.from(json['medicalHistory'] ?? []),
       microchipId: json['microchipId'] ?? '',
       adoptionType: json['adoptionType'] ?? 'offering',
+      title: json['title']?.toString(),
+    );
+  }
+
+  /// Parses Firestore map with nested petDetails/contactInfo/location.
+  factory AdoptionPetModel.fromFirestoreMap(String id, Map<String, dynamic> data) {
+    final pd = data['petDetails'] as Map<String, dynamic>? ?? {};
+    final ci = data['contactInfo'] as Map<String, dynamic>? ?? {};
+    final loc = data['location'];
+    return AdoptionPetModel(
+      id: id,
+      userId: data['userId']?.toString() ?? '',
+      petName: pd['name']?.toString() ?? data['petName']?.toString() ?? '',
+      petType: pd['type']?.toString() ?? data['petType']?.toString() ?? '',
+      breed: pd['breed']?.toString() ?? data['breed']?.toString() ?? '',
+      age: (pd['age'] ?? data['age'] ?? 0) as int,
+      gender: pd['gender']?.toString() ?? data['gender']?.toString() ?? '',
+      color: pd['color']?.toString() ?? data['color']?.toString() ?? '',
+      photos: List<String>.from(data['imageUrls'] ?? data['photos'] ?? []),
+      description: pd['description']?.toString() ?? data['description']?.toString() ?? '',
+      location: _parseLocation(loc is Map ? (loc['coordinates'] ?? loc) : loc),
+      address: (loc is Map ? (loc['address'] ?? data['address']) : data['address'])?.toString() ?? '',
+      contactPhone: ci['phone']?.toString() ?? data['contactPhone']?.toString() ?? '',
+      contactName: ci['name']?.toString() ?? data['contactName']?.toString() ?? '',
+      contactEmail: ci['email']?.toString() ?? data['contactEmail']?.toString() ?? '',
+      isActive: data['isActive'] ?? true,
+      createdAt: (data['createdAt'] is Timestamp) ? (data['createdAt'] as Timestamp).toDate() : DateTime.now(),
+      updatedAt: (data['updatedAt'] is Timestamp) ? (data['updatedAt'] as Timestamp).toDate() : DateTime.now(),
+      isVaccinated: pd['isVaccinated'] ?? data['isVaccinated'] ?? false,
+      isNeutered: pd['isNeutered'] ?? data['isNeutered'] ?? false,
+      healthStatus: pd['healthStatus']?.toString() ?? data['healthStatus']?.toString() ?? 'جيد',
+      temperament: pd['temperament']?.toString() ?? data['temperament']?.toString() ?? 'ودود',
+      weight: _toDouble(pd['weight'] ?? data['weight']),
+      specialNeeds: data['specialNeeds']?.toString() ?? '',
+      reason: data['reason']?.toString() ?? '',
+      adoptionFee: _toDouble(data['adoptionFee']),
+      goodWithKids: (data['adoptionRequirements'] as Map?)?['goodWithKids'] ?? data['goodWithKids'] ?? true,
+      goodWithPets: (data['adoptionRequirements'] as Map?)?['goodWithPets'] ?? data['goodWithPets'] ?? true,
+      isHouseTrained: (data['adoptionRequirements'] as Map?)?['isHouseTrained'] ?? data['isHouseTrained'] ?? false,
+      preferredHomeType: (data['adoptionRequirements'] as Map?)?['preferredHomeType']?.toString() ?? data['preferredHomeType']?.toString() ?? '',
+      medicalHistory: List<String>.from(pd['medicalHistory'] ?? data['medicalHistory'] ?? []),
+      microchipId: pd['microchipId']?.toString() ?? data['microchipId']?.toString() ?? '',
+      adoptionType: data['adoptionType']?.toString() ?? 'offering',
+      title: data['title']?.toString(),
     );
   }
 
@@ -685,6 +736,7 @@ class AdoptionPetModel extends Equatable {
     List<String>? medicalHistory,
     String? microchipId,
     String? adoptionType,
+    String? title,
   }) {
     return AdoptionPetModel(
       id: id ?? this.id,
@@ -720,6 +772,7 @@ class AdoptionPetModel extends Equatable {
       medicalHistory: medicalHistory ?? this.medicalHistory,
       microchipId: microchipId ?? this.microchipId,
       adoptionType: adoptionType ?? this.adoptionType,
+      title: title ?? this.title,
     );
   }
 
@@ -758,6 +811,7 @@ class AdoptionPetModel extends Equatable {
         medicalHistory,
         microchipId,
         adoptionType,
+        title,
       ];
 } 
 
@@ -993,6 +1047,56 @@ class BreedingPetModel extends Equatable {
       veterinarianContact: json['veterinarianContact'] ?? '',
     );
   }
+
+  /// Parses Firestore map with nested petInfo/locationInfo/contactInfo.
+  factory BreedingPetModel.fromFirestoreMap(String id, Map<String, dynamic> data) {
+    final pi = data['petInfo'] as Map<String, dynamic>? ?? {};
+    final li = data['locationInfo'] as Map<String, dynamic>? ?? {};
+    final ci = data['contactInfo'] as Map<String, dynamic>? ?? {};
+    final loc = li['coordinates'] ?? li['location'] ?? data['location'];
+    return BreedingPetModel(
+      id: id,
+      userId: data['userId']?.toString() ?? '',
+      petName: pi['name']?.toString() ?? data['petName']?.toString() ?? '',
+      petType: pi['type']?.toString() ?? data['petType']?.toString() ?? '',
+      breed: pi['breed']?.toString() ?? data['breed']?.toString() ?? '',
+      age: (pi['age'] ?? data['age'] ?? 0) as int,
+      gender: pi['gender']?.toString() ?? data['gender']?.toString() ?? '',
+      color: pi['color']?.toString() ?? data['color']?.toString() ?? '',
+      photos: List<String>.from(data['imageUrls'] ?? data['photos'] ?? []),
+      description: pi['description']?.toString() ?? data['description']?.toString() ?? '',
+      location: _parseLocation(loc),
+      address: li['address']?.toString() ?? data['address']?.toString() ?? '',
+      contactPhone: ci['phone']?.toString() ?? data['contactPhone']?.toString() ?? '',
+      contactName: ci['name']?.toString() ?? data['contactName']?.toString() ?? '',
+      contactEmail: ci['email']?.toString() ?? data['contactEmail']?.toString() ?? '',
+      isActive: data['isActive'] ?? true,
+      createdAt: (data['createdAt'] is Timestamp) ? (data['createdAt'] as Timestamp).toDate() : DateTime.now(),
+      updatedAt: (data['updatedAt'] is Timestamp) ? (data['updatedAt'] as Timestamp).toDate() : DateTime.now(),
+      isVaccinated: pi['isVaccinated'] ?? data['isVaccinated'] ?? false,
+      isNeutered: pi['isNeutered'] ?? data['isNeutered'] ?? false,
+      healthStatus: pi['healthStatus']?.toString() ?? data['healthStatus']?.toString() ?? 'جيد',
+      temperament: pi['temperament']?.toString() ?? data['temperament']?.toString() ?? 'ودود',
+      weight: _toDoubleB(pi['weight'] ?? data['weight']),
+      specialRequirements: data['specialRequirements']?.toString() ?? '',
+      breedingFee: _toDoubleB(data['breedingFee']),
+      hasBreedingExperience: data['hasBreedingExperience'] ?? false,
+      breedingHistory: data['breedingHistory']?.toString() ?? '',
+      isRegistered: data['isRegistered'] ?? false,
+      registrationNumber: data['registrationNumber']?.toString() ?? '',
+      certifications: List<String>.from(data['certifications'] ?? []),
+      breedingGoals: data['breedingGoals']?.toString() ?? '',
+      availabilityPeriod: data['availabilityPeriod']?.toString() ?? '',
+      willTravel: data['willTravel'] ?? false,
+      maxTravelDistance: (data['maxTravelDistance'] ?? 0) as int,
+      offspring: data['offspring']?.toString() ?? '',
+      previousOffspring: List<String>.from(data['previousOffspring'] ?? []),
+      veterinarianContact: data['veterinarianContact']?.toString() ?? '',
+    );
+  }
+
+  static double _toDoubleB(dynamic v) =>
+      v == null ? 0.0 : (v is int ? v.toDouble() : (v as num).toDouble());
 
   Map<String, dynamic> toJson() {
     return {

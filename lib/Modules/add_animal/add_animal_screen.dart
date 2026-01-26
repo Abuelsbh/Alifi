@@ -67,12 +67,14 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
                     : Icon(Icons.pets, color: ThemeClass.of(context).primaryColor, size: 20),
                   title: Provider.of<AppLanguage>(context, listen: false).translate('add_animal.step_titles.pet_details'),
                 ),
-                EasyStep(
-                  customStep: con.activeStep > 1
-                    ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
-                    : Icon(Icons.photo_camera, color: ThemeClass.of(context).primaryColor, size: 20),
-                  title: Provider.of<AppLanguage>(context, listen: false).translate('add_animal.step_titles.pictures'),
-                ),
+                // Skip pictures step for adoption seeking reports
+                if (widget.reportType != ReportType.adoption || widget.adoptionType != 'seeking')
+                  EasyStep(
+                    customStep: con.activeStep > 1
+                      ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
+                      : Icon(Icons.photo_camera, color: ThemeClass.of(context).primaryColor, size: 20),
+                    title: Provider.of<AppLanguage>(context, listen: false).translate('add_animal.step_titles.pictures'),
+                  ),
               ],
               onStepReached: (step) {
                 setState(() {
@@ -86,7 +88,13 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
                 con: con,
                 onNext: () {
                   setState(() {
-                    con.activeStep++;
+                    // Skip image step for adoption seeking reports
+                    if (widget.reportType == ReportType.adoption && widget.adoptionType == 'seeking') {
+                      // Go directly to submission
+                      _handleFormSubmission();
+                    } else {
+                      con.activeStep++;
+                    }
                   });
                 },
                 onBack: null, // First step, no back button
@@ -123,10 +131,13 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
         return;
       }
       
-      if (con.selectedImages.isEmpty) {
-        final appLanguage = Provider.of<AppLanguage>(context, listen: false);
-        _showErrorDialog(appLanguage.translate('post_report.photo_required'));
-        return;
+      // Skip image validation for adoption seeking reports
+      if (widget.reportType != ReportType.adoption || widget.adoptionType != 'seeking') {
+        if (con.selectedImages.isEmpty) {
+          final appLanguage = Provider.of<AppLanguage>(context, listen: false);
+          _showErrorDialog(appLanguage.translate('post_report.photo_required'));
+          return;
+        }
       }
 
       // Show loading dialog

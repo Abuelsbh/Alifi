@@ -11,6 +11,7 @@ import '../../../Widgets/translated_text.dart';
 import '../lost_found/unified_pet_details_screen.dart';
 import '../../add_animal/add_animal_screen.dart';
 import '../lost_found/lost_found_screen.dart';
+import 'edit_report_screen.dart';
 
 class MyReportsScreen extends StatefulWidget {
   const MyReportsScreen({super.key});
@@ -572,7 +573,20 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                     title: Text('تعديل التقرير'),
                     onTap: () {
                       Navigator.pop(context);
-                      // TODO: Navigate to edit report screen
+                      final type = report['type'] as String? ?? 'lost';
+                      final collection = type == 'lost' ? 'lost_pets' : 'found_pets';
+                      final id = report['id'] as String? ?? '';
+                      if (id.isEmpty) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => EditReportScreen(
+                            reportId: id,
+                            collection: collection,
+                            type: type,
+                          ),
+                        ),
+                      );
                     },
                   ),
                   ListTile(

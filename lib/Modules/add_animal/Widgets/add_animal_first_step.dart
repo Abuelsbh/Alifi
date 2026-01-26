@@ -41,6 +41,10 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
           ),
           const SizedBox(height: 30),
 
+          // Title Field
+          _buildTextField(widget.con.titleController, Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.title_field')),
+          const SizedBox(height: 15),
+
           // Pet Type Dropdown
           _buildPetTypeDropdown(),
           const SizedBox(height: 15),

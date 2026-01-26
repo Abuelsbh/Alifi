@@ -7,8 +7,10 @@ import '../../../core/Language/translation_service.dart';
 import '../../../Models/pet_report_model.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/pet_reports_service.dart';
 import '../../../Utilities/dialog_helper.dart';
 import '../../../Widgets/login_widget.dart';
+import '../profile/edit_report_screen.dart';
 import 'user_chat_screen.dart';
 
 enum PetDetailsType {
@@ -69,6 +71,17 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
     }
   }
 
+  String? get _reportTitle {
+    switch (widget.type) {
+      case PetDetailsType.report:
+        return widget.report!['title']?.toString();
+      case PetDetailsType.adoption:
+        return widget.adoptionPet!.title;
+      case PetDetailsType.breeding:
+        return null; // Breeding doesn't have title
+    }
+  }
+
   String get _description {
     switch (widget.type) {
       case PetDetailsType.report:
@@ -121,6 +134,18 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
     return gender;
   }
 
+  // دالة للحصول على أيقونة الجنس المناسبة
+  IconData _getGenderIcon(String gender) {
+    String genderKey = gender.toLowerCase();
+    if (genderKey == 'male' || genderKey == 'ذكر') {
+      return Icons.male; // أيقونة الذكر
+    } else if (genderKey == 'female' || genderKey == 'أنثى') {
+      return Icons.female; // أيقونة الأنثى
+    } else {
+      return Icons.help_outline; // أيقونة غير معروف
+    }
+  }
+
   // معرض صور محسّن يعرض جميع الصور - تصميم جديد يشبه الصورة
   Widget _buildEnhancedImageGallery() {
     if (_images.isEmpty) return const SizedBox.shrink();
@@ -145,28 +170,31 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16.r),
-              child: CachedNetworkImage(
-                imageUrl: _images[0],
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                memCacheWidth: 800,
-                memCacheHeight: 600,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey[200],
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      color: AppTheme.primaryGreen,
-                      strokeWidth: 2,
+              child: Container(
+                color: Colors.grey[200],
+                child: CachedNetworkImage(
+                  imageUrl: _images[0],
+                  fit: BoxFit.contain,
+                  width: double.infinity,
+                  height: double.infinity,
+                  memCacheWidth: 800,
+                  memCacheHeight: 600,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey[200],
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: AppTheme.primaryGreen,
+                        strokeWidth: 2,
+                      ),
                     ),
                   ),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: Colors.grey[300],
-                  child: Icon(
-                    Icons.broken_image,
-                    color: Colors.grey[600],
-                    size: 40.sp,
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey[300],
+                    child: Icon(
+                      Icons.broken_image,
+                      color: Colors.grey[600],
+                      size: 40.sp,
+                    ),
                   ),
                 ),
               ),
@@ -201,28 +229,31 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16.r),
-                  child: CachedNetworkImage(
-                    imageUrl: _images[0],
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    memCacheWidth: 800,
-                    memCacheHeight: 600,
-                    placeholder: (context, url) => Container(
-                      color: Colors.grey[200],
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: AppTheme.primaryGreen,
-                          strokeWidth: 2,
+                  child: Container(
+                    color: Colors.grey[200],
+                    child: CachedNetworkImage(
+                      imageUrl: _images[0],
+                      fit: BoxFit.contain,
+                      width: double.infinity,
+                      height: double.infinity,
+                      memCacheWidth: 800,
+                      memCacheHeight: 600,
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey[200],
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: AppTheme.primaryGreen,
+                            strokeWidth: 2,
+                          ),
                         ),
                       ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[300],
-                      child: Icon(
-                        Icons.broken_image,
-                        color: Colors.grey[600],
-                        size: 40.sp,
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.grey[300],
+                        child: Icon(
+                          Icons.broken_image,
+                          color: Colors.grey[600],
+                          size: 40.sp,
+                        ),
                       ),
                     ),
                   ),
@@ -254,28 +285,31 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16.r),
-                          child: CachedNetworkImage(
-                            imageUrl: _images[1],
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                            memCacheWidth: 400,
-                            memCacheHeight: 300,
-                            placeholder: (context, url) => Container(
-                              color: Colors.grey[200],
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  color: AppTheme.primaryGreen,
-                                  strokeWidth: 2,
+                          child: Container(
+                            color: Colors.grey[200],
+                            child: CachedNetworkImage(
+                              imageUrl: _images[1],
+                              fit: BoxFit.contain,
+                              width: double.infinity,
+                              height: double.infinity,
+                              memCacheWidth: 400,
+                              memCacheHeight: 300,
+                              placeholder: (context, url) => Container(
+                                color: Colors.grey[200],
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: AppTheme.primaryGreen,
+                                    strokeWidth: 2,
+                                  ),
                                 ),
                               ),
-                            ),
-                            errorWidget: (context, url, error) => Container(
-                              color: Colors.grey[300],
-                              child: Icon(
-                                Icons.broken_image,
-                                color: Colors.grey[600],
-                                size: 30.sp,
+                              errorWidget: (context, url, error) => Container(
+                                color: Colors.grey[300],
+                                child: Icon(
+                                  Icons.broken_image,
+                                  color: Colors.grey[600],
+                                  size: 30.sp,
+                                ),
                               ),
                             ),
                           ),
@@ -302,28 +336,31 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16.r),
-                          child: CachedNetworkImage(
-                            imageUrl: _images[2],
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                            memCacheWidth: 400,
-                            memCacheHeight: 300,
-                            placeholder: (context, url) => Container(
-                              color: Colors.grey[200],
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  color: AppTheme.primaryGreen,
-                                  strokeWidth: 2,
+                          child: Container(
+                            color: Colors.grey[200],
+                            child: CachedNetworkImage(
+                              imageUrl: _images[2],
+                              fit: BoxFit.contain,
+                              width: double.infinity,
+                              height: double.infinity,
+                              memCacheWidth: 400,
+                              memCacheHeight: 300,
+                              placeholder: (context, url) => Container(
+                                color: Colors.grey[200],
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: AppTheme.primaryGreen,
+                                    strokeWidth: 2,
+                                  ),
                                 ),
                               ),
-                            ),
-                            errorWidget: (context, url, error) => Container(
-                              color: Colors.grey[300],
-                              child: Icon(
-                                Icons.broken_image,
-                                color: Colors.grey[600],
-                                size: 30.sp,
+                              errorWidget: (context, url, error) => Container(
+                                color: Colors.grey[300],
+                                child: Icon(
+                                  Icons.broken_image,
+                                  color: Colors.grey[600],
+                                  size: 30.sp,
+                                ),
                               ),
                             ),
                           ),
@@ -362,6 +399,20 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
           ),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          if (_isCurrentUserOwner()) ...[
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.white),
+              onPressed: _navigateToEdit,
+              tooltip: TranslationService.instance.translate('profile.edit') ?? 'تعديل',
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.white),
+              onPressed: _deleteReport,
+              tooltip: TranslationService.instance.translate('common.delete') ?? 'حذف',
+            ),
+          ],
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -426,7 +477,8 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
     String breed = '';
     switch (widget.type) {
       case PetDetailsType.report:
-        final petDetails = widget.report!['petDetails'] as Map<String, dynamic>? ?? {};
+        final report = widget.report!;
+        final petDetails = report['petDetails'] as Map<String, dynamic>? ?? {};
         breed = petDetails['breed']?.toString() ?? '';
         break;
       case PetDetailsType.adoption:
@@ -437,17 +489,44 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
         break;
     }
 
+    final title = _reportTitle;
+
     return Column(
       children: [
-        Text(
-          _petName,
-          style: TextStyle(
-            fontSize: 28.sp,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey[800],
+        // Show report title if available, otherwise show pet name
+        if (title != null && title.isNotEmpty) ...[
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 28.sp,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+            textAlign: TextAlign.center,
           ),
-          textAlign: TextAlign.center,
-        ),
+          if (_petName.isNotEmpty && _petName != TranslationService.instance.translate('pet')) ...[
+            SizedBox(height: 8.h),
+            Text(
+              _petName,
+              style: TextStyle(
+                fontSize: 18.sp,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ] else ...[
+          Text(
+            _petName,
+            style: TextStyle(
+              fontSize: 28.sp,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
         if (breed.isNotEmpty) ...[
           SizedBox(height: 8.h),
           Text(
@@ -511,7 +590,7 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
         SizedBox(width: 12.w),
         Expanded(
           child: _buildInfoCard(
-            icon: Icons.wc,
+            icon: _getGenderIcon(gender),
             iconColor: Colors.pink,
             label: TranslationService.instance.translate('add_animal.pet_details.gender'),
             value: gender.isNotEmpty ? gender : '-',
@@ -665,6 +744,91 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
         return 'adoption';
       case PetDetailsType.breeding:
         return 'breeding';
+    }
+  }
+
+  String _getCollection() {
+    final t = _getPetReportType() ?? '';
+    if (t == 'lost' || t == 'lost_pet') return 'lost_pets';
+    if (t == 'found' || t == 'found_pet') return 'found_pets';
+    if (t == 'adoption') return 'adoption_pets';
+    if (t == 'breeding') return 'breeding_pets';
+    return 'lost_pets';
+  }
+
+  String _getTypeForEdit() {
+    final t = _getPetReportType() ?? '';
+    if (t == 'lost_pet') return 'lost';
+    if (t == 'found_pet') return 'found';
+    return t.isEmpty ? 'lost' : t;
+  }
+
+  Future<void> _navigateToEdit() async {
+    final id = _getPetReportId();
+    if (id == null) return;
+    final collection = _getCollection();
+    final type = _getTypeForEdit();
+    final res = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditReportScreen(
+          reportId: id,
+          collection: collection,
+          type: type,
+        ),
+      ),
+    );
+    if (res == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(TranslationService.instance.translate('profile.edit_report_saved') ?? 'تم حفظ التعديلات'),
+          backgroundColor: AppTheme.success,
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteReport() async {
+    final id = _getPetReportId();
+    if (id == null) return;
+    final collection = _getCollection();
+    final ts = TranslationService.instance;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(ts.translate('profile.my_animals_delete_title') ?? 'حذف'),
+        content: Text(ts.translate('profile.my_animals_delete_confirm') ?? 'حذف هذا التقرير؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(ts.translate('common.cancel') ?? 'إلغاء'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(ts.translate('common.delete') ?? 'حذف', style: const TextStyle(color: AppTheme.error)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await PetReportsService.deleteReport(reportId: id, collection: collection);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ts.translate('profile.my_animals_deleted') ?? 'تم الحذف'),
+          backgroundColor: AppTheme.success,
+        ),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${ts.translate('profile.my_animals_delete_error') ?? 'خطأ'}: $e'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
     }
   }
 

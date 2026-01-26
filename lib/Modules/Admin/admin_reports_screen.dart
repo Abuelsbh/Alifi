@@ -18,6 +18,7 @@ class AdminReportsScreen extends StatefulWidget {
 class _AdminReportsScreenState extends State<AdminReportsScreen> {
   String _selectedFilter = 'all';
   final List<String> _filterOptions = ['all', 'pending', 'approved', 'rejected'];
+  String _activeFilter = 'all'; // 'all', 'active', 'inactive'
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -72,7 +73,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                   onChanged: (_) => setState(() {}),
                 ),
                 SizedBox(height: 12.h),
-                // Filter Chips
+                // Filter Chips - Approval Status
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -96,6 +97,66 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                         ),
                       );
                     }).toList(),
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                // Active/Inactive Filter
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.only(right: 8.w),
+                        child: FilterChip(
+                          label: const Text('الكل'),
+                          selected: _activeFilter == 'all',
+                          onSelected: (selected) {
+                            setState(() {
+                              _activeFilter = 'all';
+                            });
+                          },
+                          selectedColor: AppTheme.primaryGreen,
+                          labelStyle: TextStyle(
+                            color: _activeFilter == 'all' ? Colors.white : Colors.black87,
+                            fontWeight: _activeFilter == 'all' ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.only(right: 8.w),
+                        child: FilterChip(
+                          label: const Text('نشط'),
+                          selected: _activeFilter == 'active',
+                          onSelected: (selected) {
+                            setState(() {
+                              _activeFilter = 'active';
+                            });
+                          },
+                          selectedColor: Colors.green,
+                          labelStyle: TextStyle(
+                            color: _activeFilter == 'active' ? Colors.white : Colors.black87,
+                            fontWeight: _activeFilter == 'active' ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.only(right: 8.w),
+                        child: FilterChip(
+                          label: const Text('غير نشط'),
+                          selected: _activeFilter == 'inactive',
+                          onSelected: (selected) {
+                            setState(() {
+                              _activeFilter = 'inactive';
+                            });
+                          },
+                          selectedColor: Colors.grey,
+                          labelStyle: TextStyle(
+                            color: _activeFilter == 'inactive' ? Colors.white : Colors.black87,
+                            fontWeight: _activeFilter == 'inactive' ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -176,6 +237,19 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
   List<Map<String, dynamic>> _filterReports(List<Map<String, dynamic>> reports) {
     var filtered = reports;
 
+    // Filter by active/inactive status
+    if (_activeFilter != 'all') {
+      filtered = filtered.where((report) {
+        final isActive = report['isActive'] ?? true;
+        if (_activeFilter == 'active') {
+          return isActive == true;
+        } else if (_activeFilter == 'inactive') {
+          return isActive != true;
+        }
+        return true;
+      }).toList();
+    }
+
     // Filter by approval status
     if (_selectedFilter != 'all') {
       filtered = filtered.where((report) {
@@ -225,26 +299,26 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
             // Header Row
             Row(
               children: [
-                // Pet Image
+                // Pet Image - Fixed Size
                 if (imageUrls.isNotEmpty)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8.r),
                     child: CachedNetworkImage(
                       imageUrl: imageUrls[0],
-                      width: 60.w,
-                      height: 60.h,
+                      width: 100.w,
+                      height: 100.h,
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Container(
-                        width: 60.w,
-                        height: 60.h,
+                        width: 100.w,
+                        height: 100.h,
                         color: Colors.grey[200],
                         child: const Center(
                           child: CircularProgressIndicator(),
                         ),
                       ),
                       errorWidget: (context, url, error) => Container(
-                        width: 60.w,
-                        height: 60.h,
+                        width: 100.w,
+                        height: 100.h,
                         color: Colors.grey[200],
                         child: const Icon(Icons.pets),
                       ),
@@ -252,13 +326,13 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                   )
                 else
                   Container(
-                    width: 60.w,
-                    height: 60.h,
+                    width: 100.w,
+                    height: 100.h,
                     decoration: BoxDecoration(
                       color: Colors.grey[200],
                       borderRadius: BorderRadius.circular(8.r),
                     ),
-                    child: const Icon(Icons.pets, size: 30),
+                    child: const Icon(Icons.pets, size: 40),
                   ),
                 SizedBox(width: 12.w),
                 // Pet Info
@@ -289,21 +363,44 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                     ],
                   ),
                 ),
-                // Status Badge
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(approvalStatus),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Text(
-                    _getStatusLabel(approvalStatus),
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.bold,
+                // Status Badges Column
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // Approval Status Badge
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(approvalStatus),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Text(
+                        _getStatusLabel(approvalStatus),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
+                    SizedBox(height: 4.h),
+                    // Active/Inactive Status Badge
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                      decoration: BoxDecoration(
+                        color: (report['isActive'] ?? true) ? Colors.green : Colors.grey,
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Text(
+                        (report['isActive'] ?? true) ? 'نشط' : 'غير نشط',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -364,6 +461,19 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                     label: const Text('حذف'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.grey[600],
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 8.h),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _permanentlyDeleteReport(report),
+                    icon: const Icon(Icons.delete_forever, size: 18),
+                    label: const Text('حذف نهائي'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red[700],
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.symmetric(vertical: 8.h),
                     ),
@@ -518,7 +628,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('تأكيد الحذف'),
-        content: const Text('هل أنت متأكد من حذف هذا التقرير؟'),
+        content: const Text('هل أنت متأكد من حذف هذا التقرير؟\nسيتم إخفاؤه من القائمة ولكن سيظل موجوداً في قاعدة البيانات.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -563,6 +673,64 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('خطأ في الحذف: $e'),
+              backgroundColor: AppTheme.error,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _permanentlyDeleteReport(Map<String, dynamic> report) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تأكيد الحذف النهائي'),
+        content: const Text('هل أنت متأكد من حذف هذا التقرير نهائياً من قاعدة البيانات؟\n\nهذا الإجراء لا يمكن التراجع عنه وسيتم حذف التقرير والصور المرتبطة به نهائياً.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('إلغاء'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('حذف نهائي', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final reportId = report['id']?.toString();
+        final collection = report['collection']?.toString();
+        
+        print('🗑️ Permanently deleting report:');
+        print('   reportId: $reportId');
+        print('   collection: $collection');
+        
+        if (reportId == null || collection == null) {
+          throw Exception('Missing report ID or collection');
+        }
+        
+        await PetReportsService.permanentlyDeleteReport(
+          reportId: reportId,
+          collection: collection,
+        );
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم حذف التقرير نهائياً بنجاح'),
+              backgroundColor: AppTheme.success,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('خطأ في الحذف النهائي: $e'),
               backgroundColor: AppTheme.error,
             ),
           );

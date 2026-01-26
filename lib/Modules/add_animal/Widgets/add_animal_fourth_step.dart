@@ -188,14 +188,17 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
     return Stack(
       children: [
         // Current Image Display
-        Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(15.r),
-            image: DecorationImage(
-              image: FileImage(File(widget.con.selectedImages[widget.con.currentImageIndex])),
-              fit: BoxFit.cover,
+        ClipRRect(
+          borderRadius: BorderRadius.circular(15.r),
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: Colors.grey[200],
+            child: Image.file(
+              File(widget.con.selectedImages[widget.con.currentImageIndex]),
+              fit: BoxFit.contain,
+              width: double.infinity,
+              height: double.infinity,
             ),
           ),
         ),
@@ -328,19 +331,71 @@ class _AddAnimalFourthStepState extends State<AddAnimalFourthStep> {
   }
 
   void _pickImages() async {
-    final List<XFile> images = await _picker.pickMultiImage();
-    if (images.isNotEmpty) {
-      setState(() {
-        // Add new images to existing ones, but limit to 10 total
-        for (var image in images) {
-          if (widget.con.selectedImages.length < 10) {
-            widget.con.selectedImages.add(image.path);
-          }
+    // Show dialog to choose between gallery and camera
+    final ImageSource? source = await showDialog<ImageSource>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pictures.select_source')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: Text(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pictures.gallery')),
+                onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: Text(Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pictures.camera')),
+                onTap: () => Navigator.of(context).pop(ImageSource.camera),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (source == null) return;
+
+    try {
+      if (source == ImageSource.gallery) {
+        // Pick multiple images from gallery
+        final List<XFile> images = await _picker.pickMultiImage();
+        if (images.isNotEmpty) {
+          setState(() {
+            // Add new images to existing ones, but limit to 10 total
+            for (var image in images) {
+              if (widget.con.selectedImages.length < 10) {
+                widget.con.selectedImages.add(image.path);
+              }
+            }
+            if (widget.con.selectedImages.isNotEmpty && widget.con.currentImageIndex >= widget.con.selectedImages.length) {
+              widget.con.currentImageIndex = 0;
+            }
+          });
         }
-        if (widget.con.selectedImages.isNotEmpty && widget.con.currentImageIndex >= widget.con.selectedImages.length) {
-          widget.con.currentImageIndex = 0;
+      } else if (source == ImageSource.camera) {
+        // Take photo with camera
+        final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+        if (image != null) {
+          setState(() {
+            if (widget.con.selectedImages.length < 10) {
+              widget.con.selectedImages.add(image.path);
+            }
+            if (widget.con.selectedImages.isNotEmpty && widget.con.currentImageIndex >= widget.con.selectedImages.length) {
+              widget.con.currentImageIndex = 0;
+            }
+          });
         }
-      });
+      }
+    } catch (e) {
+      // Handle error (e.g., permission denied)
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
     }
   }
 

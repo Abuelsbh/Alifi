@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/services/location_service.dart';
 import '../../../Models/location_model.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/Language/translation_service.dart';
 import '../../../Utilities/text_style_helper.dart';
 import '../../../Utilities/theme_helper.dart';
+import '../../../Utilities/shared_preferences.dart';
 import '../home/home_screen.dart';
 
 class LocationSelectionScreen extends StatefulWidget {
   static const String routeName = '/LocationSelection';
+  final bool isFirstTime;
 
-  const LocationSelectionScreen({super.key});
+  const LocationSelectionScreen({
+    super.key,
+    this.isFirstTime = false,
+  });
 
   @override
   State<LocationSelectionScreen> createState() => _LocationSelectionScreenState();
@@ -123,13 +129,22 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
         ),
       );
 
-      // Wait a bit then navigate back
+      // Wait a bit then navigate
       await Future.delayed(Duration(milliseconds: 800));
       
       if (!mounted) return;
       
-      // Navigate back to previous screen (home screen) with result
-      Navigator.of(context).pop(location.id);
+      // If this is first time, mark as completed and navigate to home
+      if (widget.isFirstTime) {
+        await SharedPref.setFirstLaunchCompleted();
+        // Navigate to home screen using GoRouter
+        if (mounted) {
+          context.go(HomeScreen.routeName);
+        }
+      } else {
+        // Navigate back to previous screen with result
+        Navigator.of(context).pop(location.id);
+      }
       
     } catch (e, stackTrace) {
       print('❌ Error saving location: $e');
@@ -188,20 +203,23 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
       ),
       child: Row(
         children: [
-          // Back button
-          IconButton(
-            icon: Icon(
-              Icons.arrow_back,
-              color: Colors.white,
-              size: 24.sp,
+          // Back button - only show if not first time
+          if (!widget.isFirstTime)
+            IconButton(
+              icon: Icon(
+                Icons.arrow_back,
+                color: Colors.white,
+                size: 24.sp,
+              ),
+              onPressed: () => Navigator.of(context).pop(),
             ),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          SizedBox(width: 10.w),
+          if (!widget.isFirstTime) SizedBox(width: 10.w),
           // Title
           Expanded(
             child: Text(
-              TranslationService.instance.translate('location.title') ?? 'Location',
+              widget.isFirstTime
+                  ? (TranslationService.instance.translate('location.select_location') ?? 'Select Location')
+                  : (TranslationService.instance.translate('location.title') ?? 'Location'),
               style: TextStyleHelper.of(context).s28InterTextStyle().copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,

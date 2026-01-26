@@ -11,6 +11,7 @@ import '../../Widgets/translated_text.dart';
 import '../../Widgets/custom_textfield_widget.dart';
 import '../../Widgets/translated_custom_button.dart';
 import '../Utilities/dialog_helper.dart';
+import '../Modules/Main/profile/privacy_policy_screen.dart';
 
 class SignupWidget extends StatefulWidget {
   const SignupWidget({super.key});
@@ -27,6 +28,8 @@ class _LoginWidgetState extends State<SignupWidget> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _agreedToTerms = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -37,12 +40,91 @@ class _LoginWidgetState extends State<SignupWidget> {
     super.dispose();
   }
 
+  // Convert error to translation key
+  String _getErrorTranslationKey(dynamic e) {
+    String errorString = e.toString();
+    
+    // Remove "Exception: " prefix if present
+    if (errorString.startsWith('Exception: ')) {
+      errorString = errorString.substring(11);
+    }
+    
+    // Check for Firebase Auth error codes
+    if (errorString.contains('user-not-found') || 
+        errorString.contains('No user found')) {
+      return 'auth.errors.user_not_found';
+    }
+    if (errorString.contains('wrong-password') || 
+        errorString.contains('Wrong password')) {
+      return 'auth.errors.wrong_password';
+    }
+    if (errorString.contains('email-already-in-use') || 
+        errorString.contains('already exists')) {
+      return 'auth.errors.email_already_in_use';
+    }
+    if (errorString.contains('weak-password') || 
+        errorString.contains('too weak')) {
+      return 'auth.errors.weak_password';
+    }
+    if (errorString.contains('invalid-email') || 
+        errorString.contains('not valid')) {
+      return 'auth.errors.invalid_email';
+    }
+    if (errorString.contains('user-disabled') || 
+        errorString.contains('disabled')) {
+      return 'auth.errors.user_disabled';
+    }
+    if (errorString.contains('too-many-requests') || 
+        errorString.contains('Too many requests')) {
+      return 'auth.errors.too_many_requests';
+    }
+    if (errorString.contains('operation-not-allowed') || 
+        errorString.contains('not allowed')) {
+      return 'auth.errors.operation_not_allowed';
+    }
+    if (errorString.contains('network-request-failed') || 
+        errorString.contains('Network error') ||
+        errorString.contains('network')) {
+      return 'auth.errors.network_request_failed';
+    }
+    if (errorString.contains('channel-error') || 
+        errorString.contains('channel')) {
+      return 'auth.errors.channel_error';
+    }
+    if (errorString.contains('تم حذف') || 
+        errorString.contains('deleted')) {
+      return 'auth.errors.account_deleted';
+    }
+    if (errorString.contains('تم حظر') || 
+        errorString.contains('banned')) {
+      return 'auth.errors.account_banned';
+    }
+    if (errorString.contains('تم توقيف') || 
+        errorString.contains('suspended')) {
+      return 'auth.errors.account_suspended';
+    }
+    if (errorString.contains('Authentication failed') || 
+        errorString.contains('فشل')) {
+      return 'auth.errors.authentication_failed';
+    }
+    
+    // Default to unknown error
+    return 'auth.errors.unknown_error';
+  }
+
   Future<void> _register() async {
-
-
     setState(() {
-      _isLoading = true;
+      _errorMessage = null;
     });
+
+    if (!_agreedToTerms) {
+      setState(() {
+        _errorMessage = TranslationService.instance.translate('auth.agree_terms_required');
+      });
+      return;
+    }
+
+    setState(() => _isLoading = true);
 
     try {
       await AuthService.createUserWithEmailAndPassword(
@@ -52,55 +134,42 @@ class _LoginWidgetState extends State<SignupWidget> {
       );
 
       if (mounted) {
-        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(TranslationService.instance.translate('auth.account_created_successfully')),
             backgroundColor: AppTheme.success,
           ),
         );
-
         context.pop();
       }
     } catch (e) {
       if (mounted) {
-        // Extract meaningful error message
-        String errorMessage = e.toString();
-        if (errorMessage.startsWith('Exception: ')) {
-          errorMessage = errorMessage.substring(11);
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: AppTheme.error,
-            duration: const Duration(seconds: 4),
-          ),
-        );
+        setState(() => _errorMessage = _getErrorTranslationKey(e));
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = TranslationService.instance;
     return Container(
-      height: 450.h,
+      height: 560.h,
       decoration: BoxDecoration(
         image: DecorationImage(
           image: AssetImage(Assets.imagesBackground2), // replace with your image
           fit: BoxFit.contain, // makes it cover the whole area
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
+      child: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(vertical: 12.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
           Center(
             child: Column(
               children: [
@@ -244,9 +313,49 @@ class _LoginWidgetState extends State<SignupWidget> {
             ),
           ),
 
-          SizedBox(height: 18.h),
+          SizedBox(height: 12.h),
 
-          // Login Button
+          // Terms checkbox
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 24.w,
+                  height: 24.h,
+                  child: Checkbox(
+                    value: _agreedToTerms,
+                    onChanged: (v) => setState(() => _agreedToTerms = v ?? false),
+                    activeColor: AppTheme.primaryGreen,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const PrivacyPolicyScreen(),
+                        ),
+                      );
+                    },
+                    child: Text(
+                      t.translate('auth.agree_terms'),
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Theme.of(context).textTheme.bodyMedium?.color ?? Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: 14.h),
+
           TranslatedCustomButton(
             width: 140.w,
             textKey: 'auth.signup',
@@ -254,7 +363,7 @@ class _LoginWidgetState extends State<SignupWidget> {
             isLoading: _isLoading,
           ),
 
-          SizedBox(height: 20.h),
+          SizedBox(height: 16.h),
 
           const TranslatedText(
             'auth.already_have_account',
@@ -276,6 +385,21 @@ class _LoginWidgetState extends State<SignupWidget> {
               ),
             ),
           ),
+
+          SizedBox(height: 16.h),
+          SizedBox(
+            height: 40.h,
+            child: _errorMessage != null
+                ? Center(
+                    child: TranslatedText(
+                      _errorMessage!,
+                      style: TextStyle(color: AppTheme.error, fontSize: 12.sp),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+          SizedBox(height: 8.h),
 
           // SizedBox(height: 16.h),
           //
@@ -306,6 +430,7 @@ class _LoginWidgetState extends State<SignupWidget> {
           //   ],
           // ),
         ],
+        ),
       ),
     );
   }
