@@ -540,6 +540,7 @@ class AdoptionPetModel extends Equatable {
     return {
       'userId': userId,
       'petName': petName,
+      if (title != null && title!.isNotEmpty) 'title': title,
       'petType': petType,
       'breed': breed,
       'age': age,
@@ -821,6 +822,7 @@ class BreedingPetModel extends Equatable {
   final String id;
   final String userId;
   final String petName;
+  final String? title;
   final String petType;
   final String breed;
   final int age;
@@ -862,6 +864,7 @@ class BreedingPetModel extends Equatable {
     required this.id,
     required this.userId,
     required this.petName,
+    this.title,
     required this.petType,
     required this.breed,
     required this.age,
@@ -904,6 +907,7 @@ class BreedingPetModel extends Equatable {
       id: doc.id,
       userId: data['userId'] ?? '',
       petName: data['petName'] ?? '',
+      title: data['title']?.toString(),
       petType: data['petType'] ?? '',
       breed: data['breed'] ?? '',
       age: data['age'] ?? 0,
@@ -969,6 +973,7 @@ class BreedingPetModel extends Equatable {
       'age': age,
       'gender': gender,
       'color': color,
+      if (title != null && title!.isNotEmpty) 'title': title,
       'imageUrls': photos,  // Save to imageUrls for consistency
       'photos': photos,     // Keep photos for backward compatibility
       'description': description,
@@ -1007,6 +1012,7 @@ class BreedingPetModel extends Equatable {
       id: json['id'] ?? '',
       userId: json['userId'] ?? '',
       petName: json['petName'] ?? '',
+      title: json['title']?.toString(),
       petType: json['petType'] ?? '',
       breed: json['breed'] ?? '',
       age: json['age'] ?? 0,
@@ -1058,6 +1064,7 @@ class BreedingPetModel extends Equatable {
       id: id,
       userId: data['userId']?.toString() ?? '',
       petName: pi['name']?.toString() ?? data['petName']?.toString() ?? '',
+      title: data['title']?.toString(),
       petType: pi['type']?.toString() ?? data['petType']?.toString() ?? '',
       breed: pi['breed']?.toString() ?? data['breed']?.toString() ?? '',
       age: (pi['age'] ?? data['age'] ?? 0) as int,
@@ -1103,6 +1110,7 @@ class BreedingPetModel extends Equatable {
       'id': id,
       'userId': userId,
       'petName': petName,
+      if (title != null) 'title': title,
       'petType': petType,
       'breed': breed,
       'age': age,
@@ -1145,7 +1153,7 @@ class BreedingPetModel extends Equatable {
 
   @override
   List<Object?> get props => [
-    id, userId, petName, petType, breed, age, gender, color, photos,
+    id, userId, petName, title, petType, breed, age, gender, color, photos,
     description, location, address, contactPhone, contactName, contactEmail,
     isActive, createdAt, updatedAt, isVaccinated, isNeutered, healthStatus,
     temperament, weight, specialRequirements, breedingFee, hasBreedingExperience,

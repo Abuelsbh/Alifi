@@ -218,7 +218,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(Provider.of<AppLanguage>(context, listen: false).translate('profile.image_updated') ?? 'تم تحديث الملف الشخصي بنجاح'),
+            content: Text(Provider.of<AppLanguage>(context, listen: false).translate('profile.image_updated')),
             backgroundColor: AppTheme.success,
           ),
         );

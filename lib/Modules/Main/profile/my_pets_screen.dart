@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/Theme/app_theme.dart';
+import '../../../core/Language/app_languages.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../Widgets/custom_card.dart';
 import '../../../Widgets/custom_button.dart';
@@ -325,7 +327,7 @@ class _MyPetsScreenState extends State<MyPetsScreen>
                       children: [
                         Expanded(
                           child: Text(
-                            pet['name'] ?? 'غير محدد',
+                            pet['name'] ?? Provider.of<AppLanguage>(context, listen: false).translate('common.unspecified'),
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -350,7 +352,7 @@ class _MyPetsScreenState extends State<MyPetsScreen>
                     ),
                     SizedBox(height: 4.h),
                     Text(
-                      '${pet['breed'] ?? 'غير محدد'} • ${pet['gender'] ?? 'غير محدد'}',
+                      '${pet['breed'] ?? Provider.of<AppLanguage>(context, listen: false).translate('common.unspecified')} • ${pet['gender'] ?? Provider.of<AppLanguage>(context, listen: false).translate('common.unspecified')}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Colors.grey[600],
                       ),
@@ -365,7 +367,7 @@ class _MyPetsScreenState extends State<MyPetsScreen>
                         ),
                         SizedBox(width: 4.w),
                         Text(
-                          '${pet['age'] ?? 0} سنة',
+                          '${pet['age'] ?? 0} ${Provider.of<AppLanguage>(context, listen: false).translate('common.years_suffix')}',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.grey[600],
                           ),
@@ -378,7 +380,7 @@ class _MyPetsScreenState extends State<MyPetsScreen>
                         ),
                         SizedBox(width: 4.w),
                         Text(
-                          '${pet['weight'] ?? 0} كجم',
+                          '${pet['weight'] ?? 0} ${Provider.of<AppLanguage>(context, listen: false).translate('common.kg_suffix')}',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.grey[600],
                           ),

@@ -19,91 +19,9 @@ class PetReportsService {
   static Stream<List<Map<String, dynamic>>> getLostPetsStream() {
     print('📱 Starting real-time lost pets stream');
     
-    // If in demo mode, return mock data
+    // If in demo mode, return empty list (no mock animals)
     if (FirebaseConfig.isDemoMode) {
-      final mockLostPets = [
-        {
-          'id': 'demo_lost_1',
-          'userId': 'demo_user_1',
-          'petDetails': {
-            'name': 'لولو',
-            'type': 'قط',
-            'breed': 'فارسي',
-            'color': 'أبيض',
-            'age': '3 سنوات',
-            'gender': 'أنثى',
-            'size': 'متوسط',
-            'distinguishingMarks': 'بقعة سوداء على الأذن اليسرى',
-            'temperament': 'هادئة',
-            'healthStatus': 'جيد',
-            'hasCollar': true,
-            'collarDescription': 'طوق أحمر مع جرس',
-          },
-          'lastSeenLocation': 'القاهرة، مدينة نصر',
-          'lastSeenDate': DateTime.now().subtract(const Duration(days: 2)),
-          'reward': 500,
-          'isUrgent': true,
-          'imageUrls': [],
-          'isActive': true,
-          'createdAt': DateTime.now().subtract(const Duration(days: 2)),
-          'updatedAt': DateTime.now().subtract(const Duration(hours: 6)),
-        },
-        {
-          'id': 'demo_lost_2',
-          'userId': 'demo_user_2',
-          'petDetails': {
-            'name': 'ريكس',
-            'type': 'كلب',
-            'breed': 'جيرمان شيبرد',
-            'color': 'أسود وبني',
-            'age': '2 سنوات',
-            'gender': 'ذكر',
-            'size': 'كبير',
-            'distinguishingMarks': 'ندبة على الكتف الأيمن',
-            'temperament': 'ودود',
-            'healthStatus': 'جيد',
-            'hasCollar': true,
-            'collarDescription': 'طوق بني مع اسمه',
-          },
-          'lastSeenLocation': 'الجيزة، الدقي',
-          'lastSeenDate': DateTime.now().subtract(const Duration(days: 1)),
-          'reward': 1000,
-          'isUrgent': false,
-          'imageUrls': [],
-          'isActive': true,
-          'createdAt': DateTime.now().subtract(const Duration(days: 1)),
-          'updatedAt': DateTime.now().subtract(const Duration(hours: 12)),
-        },
-        {
-          'id': 'demo_lost_3',
-          'userId': 'demo_user_3',
-          'petDetails': {
-            'name': 'كوكي',
-            'type': 'طائر',
-            'breed': 'بادجي',
-            'color': 'أزرق وأصفر',
-            'age': '1 سنة',
-            'gender': 'ذكر',
-            'size': 'صغير',
-            'distinguishingMarks': 'ريش أزرق على الجناح الأيمن',
-            'temperament': 'نشيط',
-            'healthStatus': 'جيد',
-            'hasCollar': false,
-            'collarDescription': '',
-          },
-          'lastSeenLocation': 'الإسكندرية، سموحة',
-          'lastSeenDate': DateTime.now().subtract(const Duration(hours: 6)),
-          'reward': 200,
-          'isUrgent': true,
-          'imageUrls': [],
-          'isActive': true,
-          'createdAt': DateTime.now().subtract(const Duration(hours: 6)),
-          'updatedAt': DateTime.now().subtract(const Duration(hours: 1)),
-        },
-      ];
-      
-      final stream = Stream.value(mockLostPets);
-      return stream;
+      return Stream.value([]);
     }
     
     return _firestore
@@ -187,91 +105,9 @@ class PetReportsService {
   static Stream<List<Map<String, dynamic>>> getFoundPetsStream() {
     print('📱 Starting real-time found pets stream');
     
-    // If in demo mode, return mock data
+    // If in demo mode, return empty list (no mock animals)
     if (FirebaseConfig.isDemoMode) {
-      final mockFoundPets = [
-        {
-          'id': 'demo_found_1',
-          'userId': 'demo_user_4',
-          'petDetails': {
-            'name': 'ماكس',
-            'type': 'كلب',
-            'breed': 'لابرادور',
-            'color': 'أصفر',
-            'age': '4 سنوات',
-            'gender': 'ذكر',
-            'size': 'كبير',
-            'distinguishingMarks': 'بقعة بيضاء على الصدر',
-            'temperament': 'ودود جداً',
-            'healthStatus': 'جيد',
-            'hasCollar': true,
-            'collarDescription': 'طوق أزرق مع اسمه',
-          },
-          'foundLocation': 'القاهرة، المعادي',
-          'foundDate': DateTime.now().subtract(const Duration(days: 1)),
-          'description': 'وجدت هذا الكلب في حديقة المعادي، يبدو أنه ضائع ويريد العودة لصاحبه',
-          'isInShelter': true,
-          'imageUrls': [],
-          'isActive': true,
-          'createdAt': DateTime.now().subtract(const Duration(days: 1)),
-          'updatedAt': DateTime.now().subtract(const Duration(hours: 8)),
-        },
-        {
-          'id': 'demo_found_2',
-          'userId': 'demo_user_5',
-          'petDetails': {
-            'name': 'سيمبا',
-            'type': 'قط',
-            'breed': 'سيامي',
-            'color': 'كريمي مع علامات بنية',
-            'age': '2 سنوات',
-            'gender': 'ذكر',
-            'size': 'متوسط',
-            'distinguishingMarks': 'عيون زرقاء جميلة',
-            'temperament': 'هادئ',
-            'healthStatus': 'جيد',
-            'hasCollar': false,
-            'collarDescription': '',
-          },
-          'foundLocation': 'الجيزة، المهندسين',
-          'foundDate': DateTime.now().subtract(const Duration(hours: 12)),
-          'description': 'قط جميل وجدته في الشارع، يبدو أنه ضائع ويريد العودة لصاحبه',
-          'isInShelter': false,
-          'imageUrls': [],
-          'isActive': true,
-          'createdAt': DateTime.now().subtract(const Duration(hours: 12)),
-          'updatedAt': DateTime.now().subtract(const Duration(hours: 2)),
-        },
-        {
-          'id': 'demo_found_3',
-          'userId': 'demo_user_6',
-          'petDetails': {
-            'name': 'بيكو',
-            'type': 'طائر',
-            'breed': 'كناري',
-            'color': 'أصفر',
-            'age': '1 سنة',
-            'gender': 'ذكر',
-            'size': 'صغير',
-            'distinguishingMarks': 'ريش أصفر لامع',
-            'temperament': 'نشيط',
-            'healthStatus': 'جيد',
-            'hasCollar': false,
-            'collarDescription': '',
-          },
-          'foundLocation': 'الإسكندرية، سيدي جابر',
-          'foundDate': DateTime.now().subtract(const Duration(hours: 6)),
-          'description': 'طائر كناري جميل وجدته في الشرفة، يبدو أنه هرب من قفصه',
-          'isInShelter': true,
-          'imageUrls': [],
-          'isActive': true,
-          'createdAt': DateTime.now().subtract(const Duration(hours: 6)),
-          'updatedAt': DateTime.now().subtract(const Duration(hours: 1)),
-        },
-      ];
-      
-      final stream = Stream.value(mockFoundPets);
-      return stream;
+      return Stream.value([]);
     }
     
     return _firestore

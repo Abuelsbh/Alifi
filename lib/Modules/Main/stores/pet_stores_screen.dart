@@ -60,17 +60,17 @@ class _PetStoresScreenState extends State<PetStoresScreen> {
       // Check if collection exists
       await PetStoresService.checkCollectionExists();
       
-      final stores = await PetStoresService.getActivePetStores();
-      print('🏪 Loaded ${stores.length} stores from Firebase');
+      final stores = await PetStoresService.getActivePetStoresForUserLocation();
+      print('🏪 Loaded ${stores.length} stores for user location');
       
       if (stores.isNotEmpty) {
         print('🏪 First store data: ${stores.first}');
       }
       
-      final categories = await PetStoresService.getAvailableCategories();
+      final categories = PetStoresService.getCategoriesFromStores(stores);
       print('📁 Available categories: $categories');
       
-      final cities = await PetStoresService.getAvailableCities();
+      final cities = PetStoresService.getCitiesFromStores(stores);
       print('🏙️ Available cities: $cities');
 
       setState(() {

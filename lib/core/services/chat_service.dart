@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../firebase/firebase_config.dart';
+import '../Language/translation_service.dart';
 import '../../Models/chat_model.dart';
 import '../../Models/user_model.dart';
 import 'auth_service.dart';
@@ -152,7 +153,7 @@ class ChatService {
                       'id': doc.id,
                       ...data,
                       // Map username to name for compatibility
-                      'name': data['name'] ?? data['username'] ?? 'طبيب بيطري',
+                      'name': data['name'] ?? data['username'] ?? TranslationService.instance.translate('chat.veterinarian'),
                       // Map profileImageUrl to profilePhoto for compatibility
                       'profilePhoto': data['profileImageUrl'] ?? data['profilePhoto'],
                     };
@@ -219,8 +220,8 @@ class ChatService {
       }
 
       // Get user and veterinarian names, photos, and types from users collection
-      String userName = 'المستخدم';
-      String vetName = 'الدكتور';
+      String userName = TranslationService.instance.translate('chat.user');
+      String vetName = TranslationService.instance.translate('chat.doctor');
       String? userPhoto;
       String? vetPhoto;
       
@@ -228,7 +229,7 @@ class ChatService {
         final userDoc = await _firestore.collection('users').doc(userId).get();
         if (userDoc.exists) {
           final userData = userDoc.data();
-          userName = userData?['username'] ?? userData?['name'] ?? 'المستخدم';
+          userName = userData?['username'] ?? userData?['name'] ?? TranslationService.instance.translate('chat.user');
           userPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
         }
         
@@ -238,7 +239,7 @@ class ChatService {
           final vetData = vetDoc.data();
           // Check if user is actually a veterinarian
           if (vetData?['userType'] == 'veterinarian') {
-            vetName = vetData?['name'] ?? vetData?['username'] ?? 'الدكتور';
+            vetName = vetData?['name'] ?? vetData?['username'] ?? TranslationService.instance.translate('chat.doctor');
             vetPhoto = vetData?['profileImageUrl'] ?? vetData?['profilePhoto'];
           } else {
             throw Exception('المستخدم المحدد ليس طبيباً بيطرياً');
@@ -269,7 +270,7 @@ class ChatService {
           userId: 'user',
           veterinarianId: 'veterinarian',
         },
-        'lastMessage': initialMessage ?? 'محادثة جديدة',
+        'lastMessage': initialMessage ?? TranslationService.instance.translate('chat.new_chat'),
         'lastMessageAt': now,
         'lastMessageSender': userId,
         'isActive': true,
@@ -330,7 +331,7 @@ class ChatService {
       }
       
       // Get sender name, photo, and type from users collection
-      String senderName = 'المستخدم';
+      String senderName = TranslationService.instance.translate('chat.user');
       String? senderPhoto;
       String senderType = 'user';
       try {
@@ -339,11 +340,11 @@ class ChatService {
           final userData = userDoc.data();
           // Check if user is a veterinarian
           if (userData?['userType'] == 'veterinarian') {
-            senderName = userData?['name'] ?? userData?['username'] ?? 'الدكتور';
+            senderName = userData?['name'] ?? userData?['username'] ?? TranslationService.instance.translate('chat.doctor');
             senderPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
             senderType = 'veterinarian';
           } else {
-            senderName = userData?['username'] ?? userData?['name'] ?? 'المستخدم';
+            senderName = userData?['username'] ?? userData?['name'] ?? TranslationService.instance.translate('chat.user');
             senderPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
             senderType = 'user';
           }
@@ -416,7 +417,7 @@ class ChatService {
         }
       }
       
-      String senderName = 'المستخدم';
+      String senderName = TranslationService.instance.translate('chat.user');
       String? senderPhoto;
       String senderType = 'user';
       try {
@@ -426,11 +427,11 @@ class ChatService {
           final userData = userDoc.data();
           // Check if user is a veterinarian
           if (userData?['userType'] == 'veterinarian') {
-            senderName = userData?['name'] ?? userData?['username'] ?? 'الدكتور';
+            senderName = userData?['name'] ?? userData?['username'] ?? TranslationService.instance.translate('chat.doctor');
             senderPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
             senderType = 'veterinarian';
           } else {
-            senderName = userData?['username'] ?? userData?['name'] ?? 'المستخدم';
+            senderName = userData?['username'] ?? userData?['name'] ?? TranslationService.instance.translate('chat.user');
             senderPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
             senderType = 'user';
           }
@@ -448,7 +449,7 @@ class ChatService {
       final messageData = {
         'chatId': chatId,
         'senderId': senderId,
-        'message': caption ?? 'صورة',
+        'message': caption ?? TranslationService.instance.translate('chat.photo'),
         'timestamp': now,
         'type': MessageType.image.name,
         'mediaUrl': imageUrl,
@@ -466,7 +467,7 @@ class ChatService {
       }
 
       final updates = <String, dynamic>{
-        'veterinary_chats/$chatId/lastMessage': caption ?? '📷 صورة',
+        'veterinary_chats/$chatId/lastMessage': caption ?? '📷 ${TranslationService.instance.translate('chat.photo')}',
         'veterinary_chats/$chatId/lastMessageAt': now,
         'veterinary_chats/$chatId/lastMessageSender': senderId,
         'veterinary_chats/$chatId/updatedAt': now,
@@ -496,13 +497,13 @@ class ChatService {
       final messageData = {
         'chatId': chatId,
         'senderId': senderId,
-        'message': caption ?? 'فيديو',
+        'message': caption ?? TranslationService.instance.translate('chat.video'),
         'timestamp': now,
         'type': MessageType.video.name,
         'mediaUrl': videoUrl,
         'isRead': false,
         'messageId': messageId,
-        'senderName': 'المستخدم',
+        'senderName': TranslationService.instance.translate('chat.user'),
       };
 
       final chatSnapshot = await _veterinaryChatsRef.child(chatId).get();
@@ -512,7 +513,7 @@ class ChatService {
       final currentUnreadCount = Map<String, dynamic>.from(chatData['unreadCount'] ?? {});
 
       final updates = <String, dynamic>{
-        'veterinary_chats/$chatId/lastMessage': caption ?? '🎥 فيديو',
+        'veterinary_chats/$chatId/lastMessage': caption ?? '🎥 ${TranslationService.instance.translate('chat.video')}',
         'veterinary_chats/$chatId/lastMessageAt': now,
         'veterinary_chats/$chatId/lastMessageSender': senderId,
         'veterinary_chats/$chatId/updatedAt': now,
@@ -543,7 +544,7 @@ class ChatService {
       final messageData = {
         'chatId': chatId,
         'senderId': senderId,
-        'message': fileName ?? 'ملف',
+        'message': fileName ?? TranslationService.instance.translate('chat.file'),
         'timestamp': now,
         'type': MessageType.file.name,
         'mediaUrl': fileUrl,
@@ -551,7 +552,7 @@ class ChatService {
         'fileSize': fileSize,
         'isRead': false,
         'messageId': messageId,
-        'senderName': 'المستخدم',
+        'senderName': TranslationService.instance.translate('chat.user'),
       };
 
       final chatSnapshot = await _veterinaryChatsRef.child(chatId).get();
@@ -560,7 +561,7 @@ class ChatService {
           : <String, dynamic>{};
 
       final updates = <String, dynamic>{
-        'veterinary_chats/$chatId/lastMessage': fileName ?? '📎 ملف',
+        'veterinary_chats/$chatId/lastMessage': fileName ?? '📎 ${TranslationService.instance.translate('chat.file')}',
         'veterinary_chats/$chatId/lastMessageAt': now,
         'veterinary_chats/$chatId/lastMessageSender': senderId,
         'veterinary_chats/$chatId/updatedAt': now,
@@ -1015,8 +1016,8 @@ class ChatService {
       }
 
       // Get user names, photos, and types
-      String userName = 'المستخدم';
-      String otherUserName = 'المستخدم';
+      String userName = TranslationService.instance.translate('chat.user');
+      String otherUserName = TranslationService.instance.translate('chat.user');
       String? userPhoto;
       String? otherUserPhoto;
       String userType = 'user';
@@ -1026,7 +1027,7 @@ class ChatService {
         final userDoc = await _firestore.collection('users').doc(userId).get();
         if (userDoc.exists) {
           final userData = userDoc.data();
-          userName = userData?['name'] ?? userData?['username'] ?? 'المستخدم';
+          userName = userData?['name'] ?? userData?['username'] ?? TranslationService.instance.translate('chat.user');
           userPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
         }
         
@@ -1036,11 +1037,11 @@ class ChatService {
           final otherUserData = otherUserDoc.data();
           // Check if user is a veterinarian
           if (otherUserData?['userType'] == 'veterinarian') {
-            otherUserName = otherUserData?['name'] ?? otherUserData?['username'] ?? 'الدكتور';
+            otherUserName = otherUserData?['name'] ?? otherUserData?['username'] ?? TranslationService.instance.translate('chat.doctor');
             otherUserPhoto = otherUserData?['profileImageUrl'] ?? otherUserData?['profilePhoto'];
             otherUserType = 'veterinarian';
           } else {
-            otherUserName = otherUserData?['name'] ?? otherUserData?['username'] ?? 'المستخدم';
+            otherUserName = otherUserData?['name'] ?? otherUserData?['username'] ?? TranslationService.instance.translate('chat.user');
             otherUserPhoto = otherUserData?['profileImageUrl'] ?? otherUserData?['profilePhoto'];
             otherUserType = 'user';
           }
@@ -1067,7 +1068,7 @@ class ChatService {
           userId: userType,
           otherUserId: otherUserType,
         },
-        'lastMessage': initialMessage ?? 'محادثة جديدة',
+        'lastMessage': initialMessage ?? TranslationService.instance.translate('chat.new_chat'),
         'lastMessageAt': now,
         'lastMessageSender': userId,
         'isActive': true,
@@ -1134,7 +1135,7 @@ class ChatService {
         }
       }
       
-      String senderName = 'المستخدم';
+      String senderName = TranslationService.instance.translate('chat.user');
       String? senderPhoto;
       String senderType = 'user';
       try {
@@ -1144,11 +1145,11 @@ class ChatService {
           final userData = userDoc.data();
           // Check if user is a veterinarian
           if (userData?['userType'] == 'veterinarian') {
-            senderName = userData?['name'] ?? userData?['username'] ?? 'الدكتور';
+            senderName = userData?['name'] ?? userData?['username'] ?? TranslationService.instance.translate('chat.doctor');
             senderPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
             senderType = 'veterinarian';
           } else {
-            senderName = userData?['name'] ?? userData?['username'] ?? 'المستخدم';
+            senderName = userData?['name'] ?? userData?['username'] ?? TranslationService.instance.translate('chat.user');
             senderPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
             senderType = 'user';
           }
@@ -1221,7 +1222,7 @@ class ChatService {
         }
       }
       
-      String senderName = 'المستخدم';
+      String senderName = TranslationService.instance.translate('chat.user');
       String? senderPhoto;
       String senderType = 'user';
       try {
@@ -1231,11 +1232,11 @@ class ChatService {
           final userData = userDoc.data();
           // Check if user is a veterinarian
           if (userData?['userType'] == 'veterinarian') {
-            senderName = userData?['name'] ?? userData?['username'] ?? 'الدكتور';
+            senderName = userData?['name'] ?? userData?['username'] ?? TranslationService.instance.translate('chat.doctor');
             senderPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
             senderType = 'veterinarian';
           } else {
-            senderName = userData?['name'] ?? userData?['username'] ?? 'المستخدم';
+            senderName = userData?['name'] ?? userData?['username'] ?? TranslationService.instance.translate('chat.user');
             senderPhoto = userData?['profileImageUrl'] ?? userData?['profilePhoto'];
             senderType = 'user';
           }
@@ -1252,7 +1253,7 @@ class ChatService {
       final messageData = {
         'chatId': chatId,
         'senderId': senderId,
-        'message': caption ?? 'صورة',
+        'message': caption ?? TranslationService.instance.translate('chat.photo'),
         'timestamp': now,
         'type': MessageType.image.name,
         'mediaUrl': imageUrl,
@@ -1270,7 +1271,7 @@ class ChatService {
       }
 
       final updates = <String, dynamic>{
-        'user_chats/$chatId/lastMessage': caption ?? '📷 صورة',
+        'user_chats/$chatId/lastMessage': caption ?? '📷 ${TranslationService.instance.translate('chat.photo')}',
         'user_chats/$chatId/lastMessageAt': now,
         'user_chats/$chatId/lastMessageSender': senderId,
         'user_chats/$chatId/updatedAt': now,

@@ -33,7 +33,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
   bool _loading = true;
   bool _saving = false;
   Map<String, dynamic>? _doc;
-  String? _loadError;
+  String? _loadError; // Either translation key (e.g. errors.report_not_found) or raw error string
 
   @override
   void initState() {
@@ -69,7 +69,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
       if (!snap.exists) {
         setState(() {
           _loading = false;
-          _loadError = 'Report not found';
+          _loadError = 'errors.report_not_found';
         });
         return;
       }
@@ -143,7 +143,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
       final t = Provider.of<AppLanguage>(context, listen: false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(t.translate('profile.edit_report_saved') ?? 'تم حفظ التعديلات'),
+          content: Text(t.translate('profile.edit_report_saved')),
           backgroundColor: AppTheme.success,
         ),
       );
@@ -152,7 +152,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${Provider.of<AppLanguage>(context, listen: false).translate('profile.edit_report_error') ?? 'خطأ'}: $e'),
+          content: Text('${Provider.of<AppLanguage>(context, listen: false).translate('profile.edit_report_error')}: $e'),
           backgroundColor: AppTheme.error,
         ),
       );
@@ -164,7 +164,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
   @override
   Widget build(BuildContext context) {
     final t = Provider.of<AppLanguage>(context);
-    final title = t.translate('profile.edit_report') ?? 'تعديل التقرير';
+    final title = t.translate('profile.edit_report');
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -192,12 +192,17 @@ class _EditReportScreenState extends State<EditReportScreen> {
                       children: [
                         Icon(Icons.error_outline, size: 48.sp, color: AppTheme.error),
                         SizedBox(height: 16.h),
-                        Text(_loadError!, textAlign: TextAlign.center),
+                        Text(
+                          _loadError!.startsWith('errors.')
+                              ? t.translate(_loadError!)
+                              : _loadError!,
+                          textAlign: TextAlign.center,
+                        ),
                         SizedBox(height: 16.h),
                         TextButton.icon(
                           onPressed: _loadReport,
                           icon: const Icon(Icons.refresh),
-                          label: Text(t.translate('common.retry') ?? 'إعادة المحاولة'),
+                          label: Text(t.translate('common.retry')),
                         ),
                       ],
                     ),
@@ -213,7 +218,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
                         TextFormField(
                           controller: _titleController,
                           decoration: InputDecoration(
-                            labelText: t.translate('add_animal.pet_details.title_field') ?? 'العنوان',
+                            labelText: t.translate('add_animal.pet_details.title_field'),
                             border: const OutlineInputBorder(),
                           ),
                         ),
@@ -222,7 +227,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
                           controller: _descriptionController,
                           maxLines: 4,
                           decoration: InputDecoration(
-                            labelText: t.translate('add_animal.pet_details.description_hint') ?? 'الوصف',
+                            labelText: t.translate('add_animal.pet_details.description_hint'),
                             border: const OutlineInputBorder(),
                             alignLabelWithHint: true,
                           ),
@@ -231,7 +236,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
                         TextFormField(
                           controller: _contactNameController,
                           decoration: InputDecoration(
-                            labelText: t.translate('auth.name') ?? 'الاسم',
+                            labelText: t.translate('auth.name'),
                             border: const OutlineInputBorder(),
                           ),
                         ),
@@ -240,7 +245,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
                           controller: _contactPhoneController,
                           keyboardType: TextInputType.phone,
                           decoration: InputDecoration(
-                            labelText: t.translate('auth.phone') ?? 'رقم الهاتف',
+                            labelText: t.translate('auth.phone'),
                             border: const OutlineInputBorder(),
                           ),
                         ),
@@ -249,7 +254,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
                           controller: _addressController,
                           maxLines: 2,
                           decoration: InputDecoration(
-                            labelText: t.translate('add_animal.contact_info.address') ?? 'العنوان / الموقع',
+                            labelText: t.translate('add_animal.contact_info.address'),
                             border: const OutlineInputBorder(),
                             alignLabelWithHint: true,
                           ),
@@ -258,7 +263,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
                         Row(
                           children: [
                             Text(
-                              t.translate('profile.edit_report_active') ?? 'التقرير نشط',
+                              t.translate('profile.edit_report_active'),
                               style: TextStyle(fontSize: 16.sp),
                             ),
                             const Spacer(),
@@ -283,7 +288,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
                                   child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                 )
                               : Text(
-                                  t.translate('common.save') ?? 'حفظ',
+                                  t.translate('common.save'),
                                   style: TextStyle(fontSize: 16.sp),
                                 ),
                         ),

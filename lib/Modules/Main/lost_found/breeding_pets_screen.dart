@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../Utilities/dialog_helper.dart';
-import '../../../Utilities/text_style_helper.dart';
 import '../../../Utilities/theme_helper.dart';
 import '../../../Widgets/login_widget.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../Models/pet_report_model.dart';
 import '../../../Widgets/translated_text.dart';
-import '../../../Widgets/custom_card.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/pet_reports_service.dart';
 import '../../add_animal/add_animal_screen.dart';
-import '../home/home_screen.dart';
-import 'unified_pet_details_screen.dart';
+import 'unified_pet_card.dart';
 
 class BreedingPetsScreen extends StatefulWidget {
   const BreedingPetsScreen({super.key});
@@ -194,166 +190,15 @@ class _BreedingPetsScreenState extends State<BreedingPetsScreen> {
       padding: EdgeInsets.all(16.w),
       itemCount: _breedingPets.length,
       itemBuilder: (context, index) {
-        final pet = _breedingPets[index];
-        return _buildPetCard(context,pet,index%2 == 0 ? ThemeClass.of(context).secondaryColor : ThemeClass.of(context).primaryColor);
-      },
-    );
-  }
-
-  Widget _buildPetCard(BuildContext context, BreedingPetModel pet, Color color) {
-    final imageUrls = pet.photos;
-
-    return CustomCard(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => UnifiedPetDetailsScreen(
-              type: PetDetailsType.breeding,
-              breedingPet: pet,
-            ),
+        return Padding(
+          padding: EdgeInsets.only(bottom: 4.h),
+          child: UnifiedPetCard(
+            breedingPet: _breedingPets[index],
+            color: index % 2 == 0 ? ThemeClass.of(context).secondaryColor : ThemeClass.of(context).primaryColor,
+            reportType: 'breeding',
           ),
         );
       },
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Base Card
-          Container(
-            width: double.infinity,
-            height: 85.h,
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(24.r),
-                bottomRight: Radius.circular(24.r),
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(width: 130.w),
-
-                // Pet Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              pet.petName,
-                              style: TextStyleHelper.of(context).s22RegTextStyle.copyWith(
-                                color: ThemeClass.of(context).backGroundColor,
-                              ),
-                            ),
-                          ),
-                          if (pet.isRegistered)
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(4.r),
-                              ),
-                              child: Text(
-                                'مسجل',
-                                style: TextStyle(
-                                  color: Colors.orange,
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      SizedBox(height: 4.h),
-
-                      // Type • Breed • Age
-                      Text(
-                        pet.petType,
-                        style: TextStyleHelper.of(context).s12RegTextStyle.copyWith(
-                          color: ThemeClass.of(context).backGroundColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  color: color == ThemeClass.of(context).primaryColor
-                      ? ThemeClass.of(context).secondaryColor
-                      : ThemeClass.of(context).primaryColor,
-                  size: 18.sp,
-                ),
-              ],
-            ),
-          ),
-
-          // Pet Image
-          Positioned(
-            top: 6.h,
-            left: 16.w,
-            child: Container(
-              height: 93.h,
-              width: 121.w,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(24.r),
-                  bottomRight: Radius.circular(24.r),
-                  topRight: Radius.circular(24.r),
-                ),
-                color: Colors.grey[300],
-              ),
-              child: imageUrls.isNotEmpty
-                  ? ClipRRect(
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(24.r),
-                  bottomRight: Radius.circular(24.r),
-                  topRight: Radius.circular(24.r),
-                ),
-                child: Container(
-                  color: Colors.grey[300],
-                  child: CachedNetworkImage(
-                    imageUrl: imageUrls.first,
-                    fit: BoxFit.contain,
-                    width: double.infinity,
-                    height: double.infinity,
-                    memCacheWidth: 121.w.toInt(),
-                    memCacheHeight: 83.h.toInt(),
-                    maxWidthDiskCache: 500,
-                    maxHeightDiskCache: 500,
-                    placeholder: (context, url) => Container(
-                      color: Colors.grey[300],
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppTheme.primaryGreen,
-                        ),
-                      ),
-                    ),
-                    errorWidget: (context, url, error) => Icon(
-                      Icons.pets,
-                      size: 40.sp,
-                      color: AppTheme.primaryGreen,
-                    ),
-                  ),
-                ),
-              )
-                  : Icon(
-                Icons.pets,
-                size: 40.sp,
-                color: AppTheme.primaryGreen,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
-
-
 } 

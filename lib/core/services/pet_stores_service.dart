@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../firebase/firebase_config.dart';
+import 'location_service.dart';
 
 class PetStoresService {
   static final FirebaseFirestore _firestore = FirebaseConfig.firestore;
@@ -128,6 +129,24 @@ class PetStoresService {
     }
   }
 
+  /// Get active pet stores filtered by user's selected location.
+  /// Only shows stores that are either in "all" locations or in the user's region.
+  static Future<List<Map<String, dynamic>>> getActivePetStoresForUserLocation() async {
+    final allStores = await getActivePetStores();
+    final userLocationId = LocationService.getUserLocation();
+
+    final filtered = allStores.where((store) {
+      final locations = store['locations'];
+      return LocationService.shouldShowForLocation(
+        locations is List ? List<dynamic>.from(locations) : null,
+        userLocationId,
+      );
+    }).toList();
+
+    print('🏪 Filtered ${filtered.length} stores for location: ${userLocationId ?? "none"} (from ${allStores.length} total)');
+    return filtered;
+  }
+
   // Get pet stores by category
   static Future<List<Map<String, dynamic>>> getPetStoresByCategory(String category) async {
     try {
@@ -170,10 +189,10 @@ class PetStoresService {
     }
   }
 
-  // Search pet stores
+  // Search pet stores (filtered by user location)
   static Future<List<Map<String, dynamic>>> searchPetStores(String query) async {
     try {
-      final stores = await getActivePetStores();
+      final stores = await getActivePetStoresForUserLocation();
       
       return stores.where((store) {
         final name = store['name']?.toString().toLowerCase() ?? '';
@@ -217,36 +236,44 @@ class PetStoresService {
   static Future<List<String>> getAvailableCategories() async {
     try {
       final stores = await getActivePetStores();
-      final categories = stores
-          .map((store) => store['category']?.toString() ?? '')
-          .where((category) => category.isNotEmpty)
-          .toSet()
-          .toList();
-      
-      categories.sort();
-      return categories;
+      return getCategoriesFromStores(stores);
     } catch (e) {
       print('Error getting categories: $e');
       return [];
     }
   }
 
+  // Get available categories from a list of stores (e.g. filtered by location)
+  static List<String> getCategoriesFromStores(List<Map<String, dynamic>> stores) {
+    final categories = stores
+        .map((store) => store['category']?.toString() ?? '')
+        .where((category) => category.isNotEmpty)
+        .toSet()
+        .toList();
+    categories.sort();
+    return categories;
+  }
+
   // Get available cities
   static Future<List<String>> getAvailableCities() async {
     try {
       final stores = await getActivePetStores();
-      final cities = stores
-          .map((store) => store['city']?.toString() ?? '')
-          .where((city) => city.isNotEmpty)
-          .toSet()
-          .toList();
-      
-      cities.sort();
-      return cities;
+      return getCitiesFromStores(stores);
     } catch (e) {
       print('Error getting cities: $e');
       return [];
     }
+  }
+
+  // Get available cities from a list of stores (e.g. filtered by location)
+  static List<String> getCitiesFromStores(List<Map<String, dynamic>> stores) {
+    final cities = stores
+        .map((store) => store['city']?.toString() ?? '')
+        .where((city) => city.isNotEmpty)
+        .toSet()
+        .toList();
+    cities.sort();
+    return cities;
   }
 
   // Format category name for display

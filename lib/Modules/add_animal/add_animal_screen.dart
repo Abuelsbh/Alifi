@@ -195,12 +195,13 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
   }
 
   void _showSuccessDialog() {
+    final t = Provider.of<AppLanguage>(context, listen: false);
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('تم بنجاح'),
-          content: Text('تم إضافة ${_getReportTypeText()} بنجاح!'),
+          title: Text(t.translate('common.success')),
+          content: Text(t.translate('post_report.success')),
           actions: [
             TextButton(
               onPressed: () {
@@ -208,26 +209,11 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
                 Navigator.of(context).pop(); // Go back to previous screen
                 con.resetFields(); // Reset form
               },
-              child: const Text('موافق'),
+              child: Text(t.translate('common.ok')),
             ),
           ],
         );
       },
     );
-  }
-
-  String _getReportTypeText() {
-    switch (widget.reportType) {
-      case ReportType.lost:
-        return 'الحيوان المفقود';
-      case ReportType.found:
-        return 'الحيوان الموجود';
-      case ReportType.adoption:
-        return 'الحيوان للتبني';
-      case ReportType.breeding:
-        return 'الحيوان للتزاوج';
-      default:
-        return 'الحيوان';
-    }
   }
 }

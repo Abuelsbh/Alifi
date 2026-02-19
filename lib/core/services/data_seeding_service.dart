@@ -336,14 +336,14 @@ class DataSeedingService {
     }
   }
 
-  // Initialize all demo data
+  // Initialize all demo data (veterinarians only - no sample pets)
   static Future<void> initializeAllDemoData() async {
     print('🔄 Starting demo data initialization...');
     
     await Future.wait([
       initializeVeterinarians(),
-      initializeSampleLostPets(),
-      initializeSampleFoundPets(),
+      // initializeSampleLostPets() - disabled: no auto sample animals
+      // initializeSampleFoundPets() - disabled: no auto sample animals
     ]);
     
     print('✅ Demo data initialization completed');

@@ -223,6 +223,20 @@ function initializeEventListeners() {
     if (storeForm) {
         storeForm.addEventListener('submit', handleStoreSubmit);
         
+        // When user checks an individual location, uncheck "All Locations" to prevent conflict
+        const storeLocationsContainer = document.getElementById('store-locations-container');
+        if (storeLocationsContainer) {
+            storeLocationsContainer.addEventListener('change', function(e) {
+                if (e.target.classList.contains('store-location-checkbox') && e.target.checked) {
+                    const allCheckbox = document.getElementById('store-location-all');
+                    if (allCheckbox && allCheckbox.checked) {
+                        allCheckbox.checked = false;
+                        toggleStoreLocationCheckboxes(false);
+                    }
+                }
+            });
+        }
+        
         // Add image preview functionality
         const storeImageInput = document.getElementById('store-image');
         if (storeImageInput) {
@@ -1317,6 +1331,25 @@ async function openStoreModal(store = null) {
         // Clear file input (user can select new image if needed)
         imageInput.value = '';
         imageInput.required = false; // Not required when editing
+        
+        // Populate locations based on store.locations
+        const storeLocations = store.locations || [];
+        const allLocationsCheckbox = document.getElementById('store-location-all');
+        const locationCheckboxes = document.querySelectorAll('.store-location-checkbox');
+        
+        if (storeLocations.includes('all') || storeLocations.length === 0) {
+            allLocationsCheckbox.checked = true;
+            locationCheckboxes.forEach(cb => {
+                cb.checked = false;
+                cb.disabled = true;
+            });
+        } else {
+            allLocationsCheckbox.checked = false;
+            locationCheckboxes.forEach(cb => {
+                cb.disabled = false;
+                cb.checked = storeLocations.includes(cb.value);
+            });
+        }
     } else {
         // Add mode
         modalTitle.textContent = 'Add Pet Store';
@@ -1345,7 +1378,7 @@ async function openStoreModal(store = null) {
         
         // Reset locations to "all"
         document.getElementById('store-location-all').checked = true;
-        toggleStoreLocationCheckboxes(false);
+        toggleStoreLocationCheckboxes(true); // Disable individual checkboxes when "All" is selected
     }
     
     storeModal.classList.add('show');

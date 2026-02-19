@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 import '../../../Widgets/bottom_navbar_widget.dart';
 import '../../../core/Theme/app_theme.dart';
@@ -89,6 +90,73 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
           'name': displayName,
           'profileImageUrl': AuthService.userPhotoURL,
         };
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 80,
+      );
+
+      if (image == null) return;
+
+      setState(() => _isLoading = true);
+
+      final userId = AuthService.userId;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('user_profiles')
+          .child('$userId.jpg');
+
+      await ref.putFile(File(image.path));
+      final imageUrl = await ref.getDownloadURL();
+
+      await FirebaseConfig.firestore
+          .collection('users')
+          .doc(userId)
+          .update({
+        'profileImageUrl': imageUrl,
+        'profilePhoto': imageUrl,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      await AuthService.updateUserProfile(
+        uid: userId,
+        photoUrl: imageUrl,
+      );
+
+      await _loadUserData();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(Provider.of<AppLanguage>(context, listen: false).translate('profile.image_updated')),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error uploading image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${Provider.of<AppLanguage>(context, listen: false).translate('profile.image_error')}: $e'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -181,6 +249,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
                 // Profile Picture with Modern Design
                 Stack(
                   alignment: Alignment.center,
+                  clipBehavior: Clip.none,
                   children: [
                     // Middle circle
                     Container(
@@ -200,6 +269,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
                     ),
                     // Profile image
                     GestureDetector(
+                      onTap: _pickAndUploadImage,
                       child: Container(
                         width: 120.w,
                         height: 120.w,
@@ -241,7 +311,35 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
                         ),
                       ),
                     ),
-
+                    // زر + لإضافة صورة البروفايل
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: GestureDetector(
+                        onTap: _pickAndUploadImage,
+                        child: Container(
+                          width: 36.w,
+                          height: 36.w,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppTheme.primaryGreen,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.add,
+                            color: Colors.white,
+                            size: 24.sp,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 // User Name with Modern Style
@@ -299,7 +397,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
                   _buildModernMenuCard(
                     icon: Icons.chat_bubble_outline,
                     title: Provider.of<AppLanguage>(context).translate('profile.my_chats') ?? 'My Chats',
-                    subtitle: 'View your conversations',
+                    subtitle: Provider.of<AppLanguage>(context).translate('profile.chats_subtitle') ?? 'View your conversations',
                     gradient: [AppTheme.primaryOrange, AppTheme.lightOrange],
                     onTap: () {
                       Navigator.push(
@@ -315,7 +413,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
                   _buildModernMenuCard(
                     icon: Icons.pets,
                     title: Provider.of<AppLanguage>(context).translate('profile.my_animals') ?? 'My Animals',
-                    subtitle: 'Manage your pets',
+                    subtitle: Provider.of<AppLanguage>(context).translate('profile.my_pets_subtitle') ?? 'Manage your pets',
                     gradient: [AppTheme.primaryGreen, AppTheme.lightGreen],
                     onTap: () {
                       Navigator.push(
@@ -331,7 +429,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
                   _buildModernMenuCard(
                     icon: Icons.account_circle_outlined,
                     title: Provider.of<AppLanguage>(context).translate('profile.account') ?? 'Account',
-                    subtitle: 'Edit your profile',
+                    subtitle: Provider.of<AppLanguage>(context).translate('profile.account_subtitle') ?? 'Edit your profile',
                     gradient: [AppTheme.primaryGreen.withOpacity(0.8), AppTheme.primaryOrange.withOpacity(0.6)],
                     onTap: () {
                       Navigator.push(
@@ -347,7 +445,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
                   _buildModernMenuCard(
                     icon: Icons.privacy_tip_outlined,
                     title: Provider.of<AppLanguage>(context).translate('profile.privacy_policy') ?? 'Privacy Policy',
-                    subtitle: 'Read our privacy policy',
+                    subtitle: Provider.of<AppLanguage>(context).translate('profile.privacy_subtitle') ?? 'Read our privacy policy',
                     gradient: [Colors.grey.shade600, Colors.grey.shade400],
                     onTap: () {
                       Navigator.push(
@@ -363,7 +461,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
                   _buildModernMenuCard(
                     icon: Icons.language,
                     title: Provider.of<AppLanguage>(context).translate('profile.language') ?? 'Language',
-                    subtitle: 'Change app language',
+                    subtitle: Provider.of<AppLanguage>(context).translate('profile.language_subtitle') ?? 'Change app language',
                     gradient: [Colors.blue.shade600, Colors.blue.shade400],
                     onTap: () => _showLanguageBottomSheet(),
                   ),
@@ -510,7 +608,7 @@ class _SimpleProfileScreenState extends State<SimpleProfileScreen> {
                             ),
                           ),
                           Text(
-                            'Explore all services',
+                            Provider.of<AppLanguage>(context).translate('profile.services_subtitle') ?? 'Explore all services',
                             style: TextStyle(
                               fontSize: 12.sp,
                               color: Colors.grey.shade600,

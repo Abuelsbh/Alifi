@@ -444,6 +444,7 @@ class _AnimalCard extends StatelessWidget {
 
     return CustomCard(
       onTap: onTap,
+      border: Border.all(color: Colors.grey.shade300, width: 1),
       child: Padding(
         padding: EdgeInsets.all(16.w),
         child: Row(

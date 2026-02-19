@@ -67,7 +67,7 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
       case PetDetailsType.breeding:
         return widget.breedingPet!.petName.isNotEmpty 
             ? widget.breedingPet!.petName 
-            : TranslationService.instance.translate('pet');
+            : TranslationService.instance.translate('breeding.breeding_pet');
     }
   }
 
@@ -78,7 +78,7 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
       case PetDetailsType.adoption:
         return widget.adoptionPet!.title;
       case PetDetailsType.breeding:
-        return null; // Breeding doesn't have title
+        return widget.breedingPet!.title;
     }
   }
 
@@ -404,12 +404,12 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
             IconButton(
               icon: const Icon(Icons.edit, color: Colors.white),
               onPressed: _navigateToEdit,
-              tooltip: TranslationService.instance.translate('profile.edit') ?? 'تعديل',
+              tooltip: TranslationService.instance.translate('profile.edit'),
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.white),
               onPressed: _deleteReport,
-              tooltip: TranslationService.instance.translate('common.delete') ?? 'حذف',
+              tooltip: TranslationService.instance.translate('common.delete'),
             ),
           ],
         ],
@@ -781,7 +781,7 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
     if (res == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(TranslationService.instance.translate('profile.edit_report_saved') ?? 'تم حفظ التعديلات'),
+          content: Text(TranslationService.instance.translate('profile.edit_report_saved')),
           backgroundColor: AppTheme.success,
         ),
       );
@@ -796,16 +796,16 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(ts.translate('profile.my_animals_delete_title') ?? 'حذف'),
-        content: Text(ts.translate('profile.my_animals_delete_confirm') ?? 'حذف هذا التقرير؟'),
+        title: Text(ts.translate('profile.my_animals_delete_title')),
+        content: Text(ts.translate('profile.my_animals_delete_confirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(ts.translate('common.cancel') ?? 'إلغاء'),
+            child: Text(ts.translate('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(ts.translate('common.delete') ?? 'حذف', style: const TextStyle(color: AppTheme.error)),
+            child: Text(ts.translate('common.delete'), style: const TextStyle(color: AppTheme.error)),
           ),
         ],
       ),
@@ -816,7 +816,7 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(ts.translate('profile.my_animals_deleted') ?? 'تم الحذف'),
+          content: Text(ts.translate('profile.my_animals_deleted')),
           backgroundColor: AppTheme.success,
         ),
       );
@@ -825,7 +825,7 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${ts.translate('profile.my_animals_delete_error') ?? 'خطأ'}: $e'),
+          content: Text('${ts.translate('profile.my_animals_delete_error')}: $e'),
           backgroundColor: AppTheme.error,
         ),
       );

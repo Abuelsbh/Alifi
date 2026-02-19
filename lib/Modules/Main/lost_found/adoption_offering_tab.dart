@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../Utilities/theme_helper.dart';
-import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../Models/pet_report_model.dart';
 import '../../../Widgets/translated_text.dart';
-import '../../../Widgets/custom_card.dart';
-import 'unified_pet_details_screen.dart';
+import 'unified_pet_card.dart';
 
 class AdoptionOfferingTab extends StatefulWidget {
   const AdoptionOfferingTab({super.key});
@@ -117,10 +114,13 @@ class _AdoptionOfferingTabState extends State<AdoptionOfferingTab> {
                         padding: EdgeInsets.all(16.w),
                         itemCount: _filteredPets.length,
                         itemBuilder: (context, index) {
-                          return _buildPetCard(
-                            context,
-                            _filteredPets[index],
-                            index % 2 == 0 ? ThemeClass.of(context).secondaryColor : ThemeClass.of(context).primaryColor,
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: 4.h),
+                            child: UnifiedPetCard(
+                              adoptionPet: _filteredPets[index],
+                              color: index % 2 == 0 ? ThemeClass.of(context).secondaryColor : ThemeClass.of(context).primaryColor,
+                              reportType: 'adoption',
+                            ),
                           );
                         },
                       ),
@@ -158,177 +158,6 @@ class _AdoptionOfferingTabState extends State<AdoptionOfferingTab> {
         ],
       ),
     );
-  }
-
-  Widget _buildPetCard(BuildContext context, AdoptionPetModel pet, Color color) {
-    final imageUrls = pet.photos;
-
-    return CustomCard(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => UnifiedPetDetailsScreen(
-              type: PetDetailsType.adoption,
-              adoptionPet: pet,
-            ),
-          ),
-        );
-      },
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Base Card
-          Container(
-            width: double.infinity,
-            height: 85.h,
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(24.r),
-                bottomRight: Radius.circular(24.r),
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(width: 130.w),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Report Title or Pet Name
-                    Text(
-                      pet.title?.isNotEmpty == true ? pet.title! : pet.petName,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 4.h),
-                    // Publication Date
-                    Text(
-                      _formatDate(pet.createdAt),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  color: color == ThemeClass.of(context).primaryColor
-                      ? ThemeClass.of(context).secondaryColor
-                      : ThemeClass.of(context).primaryColor,
-                  size: 18.sp,
-                ),
-              ],
-            ),
-          ),
-
-          // Positioned Pet Image
-          Positioned(
-            top: 6.h,
-            left: 16.w,
-            child: Container(
-              height: 93.h,
-              width: 121.w,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(24.r),
-                  bottomRight: Radius.circular(24.r),
-                  topRight: Radius.circular(24.r),
-                ),
-                color: Colors.grey[300],
-              ),
-              child: imageUrls.isNotEmpty
-                  ? ClipRRect(
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(24.r),
-                  bottomRight: Radius.circular(24.r),
-                  topRight: Radius.circular(24.r),
-                ),
-                child: Container(
-                  color: Colors.grey[300],
-                  child: CachedNetworkImage(
-                    imageUrl: imageUrls.first,
-                    fit: BoxFit.contain,
-                    width: double.infinity,
-                    height: double.infinity,
-                    memCacheWidth: 121.w.toInt(),
-                    memCacheHeight: 83.h.toInt(),
-                    maxWidthDiskCache: 500,
-                    maxHeightDiskCache: 500,
-                    placeholder: (context, url) => Container(
-                      color: Colors.grey[300],
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppTheme.primaryGreen,
-                        ),
-                      ),
-                    ),
-                    errorWidget: (context, url, error) => Icon(
-                      Icons.pets,
-                      size: 40.sp,
-                      color: AppTheme.primaryGreen,
-                    ),
-                  ),
-                ),
-              )
-                  : Icon(
-                Icons.pets,
-                size: 40.sp,
-                color: AppTheme.primaryGreen,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatDate(dynamic date) {
-    if (date == null) return '';
-    
-    try {
-      DateTime dateTime;
-      if (date is Timestamp) {
-        dateTime = date.toDate();
-      } else if (date is DateTime) {
-        dateTime = date;
-      } else {
-        return '';
-      }
-      
-      final now = DateTime.now();
-      final difference = now.difference(dateTime);
-      
-      if (difference.inDays == 0) {
-        if (difference.inHours == 0) {
-          if (difference.inMinutes == 0) {
-            return 'الآن';
-          }
-          return 'منذ ${difference.inMinutes} دقيقة';
-        }
-        return 'منذ ${difference.inHours} ساعة';
-      } else if (difference.inDays == 1) {
-        return 'أمس';
-      } else if (difference.inDays < 7) {
-        return 'منذ ${difference.inDays} أيام';
-      } else {
-        return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
-      }
-    } catch (e) {
-      return '';
-    }
   }
 }
 

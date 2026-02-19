@@ -71,12 +71,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _totalBreedingPets = 0;
   int _totalVeterinarians = 0;
   int _unreadMessages = 0;
+  int _userUnreadMessages = 0;
   bool _isLoading = true;
 
   // Stream subscriptions to manage
   StreamSubscription? _lostPetsSubscription;
   StreamSubscription? _foundPetsSubscription;
   StreamSubscription? _unreadMessagesSubscription;
+  StreamSubscription? _userUnreadMessagesSubscription;
   StreamSubscription? _veterinariansSubscription;
   StreamSubscription? _locationSubscription;
   StreamSubscription? _userStatusSubscription;
@@ -412,12 +414,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         });
 
         if (userId != null) {
-          // Get unread messages count
+          // Get unread messages count (veterinary chats)
           final unreadStream = ChatService.getUnreadMessageCountStream(userId);
           _unreadMessagesSubscription = unreadStream.listen((count) {
             if (mounted) {
               setState(() {
                 _unreadMessages = count;
+              });
+            }
+          });
+          // Get unread messages count (user-to-user chats)
+          final userUnreadStream = ChatService.getUserUnreadMessageCountStream(userId);
+          _userUnreadMessagesSubscription = userUnreadStream.listen((count) {
+            if (mounted) {
+              setState(() {
+                _userUnreadMessages = count;
               });
             }
           });
@@ -451,6 +462,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     await _lostPetsSubscription?.cancel();
     await _foundPetsSubscription?.cancel();
     await _unreadMessagesSubscription?.cancel();
+    await _userUnreadMessagesSubscription?.cancel();
     await _veterinariansSubscription?.cancel();
     await _locationSubscription?.cancel();
     await _userStatusSubscription?.cancel();
@@ -921,25 +933,43 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
             ),
-            // Chat Icon with Notification
+            // Chat Icon with Notification Badge
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 8.w),
               child: Stack(
+                clipBehavior: Clip.none,
                 children: [
                   SvgPicture.asset(Assets.iconsChat, height: 27.r, width: 27.r),
-                  // Notification Dot
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Container(
-                      width: 8.w,
-                      height: 8.h,
-                      decoration: BoxDecoration(
-                        color: Color(0xFFFF914C), // Orange
-                        shape: BoxShape.circle,
+                  // New message indicator - only when there are unread messages
+                  if ((_unreadMessages + _userUnreadMessages) > 0)
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: (_unreadMessages + _userUnreadMessages) > 99 ? 4.w : 5.w,
+                          vertical: 2.h,
+                        ),
+                        constraints: BoxConstraints(minWidth: 18.w, minHeight: 18.h),
+                        decoration: BoxDecoration(
+                          color: Color(0xFFFF914C), // Orange
+                          shape: BoxShape.rectangle,
+                          borderRadius: BorderRadius.circular(9.r),
+                        ),
+                        child: Center(
+                          child: Text(
+                            (_unreadMessages + _userUnreadMessages) > 99
+                                ? '99+'
+                                : (_unreadMessages + _userUnreadMessages).toString(),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
