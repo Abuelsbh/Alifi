@@ -19,6 +19,14 @@ Or use the existing veterinarian account:
 - **Email:** `doctor@gmail.com`
 - **Password:** `000111`
 
+### 3. Multiple Admins
+You can create 3-4 admins (or more) with different emails and passwords, each with different roles:
+- **Super Admin** - Full permissions
+- **Admin** - Limited admin permissions
+- **Moderator** - Review-only permissions
+
+Go to **Admins** in the sidebar to add new administrators. Each admin gets their own email and password.
+
 ## 📋 Features
 
 ### ✅ **Completed Features:**

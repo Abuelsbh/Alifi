@@ -10,6 +10,10 @@ class AuthService {
   static bool? _cachedIsVeterinarian;
   static String? _cachedUserIdForVetCheck;
   
+  // Cache for admin status (supports multiple admins from Firestore)
+  static bool? _cachedIsAdmin;
+  static String? _cachedUserIdForAdminCheck;
+  
   static FirebaseAuth get _auth {
     if (FirebaseConfig.isDemoMode) {
       throw Exception('Authentication not available in demo mode');
@@ -57,6 +61,44 @@ class AuthService {
   static void _clearVeterinarianCache() {
     _cachedIsVeterinarian = null;
     _cachedUserIdForVetCheck = null;
+  }
+  
+  static void _clearAdminCache() {
+    _cachedIsAdmin = null;
+    _cachedUserIdForAdminCheck = null;
+  }
+  
+  static Future<void> _initializeAdminStatus() async {
+    final currentUserId = userId;
+    if (currentUserId == null) {
+      _cachedIsAdmin = false;
+      _cachedUserIdForAdminCheck = null;
+      return;
+    }
+    if (_cachedUserIdForAdminCheck == currentUserId && _cachedIsAdmin != null) {
+      return;
+    }
+    try {
+      // Check admins collection (supports multiple admins with different emails)
+      final adminDoc = await _firestore.collection('admins').doc(currentUserId).get();
+      if (adminDoc.exists) {
+        _cachedIsAdmin = true;
+        _cachedUserIdForAdminCheck = currentUserId;
+        return;
+      }
+      // Fallback: check users collection customClaims (legacy)
+      final userDoc = await _firestore.collection('users').doc(currentUserId).get();
+      if (userDoc.exists) {
+        final data = userDoc.data();
+        _cachedIsAdmin = data?['customClaims']?['admin'] == true;
+      } else {
+        _cachedIsAdmin = false;
+      }
+      _cachedUserIdForAdminCheck = currentUserId;
+    } catch (e) {
+      _cachedIsAdmin = false;
+      _cachedUserIdForAdminCheck = currentUserId;
+    }
   }
 
   // Get current user
@@ -131,9 +173,11 @@ class AuthService {
       // Update last login time
       await _updateLastLogin(credential.safeUser.uid);
       
-      // Initialize veterinarian status cache after login
+      // Initialize caches after login
       _clearVeterinarianCache();
-      _initializeVeterinarianStatus();
+      _clearAdminCache();
+      await _initializeVeterinarianStatus();
+      await _initializeAdminStatus();
       
       // Clear chat cache after successful login
       try {
@@ -185,9 +229,11 @@ class AuthService {
         // Continue anyway - Firebase Auth succeeded
       }
 
-      // Initialize veterinarian status cache after account creation
+      // Initialize caches after account creation
       _clearVeterinarianCache();
-      _initializeVeterinarianStatus();
+      _clearAdminCache();
+      await _initializeVeterinarianStatus();
+      await _initializeAdminStatus();
 
       // Clear chat cache after successful login
       try {
@@ -215,8 +261,9 @@ class AuthService {
         print('⚠️ Could not clear chat cache: $e');
       }
       
-      // Clear veterinarian status cache
+      // Clear caches
       _clearVeterinarianCache();
+      _clearAdminCache();
       
       await ImprovedFirebaseWrapper.signOut();
     } catch (e) {
@@ -411,41 +458,30 @@ class AuthService {
   // Check if email is verified
   static bool get isEmailVerified => currentUser?.emailVerified ?? false;
 
-  // Check if current user is admin
+  // Check if current user is admin (uses Firestore cache - supports multiple admins with different emails)
   // Note: Veterinarians are always treated as regular users, not admins
   static bool get isAdmin {
     if (FirebaseConfig.isDemoMode) {
       return false;
     }
-    
-    // If user is a veterinarian, they are never an admin (treated as regular user)
     if (_cachedIsVeterinarian == true) {
       return false;
     }
-    
-    final email = userEmail ?? '';
-    return email.contains('admin') || 
-           email == 'doctor@gmail.com' || 
-           email == 'admin@alifi.com';
+    return _cachedIsAdmin ?? false;
   }
   
   // Check if user should see admin features (excludes veterinarians)
-  // Veterinarians are always treated as regular users
+  // Supports multiple admins with different emails from Firestore
   static Future<bool> canSeeAdminFeatures() async {
     if (FirebaseConfig.isDemoMode) {
       return false;
     }
-    
-    // Initialize cache if needed
     await _initializeVeterinarianStatus();
-    
-    // If user is a veterinarian, they're always regular users (not admin)
     if (_cachedIsVeterinarian == true) {
       return false;
     }
-    
-    // If not a veterinarian, use normal admin check
-    return isAdmin;
+    await _initializeAdminStatus();
+    return _cachedIsAdmin ?? false;
   }
   
   // Check if user should see unapproved animals (only admins, not veterinarians)

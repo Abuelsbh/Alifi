@@ -76,42 +76,54 @@ const FirebaseService = {
         return auth.onAuthStateChanged(callback);
     },
 
-    // Check if user is admin from Firestore
+    // Check if user is admin from Firestore (supports multiple admins with different emails)
     async checkAdminStatus(userId) {
         try {
             console.log('🔍 Checking admin status for user:', userId);
-            const userDoc = await db.collection('users').doc(userId).get();
+            const currentUser = auth.currentUser;
             
-            if (!userDoc.exists) {
-                console.warn('⚠️ User document not found in Firestore');
-                // Fallback: check if email is admin@alifi.com
-                const currentUser = auth.currentUser;
-                if (currentUser && currentUser.email === 'admin@alifi.com') {
-                    console.log('✅ Admin email detected, allowing access');
-                    return true;
-                }
-                return false;
+            // 1. Check admins collection (primary - enables Firestore rules for multiple admins)
+            const adminDoc = await db.collection('admins').doc(userId).get();
+            if (adminDoc.exists) {
+                console.log('✅ Admin found in admins collection');
+                return true;
             }
             
-            const userData = userDoc.data();
-            console.log('📄 User data:', userData);
+            // 2. Check users collection customClaims (legacy)
+            const userDoc = await db.collection('users').doc(userId).get();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                const isAdmin = (userData.customClaims && userData.customClaims.admin === true) ||
+                    (userData.isAdmin === true) || (userData.role === 'admin') || (userData.userType === 'admin');
+                if (isAdmin) {
+                    // Bootstrap: ensure they're in admins collection for Firestore rules
+                    if (currentUser && currentUser.email === 'admin@alifi.com') {
+                        try {
+                            await db.collection('admins').doc(userId).set({
+                                email: currentUser.email,
+                                name: userData.name || currentUser.displayName,
+                                role: userData.customClaims?.role || 'super_admin',
+                                permissions: userData.customClaims?.permissions || {},
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            }, { merge: true });
+                            console.log('✅ Bootstrap: admin@alifi.com added to admins collection');
+                        } catch (e) { console.warn('Bootstrap admins add:', e); }
+                    }
+                    return true;
+                }
+            }
             
-            // Check multiple possible admin indicators
-            const isAdmin = 
-                (userData.customClaims && userData.customClaims.admin === true) ||
-                (userData.isAdmin === true) ||
-                (userData.role === 'admin') ||
-                (userData.userType === 'admin') ||
-                (auth.currentUser && auth.currentUser.email === 'admin@alifi.com');
+            // 3. Fallback: admin@alifi.com for first-time setup
+            if (currentUser && currentUser.email === 'admin@alifi.com') {
+                console.log('✅ Admin email (admin@alifi.com) detected, allowing access');
+                return true;
+            }
             
-            console.log('✅ Admin status result:', isAdmin);
-            return isAdmin;
+            return false;
         } catch (error) {
             console.error('❌ Error checking admin status:', error);
-            // Fallback: allow if email is admin@alifi.com
             const currentUser = auth.currentUser;
             if (currentUser && currentUser.email === 'admin@alifi.com') {
-                console.log('✅ Fallback: Admin email detected, allowing access');
                 return true;
             }
             return false;
@@ -784,26 +796,17 @@ const FirebaseService = {
     },
 
     async removeAdmin(uid) {
-        // WARNING: Removing custom claims and deleting users from client-side is INSECURE for production apps.
-        // This should be done via a Firebase Cloud Function or other secure backend service
-        // using the Firebase Admin SDK.
         try {
-            // Remove custom claim (insecure client-side example)
-            // For a secure implementation, call a Cloud Function here:
-            // await firebase.functions().httpsCallable('removeAdminRole')({ uid: uid });
+            // Remove from users collection customClaims
             await db.collection('users').doc(uid).update({
                 'customClaims.admin': firebase.firestore.FieldValue.delete(),
+                'customClaims.role': firebase.firestore.FieldValue.delete(),
+                'customClaims.permissions': firebase.firestore.FieldValue.delete(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // Delete user from authentication
-            // Note: Client-side delete only works for the currently signed-in user.
-            // To delete other users, you NEED the Admin SDK on a backend.
-            // await auth.currentUser.delete(); // This would delete the currently logged in admin!
-
-            // For demonstration, we will just update the Firestore record for the user
-            // In a real app, a Cloud Function would delete the Auth user.
-            console.warn('Client-side admin removal is incomplete. Implement a Cloud Function for full security.');
+            // Remove from admins collection (revokes Firestore access)
+            await db.collection('admins').doc(uid).delete();
             
             return { success: true };
         } catch (error) {
@@ -1634,6 +1637,15 @@ const FirebaseService = {
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
+                // Add to admins collection for Firestore rules (enables multiple admins with different emails)
+                await db.collection('admins').doc(uid).set({
+                    email: email,
+                    name: displayName,
+                    role: role,
+                    permissions: roles[role].permissions,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+                
                 return { success: true, uid: uid, message: `Admin privileges added to existing user with role: ${roles[role].name}` };
             } else {
                 // User doesn't exist, create new account
@@ -1642,6 +1654,7 @@ const FirebaseService = {
 
                 await userCredential.user.getIdToken(true);
                 
+                // 1. Add to users collection (new user can write own doc)
                 await db.collection('users').doc(uid).set({
                     email: email,
                     name: displayName,
@@ -1654,7 +1667,19 @@ const FirebaseService = {
                     lastSignInTime: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
                 
-                return { success: true, uid: uid, message: `Admin created successfully with role: ${roles[role].name}` };
+                // 2. Add to admins collection - new user can add self (Firestore rule allows when users doc has customClaims.admin)
+                await db.collection('admins').doc(uid).set({
+                    email: email,
+                    name: displayName,
+                    role: role,
+                    permissions: roles[role].permissions,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+                
+                // Sign out - createUserWithEmailAndPassword signs in as new user; admin must re-login
+                await auth.signOut();
+                
+                return { success: true, uid: uid, message: `Admin created successfully with role: ${roles[role].name}. Please sign in again with your admin account.` };
             }
         } catch (error) {
             console.error('Error creating admin with role:', error);
@@ -1668,8 +1693,8 @@ const FirebaseService = {
                 } catch (privilegeError) {
                     return { 
                         success: false, 
-                        error: 'Email already exists but could not add admin privileges. Please contact support.',
-                        code: 'privilege-error'
+                        error: 'Email already exists but could not add admin privileges. Would you like to add admin privileges to the existing user?',
+                        code: 'email-exists'
                     };
                 }
             }
@@ -1701,6 +1726,15 @@ const FirebaseService = {
                     },
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
+                
+                // Add to admins collection for Firestore rules
+                await db.collection('admins').doc(uid).set({
+                    email: email,
+                    name: displayName,
+                    role: role,
+                    permissions: roles[role].permissions,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
                 
                 return { success: true, uid: uid, message: `Admin privileges added with role: ${roles[role].name}` };
             } else {

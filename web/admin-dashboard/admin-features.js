@@ -234,10 +234,10 @@ class AdminFeatures {
     }
 
     async handleAddAdminSubmit() {
-        const name = document.getElementById('admin-name').value.trim();
-        const email = document.getElementById('admin-email').value.trim();
-        const password = document.getElementById('admin-password').value;
-        const role = document.getElementById('admin-role').value;
+        const name = document.getElementById('new-admin-name').value.trim();
+        const email = document.getElementById('new-admin-email').value.trim();
+        const password = document.getElementById('new-admin-password').value;
+        const role = document.getElementById('new-admin-role').value;
 
         if (!name || !email || !password || !role) {
             alert('Please fill in all fields.');

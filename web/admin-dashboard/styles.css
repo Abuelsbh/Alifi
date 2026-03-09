@@ -2131,7 +2131,8 @@ body {
 }
 
 /* Role Selection Styling */
-#admin-role {
+#admin-role,
+#new-admin-role {
     width: 100%;
     padding: 12px;
     border: 1px solid #ddd;
@@ -2140,7 +2141,8 @@ body {
     background-color: white;
 }
 
-#admin-role:focus {
+#admin-role:focus,
+#new-admin-role:focus {
     outline: none;
     border-color: #007bff;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
