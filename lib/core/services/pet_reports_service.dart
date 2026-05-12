@@ -91,8 +91,8 @@ class PetReportsService {
                   }
                 }
                 return {
-                  'id': doc.id,
                   ...data,
+                  'id': doc.id,
                 };
               })
               .where((pet) => pet != null)
@@ -176,8 +176,8 @@ class PetReportsService {
                   }
                 }
                 return {
-                  'id': doc.id,
                   ...data,
+                  'id': doc.id,
                 };
               })
               .where((pet) => pet != null)
@@ -189,51 +189,87 @@ class PetReportsService {
   // Get user's reports - Enhanced with both lost and found
   static Stream<List<Map<String, dynamic>>> getUserReportsStream(String userId) {
     print('📱 Starting real-time user reports stream for: $userId');
-    
-    // Combine lost and found reports
+
     final lostStream = _firestore
         .collection('lost_pets')
         .where('userId', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
         .snapshots();
-        
+
     final foundStream = _firestore
         .collection('found_pets')
         .where('userId', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
         .snapshots();
 
-    return lostStream.asyncMap((lostSnapshot) async {
-      final foundSnapshot = await foundStream.first;
-      
+    late QuerySnapshot lastLost;
+    late QuerySnapshot lastFound;
+    var haveLost = false;
+    var haveFound = false;
+    StreamSubscription? lostSub;
+    StreamSubscription? foundSub;
+
+    late final StreamController<List<Map<String, dynamic>>> streamCtrl;
+
+    void emitMerged() {
+      if (!haveLost || !haveFound) return;
+      if (streamCtrl.isClosed) return;
+
       final reports = <Map<String, dynamic>>[];
-      
-      // Add lost pets
-      for (var doc in lostSnapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
+
+      for (final doc in lastLost.docs) {
+        final data = Map<String, dynamic>.from(doc.data() as Map<String, dynamic>);
         data['id'] = doc.id;
         data['type'] = 'lost';
         reports.add(data);
       }
-      
-      // Add found pets
-      for (var doc in foundSnapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
+      for (final doc in lastFound.docs) {
+        final data = Map<String, dynamic>.from(doc.data() as Map<String, dynamic>);
         data['id'] = doc.id;
         data['type'] = 'found';
         reports.add(data);
       }
-      
-      // Sort by creation date
+
       reports.sort((a, b) {
-        final aTime = (a['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-        final bTime = (b['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+        final aTime = (a['createdAt'] as Timestamp?)?.toDate() ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        final bTime = (b['createdAt'] as Timestamp?)?.toDate() ??
+            DateTime.fromMillisecondsSinceEpoch(0);
         return bTime.compareTo(aTime);
       });
-      
+
       print('📱 User reports update: ${reports.length} reports for user');
-      return reports;
-    });
+      streamCtrl.add(reports);
+    }
+
+    streamCtrl = StreamController<List<Map<String, dynamic>>>(
+      onListen: () {
+        lostSub = lostStream.listen(
+          (snap) {
+            lastLost = snap;
+            haveLost = true;
+            emitMerged();
+          },
+          onError: (e, st) => streamCtrl.addError(e, st),
+        );
+        foundSub = foundStream.listen(
+          (snap) {
+            lastFound = snap;
+            haveFound = true;
+            emitMerged();
+          },
+          onError: (e, st) => streamCtrl.addError(e, st),
+        );
+      },
+      onCancel: () {
+        lostSub?.cancel();
+        foundSub?.cancel();
+        lostSub = null;
+        foundSub = null;
+      },
+    );
+
+    return streamCtrl.stream;
   }
 
   /// All animals added by user: lost, found, adoption, breeding.
@@ -356,8 +392,8 @@ class PetReportsService {
                 return true;
               })
               .map((doc) => {
-                'id': doc.id,
                 ...doc.data() as Map<String, dynamic>,
+                'id': doc.id,
               })
               .where((pet) {
                 // Additional filtering for breed and color
@@ -685,8 +721,8 @@ class PetReportsService {
                   print('✅ FINAL CHECK: Adoption pet ${doc.id} is approved - KEEPING');
                 }
                 return {
-                  'id': doc.id,
                   ...data,
+                  'id': doc.id,
                 };
               })
               .where((pet) => pet != null)

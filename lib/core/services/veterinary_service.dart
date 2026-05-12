@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../firebase/firebase_config.dart';
+import '../utils/localized_content.dart';
 import 'location_service.dart';
 
 class VeterinaryService {
@@ -186,12 +187,34 @@ class VeterinaryService {
     required String password,
     required String name,
     required String specialization,
+    String? nameEn,
+    String? nameAr,
+    String? nameHe,
+    String? specializationEn,
+    String? specializationAr,
+    String? specializationHe,
     required String experience,
     required String phone,
     String? license,
     List<String>? locations, // List of location IDs
   }) async {
     try {
+      final nameMap = <String, dynamic>{
+        'name': name.trim(),
+        'nameEn': (nameEn ?? name).trim(),
+        'nameAr': (nameAr ?? name).trim(),
+        'nameHe': (nameHe ?? name).trim(),
+      };
+      final primaryName = LocalizedContent.pickFromMap(nameMap, 'en', baseKey: 'name');
+      final specMap = <String, dynamic>{
+        'specialization': specialization.trim(),
+        'specializationEn': (specializationEn ?? specialization).trim(),
+        'specializationAr': (specializationAr ?? specialization).trim(),
+        'specializationHe': (specializationHe ?? specialization).trim(),
+      };
+      final primarySpec =
+          LocalizedContent.pickFromMap(specMap, 'en', baseKey: 'specialization');
+
       // Create Firebase Auth account
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -204,11 +227,17 @@ class VeterinaryService {
       await _firestore.collection('users').doc(uid).set({
         'uid': uid,
         'email': email,
-        'username': name,
-        'name': name, // Also store as name for compatibility
+        'username': primaryName,
+        'name': primaryName,
+        'nameEn': nameMap['nameEn'],
+        'nameAr': nameMap['nameAr'],
+        'nameHe': nameMap['nameHe'],
         'phoneNumber': phone,
         'phone': phone, // Also store as phone for compatibility
-        'specialization': specialization,
+        'specialization': primarySpec,
+        'specializationEn': specMap['specializationEn'],
+        'specializationAr': specMap['specializationAr'],
+        'specializationHe': specMap['specializationHe'],
         'experience': experience,
         'license': license ?? '',
         'locations': locations ?? [], // Store list of location IDs
@@ -225,7 +254,7 @@ class VeterinaryService {
       });
 
       // Update display name in Firebase Auth
-      await userCredential.user!.updateDisplayName(name);
+      await userCredential.user!.updateDisplayName(primaryName);
 
       return uid;
     } catch (e) {

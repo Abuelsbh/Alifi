@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../Models/pet_report_model.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/pet_reports_service.dart';
 import '../../../Widgets/custom_card.dart';
 import '../../../Widgets/custom_button.dart';
-import '../../../Widgets/translated_text.dart';
 import '../lost_found/unified_pet_details_screen.dart';
 import '../../add_animal/add_animal_screen.dart';
-import '../lost_found/lost_found_screen.dart';
 import 'edit_report_screen.dart';
 
 class MyReportsScreen extends StatefulWidget {
@@ -128,10 +125,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const AddAnimalScreen(
-                    reportType: ReportType.lost,
-                    title: 'إضافة حيوان مفقود',
-                  ),
+                  builder: (context) => const AddAnimalScreen(),
                 ),
               );
             },
@@ -265,10 +259,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const AddAnimalScreen(
-                    reportType: ReportType.lost,
-                    title: 'إضافة حيوان مفقود',
-                  ),
+                  builder: (context) => const AddAnimalScreen(),
                 ),
               );
             },
@@ -316,6 +307,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
             builder: (context) => UnifiedPetDetailsScreen(
               type: PetDetailsType.report,
               report: report,
+              reportListKind: isLostPet ? 'lost' : 'found',
             ),
           ),
         );

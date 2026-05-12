@@ -1,3 +1,4 @@
+import 'package:alifi/Modules/add_animal/add_animal_flow.dart';
 import 'package:alifi/Modules/add_animal/Widgets/add_animal_fourth_step.dart';
 import 'package:alifi/Modules/add_animal/add_animal_controller.dart';
 import 'package:alifi/Utilities/theme_helper.dart';
@@ -16,14 +17,16 @@ import 'package:provider/provider.dart';
 
 
 class AddAnimalScreen extends StatefulWidget {
-  final ReportType reportType;
-  final String title;
-  final String? adoptionType; // 'seeking' or 'offering'
-  
+  /// From nav sheet: limits the step‑1 dropdown (lost/found, adoption pair, or fixed breeding).
+  final AddAnimalFlow? flow;
+  /// When null (and no [flow]), the user can choose any report category in step 1.
+  final ReportType? reportType;
+  final String? adoptionType; // 'seeking' or 'offering' (only for [ReportType.adoption])
+
   const AddAnimalScreen({
-    super.key, 
-    required this.reportType,
-    required this.title,
+    super.key,
+    this.flow,
+    this.reportType,
     this.adoptionType,
   });
 
@@ -42,10 +45,59 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
   void initState() {
     super.initState();
     con.activeStep = 0;
-    con.reportType = widget.reportType;
-    if (widget.adoptionType != null) {
-      con.adoptionType = widget.adoptionType;
+    if (widget.flow == AddAnimalFlow.breeding) {
+      con.reportType = ReportType.breeding;
+      con.adoptionType = null;
+    } else {
+      con.reportType = widget.reportType;
+      if (widget.adoptionType != null) {
+        con.adoptionType = widget.adoptionType;
+      } else if (widget.reportType == ReportType.adoption) {
+        con.adoptionType = 'offering';
+      }
     }
+  }
+
+  bool get _seekingAdoption =>
+      con.reportType == ReportType.adoption && con.adoptionType == 'seeking';
+
+  bool _validateStep0() {
+    final appLanguage = Provider.of<AppLanguage>(context, listen: false);
+    final categoryLabel =
+        appLanguage.translate('add_animal.pet_details.report_category.label');
+    final req = appLanguage.translate('validation.required_field');
+
+    if (widget.flow == AddAnimalFlow.lostOrFound) {
+      if (con.reportType != ReportType.lost && con.reportType != ReportType.found) {
+        _showErrorDialog('$req: $categoryLabel');
+        return false;
+      }
+    } else if (widget.flow == AddAnimalFlow.adoption) {
+      if (con.reportType != ReportType.adoption ||
+          con.adoptionType == null ||
+          con.adoptionType!.isEmpty) {
+        _showErrorDialog('$req: $categoryLabel');
+        return false;
+      }
+    } else if (widget.flow == null) {
+      if (widget.reportType == null && con.reportType == null) {
+        _showErrorDialog('$req: $categoryLabel');
+        return false;
+      }
+      if (con.reportType == ReportType.adoption &&
+          (con.adoptionType == null || con.adoptionType!.isEmpty)) {
+        _showErrorDialog('$req: $categoryLabel');
+        return false;
+      }
+    }
+
+    if (con.selectedPetType == null || con.selectedPetType!.isEmpty) {
+      _showErrorDialog(
+        '$req: ${appLanguage.translate('add_animal.pet_details.pet_type')}',
+      );
+      return false;
+    }
+    return true;
   }
 
 
@@ -67,8 +119,7 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
                     : Icon(Icons.pets, color: ThemeClass.of(context).primaryColor, size: 20),
                   title: Provider.of<AppLanguage>(context, listen: false).translate('add_animal.step_titles.pet_details'),
                 ),
-                // Skip pictures step for adoption seeking reports
-                if (widget.reportType != ReportType.adoption || widget.adoptionType != 'seeking')
+                if (!_seekingAdoption)
                   EasyStep(
                     customStep: con.activeStep > 1
                       ? Icon(Icons.check, color: ThemeClass.of(context).backGroundColor, size: 20)
@@ -86,11 +137,15 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
             SliverToBoxAdapter(
               child: con.activeStep == 0? AddAnimalFirstStep(
                 con: con,
+                flow: widget.flow,
+                categorySelectionLocked: widget.reportType != null ||
+                    widget.flow == AddAnimalFlow.breeding,
+                onReportCategoryChanged: () => setState(() {}),
                 onNext: () {
+                  if (!_validateStep0()) return;
+
                   setState(() {
-                    // Skip image step for adoption seeking reports
-                    if (widget.reportType == ReportType.adoption && widget.adoptionType == 'seeking') {
-                      // Go directly to submission
+                    if (_seekingAdoption) {
                       _handleFormSubmission();
                     } else {
                       con.activeStep++;
@@ -131,8 +186,7 @@ class _AddAnimalScreenState extends StateX<AddAnimalScreen> {
         return;
       }
       
-      // Skip image validation for adoption seeking reports
-      if (widget.reportType != ReportType.adoption || widget.adoptionType != 'seeking') {
+      if (!_seekingAdoption) {
         if (con.selectedImages.isEmpty) {
           final appLanguage = Provider.of<AppLanguage>(context, listen: false);
           _showErrorDialog(appLanguage.translate('post_report.photo_required'));

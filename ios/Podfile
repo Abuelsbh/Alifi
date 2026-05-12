@@ -28,7 +28,7 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 flutter_ios_podfile_setup
 
 target 'Runner' do
-  use_frameworks!
+  use_frameworks! :linkage => :static
   use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
@@ -38,16 +38,64 @@ target 'Runner' do
 end
 
 post_install do |installer|
+  # Helper to remove unsupported -G flag (Xcode 16+ / Clang)
+  def strip_g_flag(flags)
+    return flags if flags.nil?
+    if flags.is_a?(String)
+      flags.split.reject { |f| f == '-G' }.join(' ')
+    else
+      flags.reject { |f| f == '-G' }
+    end
+  end
+
+  # Allow non-modular headers (e.g. Firebase.h) - required for Firebase with use_frameworks!
+  # 1) Set on Pods project and every target (in-memory build settings)
+  pods_project = installer.pods_project
+  if pods_project.respond_to?(:build_configuration_list) && pods_project.build_configuration_list
+    pods_project.build_configuration_list.build_configurations.each do |config|
+      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+    end
+  end
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+    end
+  end
+
+  # 2) Inject into each Pod's xcconfig so the setting is used when building (persists across pod install)
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      xcconfig_path = config.base_configuration_reference.real_path rescue nil
+      next unless xcconfig_path && File.exist?(xcconfig_path)
+      xcconfig_content = File.read(xcconfig_path)
+      next if xcconfig_content.include?('CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES')
+      File.open(xcconfig_path, 'a') { |f| f.puts("\nCLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES = YES") }
+    end
+  end
+
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
       # Exclude x86_64 architecture for simulator builds (Apple Silicon only)
       config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'x86_64'
-      
-      # Fix for BoringSSL-GRPC: Remove problematic -G compiler flag (Xcode 16 compatibility)
+
+      # Remove unsupported -G flag (BoringSSL-GRPC / Xcode 16+ compatibility)
       if target.name == 'BoringSSL-GRPC'
         config.build_settings['WARNING_CFLAGS'] = ''
+      end
+      config.build_settings['OTHER_CFLAGS'] = strip_g_flag(config.build_settings['OTHER_CFLAGS'])
+      config.build_settings['OTHER_CPLUSPLUSFLAGS'] = strip_g_flag(config.build_settings['OTHER_CPLUSPLUSFLAGS'])
+    end
+
+    # BoringSSL-GRPC: also strip -G from per-file COMPILER_FLAGS
+    if target.name == 'BoringSSL-GRPC'
+      target.source_build_phase.files.each do |file|
+        next unless file.settings && file.settings['COMPILER_FLAGS']
+        flags = file.settings['COMPILER_FLAGS'].to_s.split
+        flags.reject! { |f| f == '-G' || f == '-GCC_WARN_INHIBIT_ALL_WARNINGS' }
+        file.settings['COMPILER_FLAGS'] = flags.join(' ')
       end
     end
   end

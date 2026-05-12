@@ -100,56 +100,51 @@ class NotificationService {
     }
   }
 
-  // Mark message as read
-  static Future<void> markMessageAsRead(String messageId) async {
+  // Mark message as read (notification doc id is always [notificationDocId])
+  static Future<void> markMessageAsRead(
+    String notificationDocId, {
+    String? linkedAdminMessageId,
+  }) async {
     try {
       final userId = AuthService.userId;
       if (userId == null) return;
 
-      // Update both admin_messages and notifications
-      await Future.wait([
-        // Update main collection
-        _firestore.collection(_messagesCollection).doc(messageId).update({
+      final futures = <Future<void>>[];
+
+      if (linkedAdminMessageId != null && linkedAdminMessageId.isNotEmpty) {
+        futures.add(
+          _firestore
+              .collection(_messagesCollection)
+              .doc(linkedAdminMessageId)
+              .update({
+            'isRead': true,
+            'readAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          }).catchError((e) {
+            print('⚠️ Could not update admin_messages: $e');
+          }),
+        );
+      }
+
+      futures.add(
+        _firestore
+            .collection(_usersCollection)
+            .doc(userId)
+            .collection('notifications')
+            .doc(notificationDocId)
+            .update({
           'isRead': true,
           'readAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
         }).catchError((e) {
-          print('⚠️ Could not update admin_messages: $e');
+          print('⚠️ Could not update notification doc: $e');
         }),
-        
-        // Update notifications subcollection
-        _updateNotificationAsRead(userId, messageId),
-      ]);
-      
-      print('✅ Message marked as read: $messageId');
+      );
+
+      await Future.wait(futures);
+      print('✅ Message marked as read: $notificationDocId');
     } catch (e) {
       print('❌ Error marking message as read: $e');
-      throw e;
-    }
-  }
-
-  // Helper function to update notification in subcollection
-  static Future<void> _updateNotificationAsRead(String userId, String messageId) async {
-    try {
-      final notificationsRef = _firestore
-          .collection(_usersCollection)
-          .doc(userId)
-          .collection('notifications');
-      
-      // Find notification with matching messageId
-      final querySnapshot = await notificationsRef
-          .where('messageId', isEqualTo: messageId)
-          .get();
-      
-      if (querySnapshot.docs.isNotEmpty) {
-        final doc = querySnapshot.docs.first;
-        await doc.reference.update({
-          'isRead': true,
-          'readAt': FieldValue.serverTimestamp(),
-        });
-      }
-    } catch (e) {
-      print('⚠️ Could not update notification as read: $e');
+      rethrow;
     }
   }
 
@@ -165,31 +160,95 @@ class NotificationService {
           .where('isRead', isEqualTo: false)
           .get();
 
-      final batch = _firestore.batch();
+      var batch = _firestore.batch();
+      var opCount = 0;
       for (final doc in unreadMessages.docs) {
         batch.update(doc.reference, {
           'isRead': true,
           'readAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
+        opCount++;
+        if (opCount >= 400) {
+          await batch.commit();
+          batch = _firestore.batch();
+          opCount = 0;
+        }
+      }
+      if (opCount > 0) {
+        await batch.commit();
       }
 
-      await batch.commit();
+      final notifSnap = await _firestore
+          .collection(_usersCollection)
+          .doc(userId)
+          .collection('notifications')
+          .where('notificationType', isEqualTo: 'admin_message')
+          .get();
+
+      batch = _firestore.batch();
+      opCount = 0;
+      for (final doc in notifSnap.docs) {
+        final data = doc.data();
+        final isRead = data['isRead'];
+        if (isRead == true) continue;
+        batch.update(doc.reference, {
+          'isRead': true,
+          'readAt': FieldValue.serverTimestamp(),
+        });
+        opCount++;
+        if (opCount >= 400) {
+          await batch.commit();
+          batch = _firestore.batch();
+          opCount = 0;
+        }
+      }
+      if (opCount > 0) {
+        await batch.commit();
+      }
+
       print('✅ All messages marked as read');
     } catch (e) {
       print('❌ Error marking all messages as read: $e');
-      throw e;
+      rethrow;
     }
   }
 
-  // Delete message
-  static Future<void> deleteMessage(String messageId) async {
+  /// Removes the inbox item for the current user. Always deletes the
+  /// `users/{uid}/notifications/{notificationDocId}` doc (what the UI lists).
+  /// Optionally also deletes [linkedAdminMessageId] in `admin_messages` when present and allowed.
+  static Future<void> deleteMessage(
+    String notificationDocId, {
+    String? linkedAdminMessageId,
+  }) async {
+    final userId = AuthService.userId;
+    if (userId == null) {
+      throw StateError('Cannot delete notification: not signed in');
+    }
+
     try {
-      await _firestore.collection(_messagesCollection).doc(messageId).delete();
-      print('✅ Message deleted: $messageId');
+      await _firestore
+          .collection(_usersCollection)
+          .doc(userId)
+          .collection('notifications')
+          .doc(notificationDocId)
+          .delete();
+      print('✅ Notification removed: $notificationDocId');
+
+      if (linkedAdminMessageId != null && linkedAdminMessageId.isNotEmpty) {
+        try {
+          await _firestore
+              .collection(_messagesCollection)
+              .doc(linkedAdminMessageId)
+              .delete();
+          print('✅ Linked admin_message removed: $linkedAdminMessageId');
+        } catch (e) {
+          print('⚠️ Could not delete admin_messages copy: $e');
+        }
+      }
     } catch (e) {
       print('❌ Error deleting message: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -257,7 +316,7 @@ class NotificationService {
             final notification = UserNotification.fromFirestore(doc);
             // Convert UserNotification to AdminMessage
             return AdminMessage(
-              id: notification.messageId ?? doc.id,
+              id: doc.id,
               userId: notification.userId,
               subject: notification.subject,
               content: notification.content,
@@ -265,6 +324,7 @@ class NotificationService {
               isRead: notification.isRead,
               isAdminMessage: true,
               createdAt: notification.createdAt,
+              linkedAdminMessageId: notification.messageId,
             );
           } catch (e) {
             print('❌ Error converting notification to message ${doc.id}: $e');
@@ -378,6 +438,9 @@ class AdminMessage {
   final DateTime createdAt;
   final DateTime? updatedAt;
   final DateTime? readAt;
+  /// When the inbox row comes from `users/.../notifications`, this is the
+  /// optional `admin_messages` document id (may be absent or stale for test data).
+  final String? linkedAdminMessageId;
 
   AdminMessage({
     required this.id,
@@ -390,6 +453,7 @@ class AdminMessage {
     required this.createdAt,
     this.updatedAt,
     this.readAt,
+    this.linkedAdminMessageId,
   });
 
   factory AdminMessage.fromFirestore(DocumentSnapshot doc) {
@@ -406,6 +470,7 @@ class AdminMessage {
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
       readAt: (data['readAt'] as Timestamp?)?.toDate(),
+      linkedAdminMessageId: data['messageId'],
     );
   }
 
@@ -420,6 +485,7 @@ class AdminMessage {
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
       'readAt': readAt != null ? Timestamp.fromDate(readAt!) : null,
+      if (linkedAdminMessageId != null) 'messageId': linkedAdminMessageId,
     };
   }
 }

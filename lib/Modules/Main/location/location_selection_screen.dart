@@ -359,7 +359,9 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                 // Location name
                 Expanded(
                   child: Text(
-                    location.name,
+                    location.localizedName(
+                      TranslationService.instance.currentLanguage,
+                    ),
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,

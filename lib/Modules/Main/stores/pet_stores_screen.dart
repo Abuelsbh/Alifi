@@ -100,23 +100,36 @@ class _PetStoresScreenState extends State<PetStoresScreen> {
         store['category'] == _selectedCategory).toList();
     }
 
-    // Filter by city
+    // Filter by city (canonical key, see PetStoresService.cityCanonical)
     if (_selectedCity != 'all') {
-      filtered = filtered.where((store) => 
-        store['city'] == _selectedCity).toList();
+      filtered = filtered
+          .where((store) => PetStoresService.cityCanonical(store) == _selectedCity)
+          .toList();
     }
 
     // Filter by search query
     if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
       filtered = filtered.where((store) {
-        final name = store['name']?.toString().toLowerCase() ?? '';
-        final description = store['description']?.toString().toLowerCase() ?? '';
-        final city = store['city']?.toString().toLowerCase() ?? '';
-        final query = _searchQuery.toLowerCase();
-        
-        return name.contains(query) || 
-               description.contains(query) ||
-               city.contains(query);
+        const textKeys = [
+          'name',
+          'nameEn',
+          'nameAr',
+          'nameHe',
+          'description',
+          'descriptionEn',
+          'descriptionAr',
+          'descriptionHe',
+          'city',
+          'cityEn',
+          'cityAr',
+          'cityHe',
+        ];
+        for (final k in textKeys) {
+          final v = store[k]?.toString().toLowerCase() ?? '';
+          if (v.contains(query)) return true;
+        }
+        return false;
       }).toList();
     }
 
@@ -251,7 +264,11 @@ class _PetStoresScreenState extends State<PetStoresScreen> {
                     {'value': 'all', 'label': 'common.all'},
                     ..._cities.map((city) => {
                       'value': city,
-                      'label': city,
+                      'label': PetStoresService.cityLabelForCanonical(
+                        _stores,
+                        city,
+                        Provider.of<AppLanguage>(context).appLang.name,
+                      ),
                     }),
                   ],
                   onChanged: (value) {
@@ -317,6 +334,15 @@ class _PetStoresScreenState extends State<PetStoresScreen> {
   }
 
   Widget _buildStoreCard(Map<String, dynamic> store) {
+    final lang = Provider.of<AppLanguage>(context).appLang.name;
+    final storeName =
+        PetStoresService.storeLocalized(store, lang, 'name');
+    final storeCity =
+        PetStoresService.storeLocalized(store, lang, 'city');
+    final storeAddress =
+        PetStoresService.storeLocalized(store, lang, 'address');
+    final storeDescription =
+        PetStoresService.storeLocalized(store, lang, 'description');
     final rating = (store['rating'] ?? 4.0).toDouble();
     
     return Container(
@@ -391,7 +417,7 @@ class _PetStoresScreenState extends State<PetStoresScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          store['name'] ?? 'Unknown Store',
+                          storeName.isNotEmpty ? storeName : 'Unknown Store',
                           style: TextStyle(
                             fontSize: 18.sp,
                             fontWeight: FontWeight.bold,
@@ -451,9 +477,9 @@ class _PetStoresScreenState extends State<PetStoresScreen> {
                   SizedBox(height: 8.h),
                   
                   // Location with Google Maps link
-                  if (store['address'] != null && store['address'].toString().isNotEmpty)
+                  if (storeAddress.isNotEmpty)
                     InkWell(
-                      onTap: () => _openMap(store),
+                      onTap: () => _openMap(store, storeAddress, storeCity),
                       child: Row(
                         children: [
                           Icon(
@@ -464,7 +490,7 @@ class _PetStoresScreenState extends State<PetStoresScreen> {
                           SizedBox(width: 4.w),
                           Expanded(
                             child: Text(
-                              '${store['address']}, ${store['city'] ?? 'Unknown City'}',
+                              '$storeAddress, ${storeCity.isNotEmpty ? storeCity : 'Unknown City'}',
                               style: TextStyle(
                                 fontSize: 14.sp,
                                 color: AppTheme.primaryGreen,
@@ -492,7 +518,7 @@ class _PetStoresScreenState extends State<PetStoresScreen> {
                         SizedBox(width: 4.w),
                         Expanded(
                           child: Text(
-                            '${store['city'] ?? 'Unknown City'}',
+                            storeCity.isNotEmpty ? storeCity : 'Unknown City',
                             style: TextStyle(
                               fontSize: 14.sp,
                               color: AppTheme.lightOnBackground,
@@ -525,12 +551,12 @@ class _PetStoresScreenState extends State<PetStoresScreen> {
                     ),
                   ],
                   
-                  if (store['description'] != null && store['description'].isNotEmpty) ...[
+                  if (storeDescription.isNotEmpty) ...[
                     SizedBox(height: 8.h),
                     Text(
-                      store['description'].length > 100
-                          ? '${store['description'].substring(0, 100)}...'
-                          : store['description'],
+                      storeDescription.length > 100
+                          ? '${storeDescription.substring(0, 100)}...'
+                          : storeDescription,
                       style: TextStyle(
                         fontSize: 13.sp,
                         color: AppTheme.lightOnBackground.withOpacity(0.8),
@@ -687,10 +713,14 @@ class _PetStoresScreenState extends State<PetStoresScreen> {
   }
 
   // Helper function to open Google Maps
-  Future<void> _openMap(Map<String, dynamic> store) async {
-    final address = '${store['address']}, ${store['city'] ?? ''}';
+  Future<void> _openMap(
+    Map<String, dynamic> store,
+    String address,
+    String city,
+  ) async {
+    final addressQuery = '$address, $city';
     final Uri mapUri = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(address)}',
+      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(addressQuery)}',
     );
     try {
       if (await canLaunchUrl(mapUri)) {

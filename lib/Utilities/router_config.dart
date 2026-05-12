@@ -11,7 +11,8 @@ import '../Modules/Auth/register_screen.dart';
 import '../Modules/Auth/demo_mode_screen.dart';
 import '../Modules/Auth/simple_register_test.dart';
 import '../Modules/Admin/admin_dashboard_screen.dart';
-import '../Modules/Main/lost_found/post_report_screen.dart';
+import '../Modules/add_animal/add_animal_flow.dart';
+import '../Modules/add_animal/add_animal_screen.dart';
 import '../Modules/Main/location/location_selection_screen.dart';
 
 BuildContext? get currentContext_ =>
@@ -100,12 +101,25 @@ class GoRouterConfig{
         routes: const <RouteBase>[],
       ),
       GoRoute(
-        path: PostReportScreen.routeName,
+        path: '/PostReportScreen',
         name: 'postReport',
         pageBuilder: (_, GoRouterState state) {
           return getCustomTransitionPage(
             state: state,
-            child: const PostReportScreen(),
+            child: const AddAnimalScreen(),
+          );
+        },
+        routes: const <RouteBase>[],
+      ),
+      GoRoute(
+        path: '/AddAnimal',
+        name: 'addAnimal',
+        pageBuilder: (_, GoRouterState state) {
+          final extra = state.extra;
+          final flow = extra is AddAnimalFlow ? extra : null;
+          return getCustomTransitionPage(
+            state: state,
+            child: AddAnimalScreen(flow: flow),
           );
         },
         routes: const <RouteBase>[],

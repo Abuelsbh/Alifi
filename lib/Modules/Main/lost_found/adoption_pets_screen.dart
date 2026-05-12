@@ -5,9 +5,9 @@ import '../../../Widgets/login_widget.dart';
 import '../../../core/Theme/app_theme.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../Widgets/translated_text.dart';
-import 'post_adoption_screen.dart';
-import 'adoption_seeking_tab.dart';
-import 'adoption_offering_tab.dart';
+import '../../add_animal/add_animal_flow.dart';
+import '../../add_animal/add_animal_screen.dart';
+import 'unified_adoption_list.dart';
 
 class AdoptionPetsScreen extends StatefulWidget {
   const AdoptionPetsScreen({super.key});
@@ -16,22 +16,7 @@ class AdoptionPetsScreen extends StatefulWidget {
   State<AdoptionPetsScreen> createState() => _AdoptionPetsScreenState();
 }
 
-class _AdoptionPetsScreenState extends State<AdoptionPetsScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
+class _AdoptionPetsScreenState extends State<AdoptionPetsScreen> {
   Widget _buildCustomFloatingActionButton() {
     return GestureDetector(
       onTap: () => _navigateToPostAdoption(context),
@@ -65,8 +50,8 @@ class _AdoptionPetsScreenState extends State<AdoptionPetsScreen>
             ),
           ),
         ),
-          ),
-        );
+      ),
+    );
   }
 
   @override
@@ -91,24 +76,9 @@ class _AdoptionPetsScreenState extends State<AdoptionPetsScreen>
         centerTitle: true,
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppTheme.primaryGreen,
-          unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-          indicatorColor: AppTheme.primaryGreen,
-          indicatorWeight: 3,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w600),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
-          tabs: const [
-            Tab(child: TranslatedText('adoption.seeking_adoption')),
-            Tab(child: TranslatedText('adoption.offering_adoption')),
-          ],
-        ),
         actions: [
           IconButton(
-            onPressed: () {
-              _navigateToPostAdoption(context);
-            },
+            onPressed: () => _navigateToPostAdoption(context),
             icon: Icon(
               Icons.add,
               color: AppTheme.primaryGreen,
@@ -117,24 +87,19 @@ class _AdoptionPetsScreenState extends State<AdoptionPetsScreen>
           ),
         ],
       ),
-      
       floatingActionButton: _buildCustomFloatingActionButton(),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [
-          AdoptionSeekingTab(),
-          AdoptionOfferingTab(),
-        ],
-      ),
+      body: const UnifiedAdoptionList(),
     );
   }
 
   void _navigateToPostAdoption(BuildContext context) {
     if (AuthService.isAuthenticated) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-          builder: (context) => const PostAdoptionScreen(),
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const AddAnimalScreen(
+            flow: AddAnimalFlow.adoption,
+          ),
         ),
       );
     } else {
@@ -143,4 +108,4 @@ class _AdoptionPetsScreenState extends State<AdoptionPetsScreen>
       );
     }
   }
-} 
+}

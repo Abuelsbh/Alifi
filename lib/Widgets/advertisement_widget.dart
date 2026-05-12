@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/services/advertisement_service.dart';
 import '../core/services/location_service.dart';
+import '../core/Language/app_languages.dart';
 
 // Helper function to build image widget (supports base64 and network images)
 Widget _buildAdvertisementImageWidget(String imageUrl, BuildContext context) {
@@ -252,6 +254,10 @@ class _AdvertisementCarouselState extends State<AdvertisementCarousel> {
   }
 
   Widget _buildAdCard(Advertisement ad) {
+    final lang = Provider.of<AppLanguage>(context).appLang.name;
+    final title = ad.displayTitle(lang);
+    final description = ad.displayDescription(lang);
+
     return GestureDetector(
       onTap: () => _onAdTap(ad),
       child: Container(
@@ -276,7 +282,7 @@ class _AdvertisementCarouselState extends State<AdvertisementCarousel> {
               ),
               
               // Gradient Overlay (for better text readability)
-              if (ad.title != null || ad.description != null)
+              if (title != null || description != null)
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
@@ -294,7 +300,7 @@ class _AdvertisementCarouselState extends State<AdvertisementCarousel> {
                 ),
               
               // Text Content
-              if (ad.title != null || ad.description != null)
+              if (title != null || description != null)
                 Positioned(
                   bottom: 0,
                   left: 0,
@@ -305,9 +311,9 @@ class _AdvertisementCarouselState extends State<AdvertisementCarousel> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (ad.title != null)
+                        if (title != null)
                           Text(
-                            ad.title!,
+                            title,
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 16.sp,
@@ -323,10 +329,10 @@ class _AdvertisementCarouselState extends State<AdvertisementCarousel> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                        if (ad.description != null) ...[
+                        if (description != null) ...[
                           SizedBox(height: 4.h),
                           Text(
-                            ad.description!,
+                            description,
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.9),
                               fontSize: 12.sp,

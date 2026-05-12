@@ -29,6 +29,19 @@ try {
     alert('Error loading Firebase. Please check your internet connection and refresh the page.');
 }
 
+/**
+ * Sets legacy primary field `base` from the first non-empty of En/Ar/He/legacy (Firestore orderBy + old app builds).
+ * Mutates `target` which must include base, base+"En", base+"Ar", base+"He" keys when applicable.
+ */
+function syncLocalizedPrimaryFields(target, base) {
+    const en = (target[base + 'En'] || '').toString().trim();
+    const ar = (target[base + 'Ar'] || '').toString().trim();
+    const he = (target[base + 'He'] || '').toString().trim();
+    const legacy = (target[base] || '').toString().trim();
+    target[base] = en || ar || he || legacy;
+    return target;
+}
+
 // Firebase helper functions
 const FirebaseService = {
     // Authentication
@@ -209,15 +222,38 @@ const FirebaseService = {
             
             const uid = userCredential.user.uid;
             
+            const nameLoc = {
+                nameEn: (vetData.nameEn || '').trim(),
+                nameAr: (vetData.nameAr || '').trim(),
+                nameHe: (vetData.nameHe || '').trim(),
+                name: (vetData.name || '').trim(),
+            };
+            syncLocalizedPrimaryFields(nameLoc, 'name');
+            const specLoc = {
+                specializationEn: (vetData.specializationEn || '').trim(),
+                specializationAr: (vetData.specializationAr || '').trim(),
+                specializationHe: (vetData.specializationHe || '').trim(),
+                specialization: (vetData.specialization || '').trim(),
+            };
+            syncLocalizedPrimaryFields(specLoc, 'specialization');
+
+            const displayNameAuth = nameLoc.name;
+
             // Create veterinarian document in users collection with all veterinarian data
             await db.collection('users').doc(uid).set({
                 uid: uid,
                 email: vetData.email,
-                username: vetData.name,
-                name: vetData.name, // Also store as name
+                username: displayNameAuth,
+                name: displayNameAuth,
+                nameEn: nameLoc.nameEn,
+                nameAr: nameLoc.nameAr,
+                nameHe: nameLoc.nameHe,
                 phone: vetData.phone,
                 phoneNumber: vetData.phone || null, // Also store as phoneNumber
-                specialization: vetData.specialization,
+                specialization: specLoc.specialization,
+                specializationEn: specLoc.specializationEn,
+                specializationAr: specLoc.specializationAr,
+                specializationHe: specLoc.specializationHe,
                 experience: vetData.experience,
                 license: vetData.license || '',
                 locations: vetData.locations || [], // Store list of location IDs
@@ -235,7 +271,7 @@ const FirebaseService = {
 
             // Update display name
             await userCredential.user.updateProfile({
-                displayName: vetData.name
+                displayName: displayNameAuth
             });
 
             // Immediately sign out the newly created veterinarian user
@@ -265,13 +301,34 @@ const FirebaseService = {
 
     async updateVeterinarian(vetId, vetData) {
         try {
+            const nameLoc = {
+                nameEn: (vetData.nameEn || '').trim(),
+                nameAr: (vetData.nameAr || '').trim(),
+                nameHe: (vetData.nameHe || '').trim(),
+                name: (vetData.name || '').trim(),
+            };
+            syncLocalizedPrimaryFields(nameLoc, 'name');
+            const specLoc = {
+                specializationEn: (vetData.specializationEn || '').trim(),
+                specializationAr: (vetData.specializationAr || '').trim(),
+                specializationHe: (vetData.specializationHe || '').trim(),
+                specialization: (vetData.specialization || '').trim(),
+            };
+            syncLocalizedPrimaryFields(specLoc, 'specialization');
+
             const updateData = {
-                name: vetData.name,
-                username: vetData.name, // Also update username
+                name: nameLoc.name,
+                username: nameLoc.name,
+                nameEn: nameLoc.nameEn,
+                nameAr: nameLoc.nameAr,
+                nameHe: nameLoc.nameHe,
                 email: vetData.email,
                 phone: vetData.phone,
                 phoneNumber: vetData.phone, // Also update phoneNumber
-                specialization: vetData.specialization,
+                specialization: specLoc.specialization,
+                specializationEn: specLoc.specializationEn,
+                specializationAr: specLoc.specializationAr,
+                specializationHe: specLoc.specializationHe,
                 experience: vetData.experience,
                 license: vetData.license || '',
                 locations: vetData.locations || [],
@@ -442,17 +499,58 @@ const FirebaseService = {
 
     async createPetStore(storeData) {
         try {
+            const nameLoc = {
+                nameEn: (storeData.nameEn || '').trim(),
+                nameAr: (storeData.nameAr || '').trim(),
+                nameHe: (storeData.nameHe || '').trim(),
+                name: (storeData.name || '').trim(),
+            };
+            syncLocalizedPrimaryFields(nameLoc, 'name');
+            const cityLoc = {
+                cityEn: (storeData.cityEn || '').trim(),
+                cityAr: (storeData.cityAr || '').trim(),
+                cityHe: (storeData.cityHe || '').trim(),
+                city: (storeData.city || '').trim(),
+            };
+            syncLocalizedPrimaryFields(cityLoc, 'city');
+            const addressLoc = {
+                addressEn: (storeData.addressEn || '').trim(),
+                addressAr: (storeData.addressAr || '').trim(),
+                addressHe: (storeData.addressHe || '').trim(),
+                address: (storeData.address || '').trim(),
+            };
+            syncLocalizedPrimaryFields(addressLoc, 'address');
+            const descLoc = {
+                descriptionEn: (storeData.descriptionEn || '').trim(),
+                descriptionAr: (storeData.descriptionAr || '').trim(),
+                descriptionHe: (storeData.descriptionHe || '').trim(),
+                description: (storeData.description || '').trim(),
+            };
+            syncLocalizedPrimaryFields(descLoc, 'description');
+
             const docRef = await db.collection('petStores').add({
-                name: storeData.name,
+                name: nameLoc.name,
+                nameEn: nameLoc.nameEn,
+                nameAr: nameLoc.nameAr,
+                nameHe: nameLoc.nameHe,
                 category: storeData.category,
                 phone: storeData.phone,
                 email: storeData.email || '',
-                address: storeData.address,
-                city: storeData.city,
+                address: addressLoc.address,
+                addressEn: addressLoc.addressEn,
+                addressAr: addressLoc.addressAr,
+                addressHe: addressLoc.addressHe,
+                city: cityLoc.city,
+                cityEn: cityLoc.cityEn,
+                cityAr: cityLoc.cityAr,
+                cityHe: cityLoc.cityHe,
                 website: storeData.website || '',
                 workingHours: storeData.workingHours || {},
                 deliveryAvailable: storeData.deliveryAvailable === 'true',
-                description: storeData.description || '',
+                description: descLoc.description,
+                descriptionEn: descLoc.descriptionEn,
+                descriptionAr: descLoc.descriptionAr,
+                descriptionHe: descLoc.descriptionHe,
                 imageUrl: storeData.imageUrl || '',
                 rating: parseFloat(storeData.rating) || 4.0,
                 locations: storeData.locations && storeData.locations.length > 0 ? storeData.locations : ['all'],
@@ -471,17 +569,58 @@ const FirebaseService = {
 
     async updatePetStore(storeId, storeData) {
         try {
+            const nameLoc = {
+                nameEn: (storeData.nameEn || '').trim(),
+                nameAr: (storeData.nameAr || '').trim(),
+                nameHe: (storeData.nameHe || '').trim(),
+                name: (storeData.name || '').trim(),
+            };
+            syncLocalizedPrimaryFields(nameLoc, 'name');
+            const cityLoc = {
+                cityEn: (storeData.cityEn || '').trim(),
+                cityAr: (storeData.cityAr || '').trim(),
+                cityHe: (storeData.cityHe || '').trim(),
+                city: (storeData.city || '').trim(),
+            };
+            syncLocalizedPrimaryFields(cityLoc, 'city');
+            const addressLoc = {
+                addressEn: (storeData.addressEn || '').trim(),
+                addressAr: (storeData.addressAr || '').trim(),
+                addressHe: (storeData.addressHe || '').trim(),
+                address: (storeData.address || '').trim(),
+            };
+            syncLocalizedPrimaryFields(addressLoc, 'address');
+            const descLoc = {
+                descriptionEn: (storeData.descriptionEn || '').trim(),
+                descriptionAr: (storeData.descriptionAr || '').trim(),
+                descriptionHe: (storeData.descriptionHe || '').trim(),
+                description: (storeData.description || '').trim(),
+            };
+            syncLocalizedPrimaryFields(descLoc, 'description');
+
             await db.collection('petStores').doc(storeId).update({
-                name: storeData.name,
+                name: nameLoc.name,
+                nameEn: nameLoc.nameEn,
+                nameAr: nameLoc.nameAr,
+                nameHe: nameLoc.nameHe,
                 category: storeData.category,
                 phone: storeData.phone,
                 email: storeData.email || '',
-                address: storeData.address,
-                city: storeData.city,
+                address: addressLoc.address,
+                addressEn: addressLoc.addressEn,
+                addressAr: addressLoc.addressAr,
+                addressHe: addressLoc.addressHe,
+                city: cityLoc.city,
+                cityEn: cityLoc.cityEn,
+                cityAr: cityLoc.cityAr,
+                cityHe: cityLoc.cityHe,
                 website: storeData.website || '',
                 workingHours: storeData.workingHours || {},
                 deliveryAvailable: storeData.deliveryAvailable === 'true',
-                description: storeData.description || '',
+                description: descLoc.description,
+                descriptionEn: descLoc.descriptionEn,
+                descriptionAr: descLoc.descriptionAr,
+                descriptionHe: descLoc.descriptionHe,
                 imageUrl: storeData.imageUrl || '',
                 rating: parseFloat(storeData.rating) || 4.0,
                 locations: storeData.locations && storeData.locations.length > 0 ? storeData.locations : ['all'],
@@ -1350,9 +1489,30 @@ const FirebaseService = {
             }
 
             console.log('Adding document to advertisements collection...');
+            const titleLoc = {
+                titleEn: (adData.titleEn || '').trim(),
+                titleAr: (adData.titleAr || '').trim(),
+                titleHe: (adData.titleHe || '').trim(),
+                title: (adData.title || '').trim(),
+            };
+            syncLocalizedPrimaryFields(titleLoc, 'title');
+            const descLoc = {
+                descriptionEn: (adData.descriptionEn || '').trim(),
+                descriptionAr: (adData.descriptionAr || '').trim(),
+                descriptionHe: (adData.descriptionHe || '').trim(),
+                description: (adData.description || '').trim(),
+            };
+            syncLocalizedPrimaryFields(descLoc, 'description');
+
             const docRef = await db.collection('advertisements').add({
-                title: adData.title || '',
-                description: adData.description || '',
+                title: titleLoc.title,
+                titleEn: titleLoc.titleEn,
+                titleAr: titleLoc.titleAr,
+                titleHe: titleLoc.titleHe,
+                description: descLoc.description,
+                descriptionEn: descLoc.descriptionEn,
+                descriptionAr: descLoc.descriptionAr,
+                descriptionHe: descLoc.descriptionHe,
                 imageUrl: adData.imageUrl,
                 displayOrder: parseInt(adData.displayOrder) || 1,
                 isActive: adData.isActive !== false,
@@ -1374,9 +1534,30 @@ const FirebaseService = {
 
     async updateAd(adId, adData) {
         try {
+            const titleLoc = {
+                titleEn: (adData.titleEn || '').trim(),
+                titleAr: (adData.titleAr || '').trim(),
+                titleHe: (adData.titleHe || '').trim(),
+                title: (adData.title || '').trim(),
+            };
+            syncLocalizedPrimaryFields(titleLoc, 'title');
+            const descLoc = {
+                descriptionEn: (adData.descriptionEn || '').trim(),
+                descriptionAr: (adData.descriptionAr || '').trim(),
+                descriptionHe: (adData.descriptionHe || '').trim(),
+                description: (adData.description || '').trim(),
+            };
+            syncLocalizedPrimaryFields(descLoc, 'description');
+
             await db.collection('advertisements').doc(adId).update({
-                title: adData.title || '',
-                description: adData.description || '',
+                title: titleLoc.title,
+                titleEn: titleLoc.titleEn,
+                titleAr: titleLoc.titleAr,
+                titleHe: titleLoc.titleHe,
+                description: descLoc.description,
+                descriptionEn: descLoc.descriptionEn,
+                descriptionAr: descLoc.descriptionAr,
+                descriptionHe: descLoc.descriptionHe,
                 imageUrl: adData.imageUrl,
                 displayOrder: parseInt(adData.displayOrder) || 1,
                 isActive: adData.isActive !== false,
@@ -1488,9 +1669,30 @@ const FirebaseService = {
 
     async createLocation(locationData) {
         try {
+            const nameLoc = {
+                nameEn: (locationData.nameEn || '').trim(),
+                nameAr: (locationData.nameAr || '').trim(),
+                nameHe: (locationData.nameHe || '').trim(),
+                name: (locationData.name || '').trim(),
+            };
+            syncLocalizedPrimaryFields(nameLoc, 'name');
+            const descLoc = {
+                descriptionEn: (locationData.descriptionEn || '').trim(),
+                descriptionAr: (locationData.descriptionAr || '').trim(),
+                descriptionHe: (locationData.descriptionHe || '').trim(),
+                description: (locationData.description || '').trim(),
+            };
+            syncLocalizedPrimaryFields(descLoc, 'description');
+
             const locationRef = await db.collection('locations').add({
-                name: locationData.name,
-                description: locationData.description || '',
+                name: nameLoc.name,
+                nameEn: nameLoc.nameEn,
+                nameAr: nameLoc.nameAr,
+                nameHe: nameLoc.nameHe,
+                description: descLoc.description,
+                descriptionEn: descLoc.descriptionEn,
+                descriptionAr: descLoc.descriptionAr,
+                descriptionHe: descLoc.descriptionHe,
                 displayOrder: parseInt(locationData.displayOrder) || 0,
                 isActive: locationData.isActive !== false,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1506,9 +1708,30 @@ const FirebaseService = {
 
     async updateLocation(locationId, locationData) {
         try {
+            const nameLoc = {
+                nameEn: (locationData.nameEn || '').trim(),
+                nameAr: (locationData.nameAr || '').trim(),
+                nameHe: (locationData.nameHe || '').trim(),
+                name: (locationData.name || '').trim(),
+            };
+            syncLocalizedPrimaryFields(nameLoc, 'name');
+            const descLoc = {
+                descriptionEn: (locationData.descriptionEn || '').trim(),
+                descriptionAr: (locationData.descriptionAr || '').trim(),
+                descriptionHe: (locationData.descriptionHe || '').trim(),
+                description: (locationData.description || '').trim(),
+            };
+            syncLocalizedPrimaryFields(descLoc, 'description');
+
             await db.collection('locations').doc(locationId).update({
-                name: locationData.name,
-                description: locationData.description || '',
+                name: nameLoc.name,
+                nameEn: nameLoc.nameEn,
+                nameAr: nameLoc.nameAr,
+                nameHe: nameLoc.nameHe,
+                description: descLoc.description,
+                descriptionEn: descLoc.descriptionEn,
+                descriptionAr: descLoc.descriptionAr,
+                descriptionHe: descLoc.descriptionHe,
                 displayOrder: parseInt(locationData.displayOrder) || 0,
                 isActive: locationData.isActive !== false,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1795,6 +2018,17 @@ const FirebaseService = {
 
     // Upload image to Firebase Storage
     async uploadImage(file, folder, fileName = null) {
+        if (!storage) {
+            return {
+                success: false,
+                error: 'Firebase Storage is not initialized. Check that firebase-storage-compat loaded and you are signed in.',
+            };
+        }
+        if (window.location.protocol === 'file:') {
+            console.warn(
+                'Dashboard is opened via file://. Firebase Storage often fails from this origin. Run a local server in web/admin-dashboard, e.g.: python3 -m http.server 8080 then open http://localhost:8080/index.html'
+            );
+        }
         try {
             // Generate unique filename if not provided
             if (!fileName) {
@@ -1809,35 +2043,38 @@ const FirebaseService = {
             // Upload file
             const uploadTask = storageRef.put(file);
 
-            // Return promise that resolves with download URL
-            return new Promise((resolve, reject) => {
+            // Always resolve (never reject) so callers can show uploadResult.error
+            return await new Promise((resolve) => {
                 uploadTask.on(
                     'state_changed',
                     (snapshot) => {
-                        // Progress tracking (optional)
                         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                         console.log(`Upload progress: ${progress.toFixed(1)}%`);
                     },
                     (error) => {
                         console.error('Error uploading image:', error);
-                        reject(error);
+                        let msg = error.message || String(error);
+                        if (window.location.protocol === 'file:') {
+                            msg +=
+                                ' — Try opening the dashboard at http://localhost/... (local web server), not file://.';
+                        }
+                        resolve({ success: false, error: msg });
                     },
                     async () => {
-                        // Upload completed successfully
                         try {
                             const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
                             console.log('Image uploaded successfully:', downloadURL);
                             resolve({ success: true, url: downloadURL });
                         } catch (error) {
                             console.error('Error getting download URL:', error);
-                            reject(error);
+                            resolve({ success: false, error: error.message || String(error) });
                         }
                     }
                 );
             });
         } catch (error) {
             console.error('Error in uploadImage:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: error.message || String(error) };
         }
     }
 };

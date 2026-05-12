@@ -279,7 +279,11 @@ class _AddVeterinarianDialogState extends State<AddVeterinarianDialog> {
                             ..._locations.map((location) {
                               final isSelected = _selectedLocationIds.contains(location.id);
                               return CheckboxListTile(
-                                title: Text(location.name),
+                                title: Text(
+                                  location.localizedName(
+                                    TranslationService.instance.currentLanguage,
+                                  ),
+                                ),
                                 value: isSelected,
                                 onChanged: (value) {
                                   setState(() {

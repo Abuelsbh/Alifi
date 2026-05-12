@@ -761,9 +761,19 @@
             <form id="store-form">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="store-name">Store Name *</label>
-                        <input type="text" id="store-name" required>
+                        <label for="store-name-en">Store name (English) *</label>
+                        <input type="text" id="store-name-en" required>
                     </div>
+                    <div class="form-group">
+                        <label for="store-name-ar">Store name (Arabic) *</label>
+                        <input type="text" id="store-name-ar" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="store-name-he">Store name (Hebrew) *</label>
+                        <input type="text" id="store-name-he" required>
+                    </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
                         <label for="store-category">Category *</label>
                         <select id="store-category" required>
@@ -789,15 +799,33 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="store-address">Address *</label>
-                        <textarea id="store-address" rows="3" required></textarea>
+                        <label for="store-address-en">Address (English) *</label>
+                        <textarea id="store-address-en" rows="2" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="store-address-ar">Address (Arabic) *</label>
+                        <textarea id="store-address-ar" rows="2" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="store-address-he">Address (Hebrew) *</label>
+                        <textarea id="store-address-he" rows="2" required></textarea>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="store-city">City *</label>
-                        <input type="text" id="store-city" required>
+                        <label for="store-city-en">City (English) *</label>
+                        <input type="text" id="store-city-en" required>
                     </div>
+                    <div class="form-group">
+                        <label for="store-city-ar">City (Arabic) *</label>
+                        <input type="text" id="store-city-ar" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="store-city-he">City (Hebrew) *</label>
+                        <input type="text" id="store-city-he" required>
+                    </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
                         <label for="store-website">Website</label>
                         <input type="url" id="store-website" placeholder="https://example.com">
@@ -908,8 +936,16 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="store-description">Description</label>
-                        <textarea id="store-description" rows="3" placeholder="Brief description of the store..."></textarea>
+                        <label for="store-description-en">Description (English)</label>
+                        <textarea id="store-description-en" rows="2" placeholder="English..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="store-description-ar">Description (Arabic)</label>
+                        <textarea id="store-description-ar" rows="2" placeholder="العربية..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="store-description-he">Description (Hebrew)</label>
+                        <textarea id="store-description-he" rows="2" placeholder="עברית..."></textarea>
                     </div>
                 </div>
                 <div class="form-row">
@@ -970,22 +1006,40 @@
             <form id="vet-form">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="vet-name">Full Name *</label>
-                        <input type="text" id="vet-name" required>
+                        <label for="vet-name-en">Full name (English) *</label>
+                        <input type="text" id="vet-name-en" required>
                     </div>
                     <div class="form-group">
-                        <label for="vet-email">Email *</label>
-                        <input type="email" id="vet-email" required>
+                        <label for="vet-name-ar">Full name (Arabic) *</label>
+                        <input type="text" id="vet-name-ar" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vet-name-he">Full name (Hebrew) *</label>
+                        <input type="text" id="vet-name-he" required>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
+                        <label for="vet-email">Email *</label>
+                        <input type="email" id="vet-email" required>
+                    </div>
+                    <div class="form-group">
                         <label for="vet-phone">Phone Number *</label>
                         <input type="tel" id="vet-phone" required>
                     </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
-                        <label for="vet-specialization">Specialization *</label>
-                        <input type="text" id="vet-specialization" required>
+                        <label for="vet-specialization-en">Specialization (English) *</label>
+                        <input type="text" id="vet-specialization-en" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vet-specialization-ar">Specialization (Arabic) *</label>
+                        <input type="text" id="vet-specialization-ar" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vet-specialization-he">Specialization (Hebrew) *</label>
+                        <input type="text" id="vet-specialization-he" required>
                     </div>
                 </div>
                 <div class="form-row">
@@ -1042,14 +1096,34 @@
                 </button>
             </div>
             <form id="ad-form">
-                <div class="form-group">
-                    <label for="ad-title">Title (Optional)</label>
-                    <input type="text" id="ad-title" placeholder="Advertisement title...">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="ad-title-en">Title (English)</label>
+                        <input type="text" id="ad-title-en" placeholder="English title...">
+                    </div>
+                    <div class="form-group">
+                        <label for="ad-title-ar">Title (Arabic)</label>
+                        <input type="text" id="ad-title-ar" placeholder="عنوان...">
+                    </div>
+                    <div class="form-group">
+                        <label for="ad-title-he">Title (Hebrew)</label>
+                        <input type="text" id="ad-title-he" placeholder="כותרת...">
+                    </div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="ad-description">Description (Optional)</label>
-                    <textarea id="ad-description" rows="3" placeholder="Advertisement description..."></textarea>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="ad-description-en">Description (English)</label>
+                        <textarea id="ad-description-en" rows="2" placeholder="English..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="ad-description-ar">Description (Arabic)</label>
+                        <textarea id="ad-description-ar" rows="2" placeholder="العربية..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="ad-description-he">Description (Hebrew)</label>
+                        <textarea id="ad-description-he" rows="2" placeholder="עברית..."></textarea>
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -1150,13 +1224,33 @@
                 <button class="modal-close">&times;</button>
             </div>
             <form id="location-form">
-                <div class="form-group">
-                    <label for="location-name">Name *</label>
-                    <input type="text" id="location-name" required>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="location-name-en">Name (English) *</label>
+                        <input type="text" id="location-name-en" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="location-name-ar">Name (Arabic) *</label>
+                        <input type="text" id="location-name-ar" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="location-name-he">Name (Hebrew) *</label>
+                        <input type="text" id="location-name-he" required>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="location-description">Description</label>
-                    <textarea id="location-description" rows="3" placeholder="Optional description..."></textarea>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="location-description-en">Description (English)</label>
+                        <textarea id="location-description-en" rows="2" placeholder="English..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="location-description-ar">Description (Arabic)</label>
+                        <textarea id="location-description-ar" rows="2" placeholder="العربية..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="location-description-he">Description (Hebrew)</label>
+                        <textarea id="location-description-he" rows="2" placeholder="עברית..."></textarea>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="location-display-order">Display Order</label>

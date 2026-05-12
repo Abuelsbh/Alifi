@@ -746,8 +746,14 @@ function filterVeterinarians() {
     if (searchTerm) {
         filteredVets = filteredVets.filter(vet => 
             (vet.name || '').toLowerCase().includes(searchTerm) ||
+            (vet.nameEn || '').toLowerCase().includes(searchTerm) ||
+            (vet.nameAr || '').toLowerCase().includes(searchTerm) ||
+            (vet.nameHe || '').toLowerCase().includes(searchTerm) ||
             (vet.email || '').toLowerCase().includes(searchTerm) ||
-            (vet.specialization || '').toLowerCase().includes(searchTerm)
+            (vet.specialization || '').toLowerCase().includes(searchTerm) ||
+            (vet.specializationEn || '').toLowerCase().includes(searchTerm) ||
+            (vet.specializationAr || '').toLowerCase().includes(searchTerm) ||
+            (vet.specializationHe || '').toLowerCase().includes(searchTerm)
         );
     }
     
@@ -778,10 +784,14 @@ async function openVetModal(vet = null) {
         vetPassword.required = false;
         
         // Fill form with existing data
-        document.getElementById('vet-name').value = vet.name || '';
+        document.getElementById('vet-name-en').value = vet.nameEn || vet.name || '';
+        document.getElementById('vet-name-ar').value = vet.nameAr || vet.name || '';
+        document.getElementById('vet-name-he').value = vet.nameHe || vet.name || '';
         document.getElementById('vet-email').value = vet.email || '';
         document.getElementById('vet-phone').value = vet.phone || '';
-        document.getElementById('vet-specialization').value = vet.specialization || '';
+        document.getElementById('vet-specialization-en').value = vet.specializationEn || vet.specialization || '';
+        document.getElementById('vet-specialization-ar').value = vet.specializationAr || vet.specialization || '';
+        document.getElementById('vet-specialization-he').value = vet.specializationHe || vet.specialization || '';
         document.getElementById('vet-experience').value = vet.experience || '';
         document.getElementById('vet-license').value = vet.license || '';
         
@@ -888,10 +898,14 @@ async function handleVetSubmit(e) {
         }
         
         const formData = {
-            name: document.getElementById('vet-name').value.trim(),
+            nameEn: document.getElementById('vet-name-en').value.trim(),
+            nameAr: document.getElementById('vet-name-ar').value.trim(),
+            nameHe: document.getElementById('vet-name-he').value.trim(),
             email: document.getElementById('vet-email').value.trim(),
             phone: document.getElementById('vet-phone').value.trim(),
-            specialization: document.getElementById('vet-specialization').value.trim(),
+            specializationEn: document.getElementById('vet-specialization-en').value.trim(),
+            specializationAr: document.getElementById('vet-specialization-ar').value.trim(),
+            specializationHe: document.getElementById('vet-specialization-he').value.trim(),
             experience: document.getElementById('vet-experience').value.trim(),
             license: document.getElementById('vet-license').value.trim(),
             locations: locations
@@ -1220,9 +1234,18 @@ function filterPetStores() {
     if (searchTerm) {
         filteredStores = filteredStores.filter(store => 
             (store.name || '').toLowerCase().includes(searchTerm) ||
+            (store.nameEn || '').toLowerCase().includes(searchTerm) ||
+            (store.nameAr || '').toLowerCase().includes(searchTerm) ||
+            (store.nameHe || '').toLowerCase().includes(searchTerm) ||
             (store.category || '').toLowerCase().includes(searchTerm) ||
             (store.city || '').toLowerCase().includes(searchTerm) ||
-            (store.description || '').toLowerCase().includes(searchTerm)
+            (store.cityEn || '').toLowerCase().includes(searchTerm) ||
+            (store.cityAr || '').toLowerCase().includes(searchTerm) ||
+            (store.cityHe || '').toLowerCase().includes(searchTerm) ||
+            (store.description || '').toLowerCase().includes(searchTerm) ||
+            (store.descriptionEn || '').toLowerCase().includes(searchTerm) ||
+            (store.descriptionAr || '').toLowerCase().includes(searchTerm) ||
+            (store.descriptionHe || '').toLowerCase().includes(searchTerm)
         );
     }
     
@@ -1252,12 +1275,18 @@ async function openStoreModal(store = null) {
         modalTitle.textContent = 'Edit Pet Store';
         
         // Fill form with existing data
-        document.getElementById('store-name').value = store.name || '';
+        document.getElementById('store-name-en').value = store.nameEn || store.name || '';
+        document.getElementById('store-name-ar').value = store.nameAr || store.name || '';
+        document.getElementById('store-name-he').value = store.nameHe || store.name || '';
         document.getElementById('store-category').value = store.category || '';
         document.getElementById('store-phone').value = store.phone || '';
         document.getElementById('store-email').value = store.email || '';
-        document.getElementById('store-address').value = store.address || '';
-        document.getElementById('store-city').value = store.city || '';
+        document.getElementById('store-address-en').value = store.addressEn || store.address || '';
+        document.getElementById('store-address-ar').value = store.addressAr || store.address || '';
+        document.getElementById('store-address-he').value = store.addressHe || store.address || '';
+        document.getElementById('store-city-en').value = store.cityEn || store.city || '';
+        document.getElementById('store-city-ar').value = store.cityAr || store.city || '';
+        document.getElementById('store-city-he').value = store.cityHe || store.city || '';
         document.getElementById('store-website').value = store.website || '';
         
         // Load working hours for each day
@@ -1317,7 +1346,9 @@ async function openStoreModal(store = null) {
         }
         
         document.getElementById('store-delivery').value = store.deliveryAvailable ? 'true' : 'false';
-        document.getElementById('store-description').value = store.description || '';
+        document.getElementById('store-description-en').value = store.descriptionEn || store.description || '';
+        document.getElementById('store-description-ar').value = store.descriptionAr || store.description || '';
+        document.getElementById('store-description-he').value = store.descriptionHe || store.description || '';
         document.getElementById('store-rating').value = store.rating || 4.0;
         
         // Show existing image preview
@@ -1494,16 +1525,24 @@ async function handleStoreSubmit(e) {
         }
         
         const formData = {
-            name: document.getElementById('store-name').value.trim(),
+            nameEn: document.getElementById('store-name-en').value.trim(),
+            nameAr: document.getElementById('store-name-ar').value.trim(),
+            nameHe: document.getElementById('store-name-he').value.trim(),
             category: document.getElementById('store-category').value,
             phone: document.getElementById('store-phone').value.trim(),
             email: document.getElementById('store-email').value.trim(),
-            address: document.getElementById('store-address').value.trim(),
-            city: document.getElementById('store-city').value.trim(),
+            addressEn: document.getElementById('store-address-en').value.trim(),
+            addressAr: document.getElementById('store-address-ar').value.trim(),
+            addressHe: document.getElementById('store-address-he').value.trim(),
+            cityEn: document.getElementById('store-city-en').value.trim(),
+            cityAr: document.getElementById('store-city-ar').value.trim(),
+            cityHe: document.getElementById('store-city-he').value.trim(),
             website: document.getElementById('store-website').value.trim(),
             workingHours: workingHours,
             deliveryAvailable: document.getElementById('store-delivery').value,
-            description: document.getElementById('store-description').value.trim(),
+            descriptionEn: document.getElementById('store-description-en').value.trim(),
+            descriptionAr: document.getElementById('store-description-ar').value.trim(),
+            descriptionHe: document.getElementById('store-description-he').value.trim(),
             imageUrl: imageUrl,
             rating: document.getElementById('store-rating').value,
             locations: locations
@@ -1530,7 +1569,13 @@ async function handleStoreSubmit(e) {
         }
     } catch (error) {
         console.error('❌ Error saving pet store:', error);
-        showNotification('Failed to save pet store', 'error');
+        const detail = error && error.message ? error.message : String(error);
+        let msg = 'Failed to save pet store: ' + detail;
+        if (typeof window !== 'undefined' && window.location.protocol === 'file:') {
+            msg +=
+                '\n\nTip: Do not open the dashboard as file://. From folder web/admin-dashboard run: python3 -m http.server 8080 — then open http://localhost:8080/index.html';
+        }
+        showNotification(msg, 'error');
     } finally {
         saveBtn.classList.remove('loading');
         saveBtn.disabled = false;
@@ -1761,8 +1806,12 @@ function openLocationModal(location = null) {
     
     if (location) {
         title.textContent = 'Edit Location';
-        document.getElementById('location-name').value = location.name || '';
-        document.getElementById('location-description').value = location.description || '';
+        document.getElementById('location-name-en').value = location.nameEn || location.name || '';
+        document.getElementById('location-name-ar').value = location.nameAr || location.name || '';
+        document.getElementById('location-name-he').value = location.nameHe || location.name || '';
+        document.getElementById('location-description-en').value = location.descriptionEn || location.description || '';
+        document.getElementById('location-description-ar').value = location.descriptionAr || location.description || '';
+        document.getElementById('location-description-he').value = location.descriptionHe || location.description || '';
         document.getElementById('location-display-order').value = location.displayOrder || 0;
         document.getElementById('location-is-active').checked = location.isActive !== false;
         form.dataset.mode = 'edit';
@@ -1797,15 +1846,19 @@ async function handleLocationSubmit(e) {
     const locationId = form.dataset.locationId;
     
     const locationData = {
-        name: document.getElementById('location-name').value.trim(),
-        description: document.getElementById('location-description').value.trim(),
+        nameEn: document.getElementById('location-name-en').value.trim(),
+        nameAr: document.getElementById('location-name-ar').value.trim(),
+        nameHe: document.getElementById('location-name-he').value.trim(),
+        descriptionEn: document.getElementById('location-description-en').value.trim(),
+        descriptionAr: document.getElementById('location-description-ar').value.trim(),
+        descriptionHe: document.getElementById('location-description-he').value.trim(),
         displayOrder: parseInt(document.getElementById('location-display-order').value) || 0,
         isActive: document.getElementById('location-is-active').checked
     };
     
     // Validate
-    if (!locationData.name) {
-        alert('Location name is required');
+    if (!locationData.nameEn && !locationData.nameAr && !locationData.nameHe) {
+        alert('Location name is required in at least one language');
         return;
     }
     
@@ -1927,10 +1980,12 @@ function filterLocations(searchTerm) {
     }
     
     const filtered = locationsData.filter(location => {
-        const name = (location.name || '').toLowerCase();
-        const description = (location.description || '').toLowerCase();
         const search = searchTerm.toLowerCase();
-        return name.includes(search) || description.includes(search);
+        const blobs = [
+            location.name, location.nameEn, location.nameAr, location.nameHe,
+            location.description, location.descriptionEn, location.descriptionAr, location.descriptionHe,
+        ].map(v => (v || '').toLowerCase());
+        return blobs.some(b => b.includes(search));
     });
     
     displayLocations(filtered);

@@ -37,7 +37,6 @@ class TestHomeScreen extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (context) => const AddAnimalScreen(
                       reportType: ReportType.lost,
-                      title: 'Add Lost Pet',
                     ),
                   ),
                 );
@@ -52,7 +51,7 @@ class TestHomeScreen extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (context) => const AddAnimalScreen(
                       reportType: ReportType.adoption,
-                      title: 'Add Adoption Pet',
+                      adoptionType: 'offering',
                     ),
                   ),
                 );

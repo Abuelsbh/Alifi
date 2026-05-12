@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/Theme/app_theme.dart';
+import '../../../Utilities/dialog_helper.dart';
+import '../../../Widgets/login_widget.dart';
 import '../../../Widgets/translated_text.dart';
-import 'lost_pets_tab.dart';
-import 'found_pets_tab.dart';
-import 'post_report_screen.dart';
+import '../../../core/services/auth_service.dart';
+import '../../add_animal/add_animal_flow.dart';
+import '../../add_animal/add_animal_screen.dart';
+import 'unified_lost_found_list.dart';
 
 class LostFoundScreen extends StatefulWidget {
   const LostFoundScreen({super.key});
@@ -13,29 +16,14 @@ class LostFoundScreen extends StatefulWidget {
   State<LostFoundScreen> createState() => _LostFoundScreenState();
 }
 
-class _LostFoundScreenState extends State<LostFoundScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
+class _LostFoundScreenState extends State<LostFoundScreen> {
   Widget _buildCustomFloatingActionButton() {
     return GestureDetector(
       onTap: () => _navigateToPostReport(context),
       child: SizedBox(
         width: 70.w,
         height: 70.h,
-        child:  Container(
+        child: Container(
           width: 56.w,
           height: 56.h,
           decoration: BoxDecoration(
@@ -88,24 +76,9 @@ class _LostFoundScreenState extends State<LostFoundScreen>
         centerTitle: true,
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppTheme.primaryGreen,
-          unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-          indicatorColor: AppTheme.primaryGreen,
-          indicatorWeight: 3,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w600),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
-          tabs: const [
-            Tab(child: TranslatedText('lost_found.lost_pets')),
-            Tab(child: TranslatedText('lost_found.found_pets')),
-          ],
-        ),
         actions: [
           IconButton(
-            onPressed: () {
-              _navigateToPostReport(context);
-            },
+            onPressed: () => _navigateToPostReport(context),
             icon: Icon(
               Icons.add,
               color: AppTheme.primaryGreen,
@@ -114,24 +87,25 @@ class _LostFoundScreenState extends State<LostFoundScreen>
           ),
         ],
       ),
-      
       floatingActionButton: _buildCustomFloatingActionButton(),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [
-          LostPetsTab(),
-          FoundPetsTab(),
-        ],
-      ),
+      body: const UnifiedLostFoundList(),
     );
   }
 
   void _navigateToPostReport(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const PostReportScreen(),
-      ),
-    );
+    if (AuthService.isAuthenticated) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const AddAnimalScreen(
+            flow: AddAnimalFlow.lostOrFound,
+          ),
+        ),
+      );
+    } else {
+      DialogHelper.custom(context: context).customDialog(
+        dialogWidget: const LoginWidget(),
+      );
+    }
   }
-} 
+}

@@ -25,16 +25,27 @@ class UnifiedPetDetailsScreen extends StatefulWidget {
   final AdoptionPetModel? adoptionPet;
   final BreedingPetModel? breedingPet;
 
+  /// When [type] is [PetDetailsType.report], pass `'lost'` or `'found'` if the user
+  /// opened this screen from the lost/found tabs so edit/delete use the correct
+  /// Firestore collection even when the document omits or reshapes `type`.
+  final String? reportListKind;
+
   const UnifiedPetDetailsScreen({
     super.key,
     required this.type,
     this.report,
     this.adoptionPet,
     this.breedingPet,
+    this.reportListKind,
   }) : assert(
           (type == PetDetailsType.report && report != null) ||
           (type == PetDetailsType.adoption && adoptionPet != null) ||
           (type == PetDetailsType.breeding && breedingPet != null),
+        ),
+       assert(
+          reportListKind == null ||
+              (type == PetDetailsType.report &&
+                  (reportListKind == 'lost' || reportListKind == 'found')),
         );
 
   @override
@@ -132,6 +143,86 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
     
     // إذا كانت القيمة بالفعل مترجمة أو غير معروفة، استخدمها كما هي
     return gender;
+  }
+
+  /// For lost/found Firestore reports: reliable kind even if [reportListKind] is null.
+  String _resolvedLostFoundKind() {
+    final k = widget.reportListKind;
+    if (k == 'lost') return 'lost';
+    if (k == 'found') return 'found';
+    final raw = widget.report!['type']?.toString().toLowerCase() ?? '';
+    if (raw == 'found' || raw == 'found_pet') return 'found';
+    return 'lost';
+  }
+
+  String _listingCategoryValue() {
+    final ts = TranslationService.instance;
+    switch (widget.type) {
+      case PetDetailsType.report:
+        return _resolvedLostFoundKind() == 'found'
+            ? ts.translate('pet_details_screen.category_found')
+            : ts.translate('pet_details_screen.category_lost');
+      case PetDetailsType.adoption:
+        return widget.adoptionPet!.adoptionType == 'seeking'
+            ? ts.translate('pet_details_screen.category_adoption_seeking')
+            : ts.translate('pet_details_screen.category_adoption_offering');
+      case PetDetailsType.breeding:
+        return ts.translate('pet_details_screen.category_breeding');
+    }
+  }
+
+  Widget _buildListingCategoryCard() {
+    final ts = TranslationService.instance;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.label_outline,
+            color: AppTheme.primaryGreen,
+            size: 32.sp,
+          ),
+          SizedBox(width: 14.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ts.translate('pet_details_screen.listing_type'),
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: Colors.grey[700],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  _listingCategoryValue(),
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    color: Colors.grey[800],
+                    fontWeight: FontWeight.w600,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // دالة للحصول على أيقونة الجنس المناسبة
@@ -452,6 +543,8 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
               // اسم الحيوان والسلالة - في المنتصف
               _buildPetNameAndBreed(),
               SizedBox(height: 24.h),
+              _buildListingCategoryCard(),
+              SizedBox(height: 16.h),
               // ثلاث بطاقات المعلومات (Color, Gender, Type)
               _buildInfoCardsRow(),
               SizedBox(height: 24.h),
@@ -739,6 +832,9 @@ class _UnifiedPetDetailsScreenState extends State<UnifiedPetDetailsScreen> {
   String? _getPetReportType() {
     switch (widget.type) {
       case PetDetailsType.report:
+        final kind = widget.reportListKind;
+        if (kind == 'found') return 'found_pet';
+        if (kind == 'lost') return 'lost_pet';
         return widget.report!['type'] as String?; // 'lost' or 'found'
       case PetDetailsType.adoption:
         return 'adoption';

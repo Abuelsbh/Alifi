@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import '../../../core/Theme/app_theme.dart';
+import '../../../core/Language/translation_service.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../Models/chat_model.dart';
@@ -147,14 +149,24 @@ class _UnifiedChatListScreenState extends State<UnifiedChatListScreen>
     return 'user';
   }
 
+  bool _isPlaceholderDisplayName(String? name) {
+    if (name == null || name.isEmpty) return true;
+    final n = name.trim();
+    const placeholders = {'مستخدم', 'المستخدم', 'User', 'user', 'משתמש'};
+    if (placeholders.contains(n)) return true;
+    final generic = TranslationService.instance.translate('chat.user');
+    final participant = TranslationService.instance.translate('chat.participant');
+    return n == generic || n == participant;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text(
-          'المحادثات',
-          style: TextStyle(fontWeight: FontWeight.w600),
+        title: Text(
+          TranslationService.instance.translate('chat.conversations'),
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         centerTitle: true,
         elevation: 0,
@@ -199,7 +211,7 @@ class _UnifiedChatListScreenState extends State<UnifiedChatListScreen>
         controller: _searchController,
         onChanged: _onSearchChanged,
         decoration: InputDecoration(
-          hintText: 'البحث في المحادثات...',
+          hintText: TranslationService.instance.translate('chat.search_conversations'),
           prefixIcon: Icon(Icons.search, color: AppTheme.primaryGreen),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
@@ -225,7 +237,7 @@ class _UnifiedChatListScreenState extends State<UnifiedChatListScreen>
           CircularProgressIndicator(color: AppTheme.primaryGreen),
           SizedBox(height: 16.h),
           Text(
-            'جاري تحميل المحادثات...',
+            TranslationService.instance.translate('chat.loading_conversations'),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey[600],
             ),
@@ -254,14 +266,14 @@ class _UnifiedChatListScreenState extends State<UnifiedChatListScreen>
           ),
           SizedBox(height: 16.h),
           Text(
-            'يرجى تسجيل الدخول',
+            TranslationService.instance.translate('chat.login_to_view_chats_title'),
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
           SizedBox(height: 8.h),
           Text(
-            'قم بتسجيل الدخول لعرض محادثاتك',
+            TranslationService.instance.translate('chat.login_to_view_chats_subtitle'),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey[600],
             ),
@@ -290,14 +302,14 @@ class _UnifiedChatListScreenState extends State<UnifiedChatListScreen>
           ),
           SizedBox(height: 16.h),
           Text(
-            'لا توجد محادثات',
+            TranslationService.instance.translate('chat.no_chats'),
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
           SizedBox(height: 8.h),
           Text(
-            'ابدأ محادثة جديدة',
+            TranslationService.instance.translate('chat.start_new_chat_hint'),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey[600],
             ),
@@ -405,8 +417,8 @@ class _UnifiedChatListScreenState extends State<UnifiedChatListScreen>
                                 if (data != null) {
                                   // Get name from users collection
                                   final name = data['name'] as String? ?? data['username'] as String?;
-                                  if (name != null && name.isNotEmpty && name != 'المستخدم' && name != 'مستخدم') {
-                                    displayName = name;
+                                  if (!_isPlaceholderDisplayName(name)) {
+                                    displayName = name!;
                                   }
                                 }
                               }
@@ -476,15 +488,16 @@ class _UnifiedChatListScreenState extends State<UnifiedChatListScreen>
 
   String _getParticipantName(ChatModel chat) {
     final userId = AuthService.userId;
-    if (userId == null) return 'مستخدم';
-    
+    final generic = TranslationService.instance.translate('chat.user');
+    if (userId == null) return generic;
+
     for (final participantId in chat.participants) {
       if (participantId != userId) {
-        return chat.participantNames[participantId] ?? 'مستخدم';
+        return chat.participantNames[participantId] ?? generic;
       }
     }
-    
-    return 'مستخدم';
+
+    return generic;
   }
 
   String? _getOtherUserId(ChatModel chat) {
@@ -537,23 +550,25 @@ class _UnifiedChatListScreenState extends State<UnifiedChatListScreen>
   }
 
   String _formatTime(DateTime dateTime) {
+    final lang = TranslationService.instance.currentLanguage;
+    final t = TranslationService.instance;
     final now = DateTime.now();
     final difference = now.difference(dateTime);
-    
+
     if (difference.inDays > 0) {
       if (difference.inDays == 1) {
-        return 'أمس';
+        return t.translate('chat.yesterday');
       } else if (difference.inDays < 7) {
-        return '${difference.inDays} أيام';
+        return '${difference.inDays} ${t.translate('chat.time_days')}';
       } else {
-        return '${dateTime.day}/${dateTime.month}';
+        return DateFormat.yMd(lang).format(dateTime);
       }
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}س';
+      return '${difference.inHours}${t.translate('chat.time_hours_short')}';
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}د';
+      return '${difference.inMinutes}${t.translate('chat.time_minutes_short')}';
     } else {
-      return 'الآن';
+      return t.translate('chat.time_now');
     }
   }
 }

@@ -137,7 +137,9 @@ class HomeHeaderWidget extends StatelessWidget {
                   if (selectedLocation != null) ...[
                     SizedBox(width: 8.w),
                     Text(
-                      selectedLocation!.name,
+                      selectedLocation!.localizedName(
+                        TranslationService.instance.currentLanguage,
+                      ),
                       style: TextStyleHelper.of(context)
                           .s14RegTextStyle
                           .copyWith(color: ThemeClass.of(context).secondaryColor),

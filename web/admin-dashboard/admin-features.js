@@ -1267,6 +1267,7 @@ class AdminFeatures {
                         <div>
                             ${ad.title ? `<h4 class="ad-title">${ad.title}</h4>` : ''}
                             ${ad.description ? `<p class="ad-description">${ad.description}</p>` : ''}
+                            ${(ad.titleEn || ad.titleAr || ad.titleHe) ? `<p style="font-size:0.85rem;color:#666;margin-top:0.5rem;"><strong>EN:</strong> ${ad.titleEn || '—'} · <strong>AR:</strong> ${ad.titleAr || '—'} · <strong>HE:</strong> ${ad.titleHe || '—'}</p>` : ''}
                         </div>
                     </div>
                     <div class="ad-meta">
@@ -1368,8 +1369,12 @@ class AdminFeatures {
             const imagePreviewImg = document.getElementById('ad-image-preview-img');
 
             document.getElementById('ad-modal-title').textContent = 'Edit Advertisement';
-            document.getElementById('ad-title').value = ad.title || '';
-            document.getElementById('ad-description').value = ad.description || '';
+            document.getElementById('ad-title-en').value = ad.titleEn || ad.title || '';
+            document.getElementById('ad-title-ar').value = ad.titleAr || ad.title || '';
+            document.getElementById('ad-title-he').value = ad.titleHe || ad.title || '';
+            document.getElementById('ad-description-en').value = ad.descriptionEn || ad.description || '';
+            document.getElementById('ad-description-ar').value = ad.descriptionAr || ad.description || '';
+            document.getElementById('ad-description-he').value = ad.descriptionHe || ad.description || '';
             document.getElementById('ad-display-order').value = ad.displayOrder || 1;
             document.getElementById('ad-click-url').value = ad.clickUrl || '';
             document.getElementById('ad-is-active').checked = ad.isActive !== false;
@@ -1468,8 +1473,12 @@ class AdminFeatures {
             }
             
             const adData = {
-                title: document.getElementById('ad-title').value.trim(),
-                description: document.getElementById('ad-description').value.trim(),
+                titleEn: document.getElementById('ad-title-en').value.trim(),
+                titleAr: document.getElementById('ad-title-ar').value.trim(),
+                titleHe: document.getElementById('ad-title-he').value.trim(),
+                descriptionEn: document.getElementById('ad-description-en').value.trim(),
+                descriptionAr: document.getElementById('ad-description-ar').value.trim(),
+                descriptionHe: document.getElementById('ad-description-he').value.trim(),
                 imageUrl: imageUrl,
                 displayOrder: parseInt(document.getElementById('ad-display-order').value) || 1,
                 clickUrl: document.getElementById('ad-click-url').value.trim(),
@@ -1563,6 +1572,10 @@ class AdminFeatures {
                 ${ad.imageUrl ? `<img src="${ad.imageUrl}" alt="${ad.title || 'Advertisement'}">` : '<div style="height:200px; background:#f8f9fa; display:flex; align-items:center; justify-content:center; color:#6c757d; border-radius:6px;"><i class="fas fa-image"></i> No image</div>'}
                 ${ad.title ? `<h4>${ad.title}</h4>` : ''}
                 ${ad.description ? `<p>${ad.description}</p>` : ''}
+                <div style="margin-top:0.75rem;font-size:0.9rem;color:#555;">
+                    <div><strong>Title</strong> — EN: ${ad.titleEn || '—'} | AR: ${ad.titleAr || '—'} | HE: ${ad.titleHe || '—'}</div>
+                    <div style="margin-top:0.35rem;"><strong>Description</strong> — EN: ${ad.descriptionEn || '—'} | AR: ${ad.descriptionAr || '—'} | HE: ${ad.descriptionHe || '—'}</div>
+                </div>
                 <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center; font-size:0.9rem; color:#666;">
                     <span>Display Order: ${ad.displayOrder}</span>
                     <span>Status: ${ad.isActive ? '<span style="color:#28a745;">Active</span>' : '<span style="color:#dc3545;">Inactive</span>'}</span>

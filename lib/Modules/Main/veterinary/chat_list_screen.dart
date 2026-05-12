@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import '../../../core/Theme/app_theme.dart';
+import '../../../core/Language/app_languages.dart';
+import '../../../core/utils/localized_content.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../Models/chat_model.dart';
@@ -614,6 +617,15 @@ class _ChatListScreenState extends State<ChatListScreen>
   Widget _buildVeterinarianTile(Map<String, dynamic> vet) {
     final isOnline = vet['isOnline'];
     final isAvailable = vet['isActive'];
+    final lang = Provider.of<AppLanguage>(context).appLang.name;
+    final vetMap = Map<String, dynamic>.from(vet);
+    final vetName =
+        LocalizedContent.pickFromMap(vetMap, lang, baseKey: 'name');
+    final vetSpec = LocalizedContent.pickFromMap(
+      vetMap,
+      lang,
+      baseKey: 'specialization',
+    );
     
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
@@ -669,14 +681,14 @@ class _ChatListScreenState extends State<ChatListScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        vet['name'],
+                        vetName,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       SizedBox(height: 2.h),
                       Text(
-                        vet['specialization'],
+                        vetSpec,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppTheme.primaryGreen,
                         ),
@@ -768,6 +780,13 @@ class _ChatListScreenState extends State<ChatListScreen>
         ),
       );
       
+      final lang = Provider.of<AppLanguage>(context, listen: false).appLang.name;
+      final vetDisplayName = LocalizedContent.pickFromMap(
+        Map<String, dynamic>.from(vet),
+        lang,
+        baseKey: 'name',
+      );
+
       final chatId = await ChatService.createChatWithVet(
         userId: userId,
         veterinarianId: vet['id'],
@@ -783,7 +802,8 @@ class _ChatListScreenState extends State<ChatListScreen>
           builder: (context) => UserChatScreen(
             chatId: chatId,
             otherUserId: vet['id'] ?? '',
-            otherUserName: vet['name'] ?? 'طبيب بيطري',
+            otherUserName:
+                vetDisplayName.isNotEmpty ? vetDisplayName : 'طبيب بيطري',
             isVeterinaryChat: true,
           ),
         ),

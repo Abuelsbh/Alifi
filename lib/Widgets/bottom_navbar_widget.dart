@@ -1,26 +1,17 @@
-import 'package:alifi/Utilities/text_style_helper.dart';
-import 'package:alifi/Utilities/theme_helper.dart';
 import 'package:alifi/generated/assets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
-import '../Modules/Auth/login_screen.dart';
-import '../Modules/Main/home/home_screen.dart';
-import '../Modules/Main/veterinary/enhanced_veterinary_screen.dart';
-import '../Modules/add_animal/add_animal_screen.dart';
-import '../Models/pet_report_model.dart';
 import '../Utilities/dialog_helper.dart';
-import '../Utilities/bottom_sheet_helper.dart';
-import '../core/firebase/firebase_config.dart';
 import '../core/services/auth_service.dart';
-import '../core/Theme/app_theme.dart';
 import '../core/Language/translation_service.dart';
+import 'add_animal_entry_sheet.dart';
 import 'login_widget.dart';
-import 'translated_text.dart';
+import 'selected_bottom_nav_bar.dart';
 
-enum SelectedBottomNavBar { home, lostFound, veterinary, profile }
+export 'selected_bottom_nav_bar.dart' show SelectedBottomNavBar;
 
 class BottomNavBarWidget extends StatelessWidget {
   final SelectedBottomNavBar selected;
@@ -61,28 +52,22 @@ class BottomNavBarWidget extends StatelessWidget {
           bool isActive = selected == item.type;
           return GestureDetector(
             onTap: () {
+              if (item.type == SelectedBottomNavBar.lostFound) {
+                if (onTap != null) {
+                  onTap!(SelectedBottomNavBar.lostFound);
+                } else {
+                  AddAnimalEntrySheet.show(context);
+                }
+                return;
+              }
               if (onTap != null) {
-                if (item.type == SelectedBottomNavBar.lostFound) {
-                  _showAnimalTypeBottomSheet(context);
-                } else {
-                  onTap!(item.type);
-                }
+                onTap!(item.type);
+              } else if (AuthService.isAuthenticated) {
+                context.pushNamed(item.routeName ?? 'home');
               } else {
-                if (AuthService.isAuthenticated) {
-                  if (item.type == SelectedBottomNavBar.lostFound) {
-                    _showAnimalTypeBottomSheet(context);
-                  } else {
-                    context.pushNamed(item.routeName ?? 'home');
-                  }
-                } else {
-                  DialogHelper.custom(context: context).customDialog(
-                    dialogWidget: LoginWidget(
-                      onLoginSuccess: () {
-                        //context.go(item.routeName ?? 'home');
-                      },
-                    ),
-                  );
-                }
+                DialogHelper.custom(context: context).customDialog(
+                  dialogWidget: LoginWidget(onLoginSuccess: () {}),
+                );
               }
             },
             child: Container(
@@ -105,14 +90,6 @@ class BottomNavBarWidget extends StatelessWidget {
     );
   }
 
-  void _showAnimalTypeBottomSheet(BuildContext context) {
-    BottomSheetHelper.bottomSheet(
-      context: context,
-      widget: const AnimalTypeSelectionBottomSheet(),
-      topBorderRadius: 20,
-    );
-  }
-
   Widget _buildIcon(String iconPath, Color color) {
     if (iconPath.endsWith('.svg')) {
       return SvgPicture.asset(
@@ -130,118 +107,6 @@ class BottomNavBarWidget extends StatelessWidget {
         color: color,
       );
     }
-  }
-}
-
-class AnimalTypeSelectionBottomSheet extends StatelessWidget {
-  const AnimalTypeSelectionBottomSheet({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: ThemeClass.of(context).primaryColor,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(20.r), topRight: Radius.circular(20.r)),
-
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildAnimalTypeOption(
-             context: context,
-             title: TranslationService.instance.translate('lost_found.lost_pet'),
-             onTap: () => _navigateToAddAnimal(context, ReportType.lost),
-           ),
-           SizedBox(height: 15.h),
-           
-           _buildAnimalTypeOption(
-             context: context,
-             title: TranslationService.instance.translate('lost_found.found_pet'),
-             onTap: () => _navigateToAddAnimal(context, ReportType.found),
-           ),
-           SizedBox(height: 15.h),
-           
-           _buildAnimalTypeOption(
-             context: context,
-             title: TranslationService.instance.translate('adoption.adoption_pet'),
-             onTap: () => _navigateToAddAnimal(context, ReportType.adoption),
-           ),
-           SizedBox(height: 15.h),
-           
-           _buildAnimalTypeOption(
-             context: context,
-             title: TranslationService.instance.translate('breeding.breeding_pet'),
-             onTap: () => _navigateToAddAnimal(context, ReportType.breeding),
-           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnimalTypeOption({
-    required BuildContext context,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-          color: ThemeClass.of(context).secondaryColor,
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(24.r), bottomRight: Radius.circular(24.r)),
-
-          border: Border.all(
-            color: ThemeClass.of(context).secondaryColor,
-            width: 1,
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-                title,
-                style:TextStyleHelper.of(context).s18RegTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor)
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _navigateToAddAnimal(BuildContext context, ReportType reportType) {
-    // إغلاق bottom sheet أولاً
-    Navigator.of(context).pop();
-    
-    // تحديد العنوان بناءً على نوع التقرير
-    String title;
-    switch (reportType) {
-      case ReportType.lost:
-        title = TranslationService.instance.translate('post_report.lost_pet_title');
-        break;
-      case ReportType.found:
-        title = TranslationService.instance.translate('post_report.found_pet_title');
-        break;
-      case ReportType.adoption:
-        title = TranslationService.instance.translate('post_report.adoption_pet_title');
-        break;
-      case ReportType.breeding:
-        title = TranslationService.instance.translate('post_report.breeding_pet_title');
-        break;
-    }
-    
-    // التنقل إلى صفحة إضافة الحيوان مع تمرير النوع والعنوان
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AddAnimalScreen(
-          reportType: reportType,
-          title: title,
-        ),
-      ),
-    );
   }
 }
 
@@ -269,7 +134,6 @@ class _BottomNavBarItemModel {
     title: TranslationService.instance.translate('navigation.lost_found'),
     iconPath: Assets.iconsSettings, // استخدام أيقونة أكثر مناسبة
     type: SelectedBottomNavBar.lostFound,
-    // لا routeName لأنه سيعرض bottom sheet
   );
 
   static _BottomNavBarItemModel get veterinary => _BottomNavBarItemModel(

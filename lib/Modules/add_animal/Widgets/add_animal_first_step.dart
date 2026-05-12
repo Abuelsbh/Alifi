@@ -1,6 +1,5 @@
 import 'package:alifi/Utilities/text_style_helper.dart';
 import 'package:alifi/Utilities/theme_helper.dart';
-import 'package:alifi/core/Font/font_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -9,29 +8,119 @@ import '../add_animal_controller.dart';
 import 'package:alifi/core/Language/app_languages.dart';
 import 'package:provider/provider.dart';
 import 'package:alifi/Utilities/constants.dart';
+import 'package:alifi/Models/pet_report_model.dart';
+import 'package:alifi/Modules/add_animal/add_animal_flow.dart';
 
 class AddAnimalFirstStep extends StatefulWidget {
   final VoidCallback? onNext;
   final VoidCallback? onBack;
   final AddAnimalController con;
-  const AddAnimalFirstStep({Key? key, required this.onNext, this.onBack, required this.con}) : super(key: key);
+  final AddAnimalFlow? flow;
+
+  /// When true, [con.reportType] was set by the parent (e.g. breeding-only flow).
+  final bool categorySelectionLocked;
+  final VoidCallback? onReportCategoryChanged;
+
+  const AddAnimalFirstStep({
+    Key? key,
+    required this.onNext,
+    this.onBack,
+    required this.con,
+    this.flow,
+    this.categorySelectionLocked = false,
+    this.onReportCategoryChanged,
+  }) : super(key: key);
 
   @override
   State<AddAnimalFirstStep> createState() => _AddAnimalFirstStepState();
 }
 
 class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
+  static const List<String> _allCategoryIds = [
+    'lost',
+    'found',
+    'adoption_seeking',
+    'adoption_offering',
+    'breeding',
+  ];
+
+  List<String> get _allowedCategoryIds {
+    switch (widget.flow) {
+      case AddAnimalFlow.lostOrFound:
+        return const ['lost', 'found'];
+      case AddAnimalFlow.adoption:
+        return const ['adoption_seeking', 'adoption_offering'];
+      case AddAnimalFlow.breeding:
+        return const [];
+      case null:
+        return _allCategoryIds;
+    }
+  }
+
+  String? _categoryIdFromCon() {
+    final id = _rawCategoryIdFromCon();
+    if (id != null && !_allowedCategoryIds.contains(id)) {
+      return null;
+    }
+    return id;
+  }
+
+  String? _rawCategoryIdFromCon() {
+    switch (widget.con.reportType) {
+      case ReportType.lost:
+        return 'lost';
+      case ReportType.found:
+        return 'found';
+      case ReportType.adoption:
+        return widget.con.adoptionType == 'seeking'
+            ? 'adoption_seeking'
+            : 'adoption_offering';
+      case ReportType.breeding:
+        return 'breeding';
+      default:
+        return null;
+    }
+  }
+
+  void _applyCategoryId(String? id) {
+    switch (id) {
+      case 'lost':
+        widget.con.reportType = ReportType.lost;
+        widget.con.adoptionType = null;
+        break;
+      case 'found':
+        widget.con.reportType = ReportType.found;
+        widget.con.adoptionType = null;
+        break;
+      case 'adoption_offering':
+        widget.con.reportType = ReportType.adoption;
+        widget.con.adoptionType = 'offering';
+        break;
+      case 'adoption_seeking':
+        widget.con.reportType = ReportType.adoption;
+        widget.con.adoptionType = 'seeking';
+        break;
+      case 'breeding':
+        widget.con.reportType = ReportType.breeding;
+        widget.con.adoptionType = null;
+        break;
+      default:
+        widget.con.reportType = null;
+        widget.con.adoptionType = null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
-      height: 520.h,
+      constraints: BoxConstraints(minHeight: 520.h),
       decoration: BoxDecoration(
         color: ThemeClass.of(context).secondaryColor, // background color
         borderRadius: BorderRadius.circular(24.r), // rounded corners
       ),
-      child: Column(
+      child: SingleChildScrollView(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 20),
@@ -40,6 +129,11 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
             style: TextStyleHelper.of(context).s36ItimTextStyle.copyWith(color: ThemeClass.of(context).backGroundColor),
           ),
           const SizedBox(height: 30),
+
+          if (!widget.categorySelectionLocked) ...[
+            _buildReportCategoryDropdown(),
+            const SizedBox(height: 15),
+          ],
 
           // Title Field
           _buildTextField(widget.con.titleController, Provider.of<AppLanguage>(context, listen: false).translate('add_animal.pet_details.title_field')),
@@ -69,7 +163,7 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
           // Description
           _buildDescriptionField(),
 
-          const Spacer(),
+          SizedBox(height: 24.h),
 
           // Navigation Buttons
           widget.onBack != null ? Row(
@@ -156,6 +250,65 @@ class _AddAnimalFirstStepState extends State<AddAnimalFirstStep> {
           ),
         ],
       ),
+      ),
+    );
+  }
+
+  Widget _buildReportCategoryDropdown() {
+    final appLanguage = Provider.of<AppLanguage>(context, listen: false);
+    final hintStyle =
+        TextStyleHelper.of(context).s14RegTextStyle.copyWith(color: Colors.grey);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          appLanguage.translate('add_animal.pet_details.report_category.label'),
+          style: TextStyleHelper.of(context).s14RegTextStyle.copyWith(
+                color: ThemeClass.of(context).backGroundColor,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        SizedBox(height: 8.h),
+        Container(
+          width: 240.w,
+          padding: EdgeInsets.symmetric(horizontal: 12.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _categoryIdFromCon(),
+              isExpanded: true,
+              hint: Text(
+                appLanguage.translate('add_animal.pet_details.report_category.hint'),
+                style: hintStyle,
+              ),
+              items: _allowedCategoryIds.map((id) {
+                final label = appLanguage.translate(
+                  'add_animal.pet_details.report_category.$id',
+                );
+                return DropdownMenuItem<String>(
+                  value: id,
+                  child: Text(
+                    label,
+                    style: TextStyleHelper.of(context).s14RegTextStyle.copyWith(
+                          color: Colors.black,
+                        ),
+                  ),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  _applyCategoryId(newValue);
+                });
+                widget.onReportCategoryChanged?.call();
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 

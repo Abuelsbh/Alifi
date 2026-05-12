@@ -1,12 +1,19 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../firebase/firebase_config.dart';
+import '../utils/localized_content.dart';
 import 'location_service.dart';
 
 class Advertisement {
   final String id;
   final String? title;
   final String? description;
+  final String? titleEn;
+  final String? titleAr;
+  final String? titleHe;
+  final String? descriptionEn;
+  final String? descriptionAr;
+  final String? descriptionHe;
   final String imageUrl;
   final int displayOrder;
   final bool isActive;
@@ -21,6 +28,12 @@ class Advertisement {
     required this.id,
     this.title,
     this.description,
+    this.titleEn,
+    this.titleAr,
+    this.titleHe,
+    this.descriptionEn,
+    this.descriptionAr,
+    this.descriptionHe,
     required this.imageUrl,
     required this.displayOrder,
     required this.isActive,
@@ -32,12 +45,38 @@ class Advertisement {
     this.updatedAt,
   });
 
+  String? displayTitle(String languageCode) {
+    final s = LocalizedContent.pickFromMap({
+      'title': title,
+      'titleEn': titleEn,
+      'titleAr': titleAr,
+      'titleHe': titleHe,
+    }, languageCode, baseKey: 'title');
+    return s.isEmpty ? null : s;
+  }
+
+  String? displayDescription(String languageCode) {
+    final s = LocalizedContent.pickFromMap({
+      'description': description,
+      'descriptionEn': descriptionEn,
+      'descriptionAr': descriptionAr,
+      'descriptionHe': descriptionHe,
+    }, languageCode, baseKey: 'description');
+    return s.isEmpty ? null : s;
+  }
+
   factory Advertisement.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return Advertisement(
       id: doc.id,
       title: data['title']?.toString().trim().isEmpty == true ? null : data['title'],
       description: data['description']?.toString().trim().isEmpty == true ? null : data['description'],
+      titleEn: data['titleEn']?.toString().trim().isEmpty == true ? null : data['titleEn']?.toString(),
+      titleAr: data['titleAr']?.toString().trim().isEmpty == true ? null : data['titleAr']?.toString(),
+      titleHe: data['titleHe']?.toString().trim().isEmpty == true ? null : data['titleHe']?.toString(),
+      descriptionEn: data['descriptionEn']?.toString().trim().isEmpty == true ? null : data['descriptionEn']?.toString(),
+      descriptionAr: data['descriptionAr']?.toString().trim().isEmpty == true ? null : data['descriptionAr']?.toString(),
+      descriptionHe: data['descriptionHe']?.toString().trim().isEmpty == true ? null : data['descriptionHe']?.toString(),
       imageUrl: data['imageUrl'] ?? '',
       displayOrder: data['displayOrder'] ?? 1,
       isActive: data['isActive'] ?? true,
@@ -56,6 +95,12 @@ class Advertisement {
     return {
       'title': title,
       'description': description,
+      'titleEn': titleEn,
+      'titleAr': titleAr,
+      'titleHe': titleHe,
+      'descriptionEn': descriptionEn,
+      'descriptionAr': descriptionAr,
+      'descriptionHe': descriptionHe,
       'imageUrl': imageUrl,
       'displayOrder': displayOrder,
       'isActive': isActive,

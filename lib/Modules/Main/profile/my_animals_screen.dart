@@ -34,6 +34,7 @@ class _MyAnimalsScreenState extends State<MyAnimalsScreen> {
           builder: (context) => UnifiedPetDetailsScreen(
             type: PetDetailsType.report,
             report: animal,
+            reportListKind: type,
           ),
         ),
       );

@@ -8,6 +8,7 @@ import '../../../Models/pet_report_model.dart';
 import '../../../Widgets/translated_text.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/pet_reports_service.dart';
+import '../../add_animal/add_animal_flow.dart';
 import '../../add_animal/add_animal_screen.dart';
 import 'unified_pet_card.dart';
 
@@ -100,8 +101,7 @@ class _BreedingPetsScreenState extends State<BreedingPetsScreen> {
             context,
             MaterialPageRoute(
               builder: (context) => const AddAnimalScreen(
-                reportType: ReportType.breeding,
-                title: 'إضافة حيوان للتزاوج',
+                flow: AddAnimalFlow.breeding,
               ),
             ),
           );

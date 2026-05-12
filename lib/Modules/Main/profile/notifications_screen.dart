@@ -179,7 +179,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 children: [
                   if (!message.isRead)
                     TextButton.icon(
-                      onPressed: () => _markAsRead(message.id),
+                      onPressed: () => _markAsRead(message),
                       icon: Icon(
                         Icons.mark_email_read,
                         size: 16.sp,
@@ -195,7 +195,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     ),
                   const Spacer(),
                   TextButton.icon(
-                    onPressed: () => _deleteMessage(message.id),
+                    onPressed: () => _deleteMessage(message),
                     icon: Icon(
                       Icons.delete_outline,
                       size: 16.sp,
@@ -319,7 +319,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void _showMessageDetails(AdminMessage message) {
     // Mark as read when opened
     if (!message.isRead) {
-      _markAsRead(message.id);
+      _markAsRead(message);
     }
 
     showDialog(
@@ -379,7 +379,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              _deleteMessage(message.id);
+              _deleteMessage(message);
             },
             child: Text(
               'Delete',
@@ -391,9 +391,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  Future<void> _markAsRead(String messageId) async {
+  Future<void> _markAsRead(AdminMessage message) async {
     try {
-      await NotificationService.markMessageAsRead(messageId);
+      await NotificationService.markMessageAsRead(
+        message.id,
+        linkedAdminMessageId: message.linkedAdminMessageId,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -434,9 +437,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  Future<void> _deleteMessage(String messageId) async {
+  Future<void> _deleteMessage(AdminMessage message) async {
     try {
-      await NotificationService.deleteMessage(messageId);
+      await NotificationService.deleteMessage(
+        message.id,
+        linkedAdminMessageId: message.linkedAdminMessageId,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

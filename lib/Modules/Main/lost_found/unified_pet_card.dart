@@ -56,6 +56,7 @@ class UnifiedPetCard extends StatelessWidget {
             builder: (context) => UnifiedPetDetailsScreen(
               type: PetDetailsType.report,
               report: pet,
+              reportListKind: reportType,
             ),
           ),
         );

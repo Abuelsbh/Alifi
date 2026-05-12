@@ -149,6 +149,9 @@ class AddAnimalController extends StateXController {
     // Reset Step 4
     selectedImages.clear();
     currentImageIndex = 0;
+
+    reportType = null;
+    adoptionType = null;
     
     // Reset additional fields
     adoptionFee = 0.0;
@@ -202,7 +205,8 @@ class AddAnimalController extends StateXController {
       // Get user profile for contact info
       final userProfile = await AuthService.getUserProfile(user.uid);
       final userName = userProfile?['username'] ?? userProfile?['name'] ?? AuthService.userDisplayName ?? '';
-      final userPhone = userProfile?['phoneNumber'] ?? userProfile?['phone'] ?? '';
+      final rawPhone = userProfile?['phoneNumber'] ?? userProfile?['phone'];
+      final userPhone = rawPhone == null ? '' : rawPhone.toString();
       final userEmail = userProfile?['email'] ?? AuthService.userEmail ?? '';
 
       // Get user's selected location

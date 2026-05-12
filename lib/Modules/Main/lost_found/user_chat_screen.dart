@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -16,6 +17,7 @@ import '../../../Widgets/custom_textfield_widget.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gap/gap.dart';
 import 'unified_pet_details_screen.dart';
+import '../../../core/Language/translation_service.dart';
 
 class UserChatScreen extends StatefulWidget {
   final String chatId;
@@ -154,7 +156,7 @@ class _UserChatScreenState extends State<UserChatScreen>
             'type': reportType,
             'petName': data['petName'] ?? 
                       data['petDetails']?['name'] ?? 
-                      'حيوان',
+                      TranslationService.instance.translate('chat.pet_default_name'),
             'imageUrl': (data['imageUrls'] as List?)?.isNotEmpty == true 
                 ? data['imageUrls'][0] 
                 : (data['photos'] as List?)?.isNotEmpty == true 
@@ -235,7 +237,8 @@ class _UserChatScreenState extends State<UserChatScreen>
       });
     } catch (e) {
       if (mounted) {
-        _showErrorSnackBar('خطأ في تحميل الرسائل: $e');
+        _showErrorSnackBar(
+            '${TranslationService.instance.translate('chat.error_loading_messages')}: $e');
         setState(() {
           _isLoading = false;
         });
@@ -250,7 +253,7 @@ class _UserChatScreenState extends State<UserChatScreen>
     final userId = AuthService.userId;
     
     if (userId == null) {
-      _showErrorSnackBar('خطأ في المصادقة');
+      _showErrorSnackBar(TranslationService.instance.translate('chat.error_auth'));
       return;
     }
 
@@ -278,7 +281,8 @@ class _UserChatScreenState extends State<UserChatScreen>
         _scrollToBottom();
       });
     } catch (e) {
-      _showErrorSnackBar('خطأ في إرسال الرسالة: $e');
+      _showErrorSnackBar(
+          '${TranslationService.instance.translate('chat.error_sending_message')}: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -301,7 +305,8 @@ class _UserChatScreenState extends State<UserChatScreen>
         await _uploadAndSendImage(File(image.path));
       }
     } catch (e) {
-      _showErrorSnackBar('خطأ في اختيار الصورة: $e');
+      _showErrorSnackBar(
+          '${TranslationService.instance.translate('chat.error_picking_image')}: $e');
     }
   }
 
@@ -334,7 +339,8 @@ class _UserChatScreenState extends State<UserChatScreen>
         _scrollToBottom();
       });
     } catch (e) {
-      _showErrorSnackBar('خطأ في رفع الصورة: $e');
+      _showErrorSnackBar(
+          '${TranslationService.instance.translate('chat.error_uploading_image')}: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -500,7 +506,7 @@ class _UserChatScreenState extends State<UserChatScreen>
           CircularProgressIndicator(color: AppTheme.primaryGreen),
           SizedBox(height: 16.h),
           Text(
-            'جاري تحميل الرسائل...',
+            TranslationService.instance.translate('chat.loading_messages'),
             style: TextStyle(
               color: Colors.grey[600],
               fontSize: 14.sp,
@@ -514,29 +520,31 @@ class _UserChatScreenState extends State<UserChatScreen>
   Widget _buildPetReportBanner() {
     if (_petReportInfo == null) return const SizedBox.shrink();
     
-    final petName = _petReportInfo!['petName'] ?? 'حيوان';
+    final petName = _petReportInfo!['petName'] ??
+        TranslationService.instance.translate('chat.pet_default_name');
     final imageUrl = _petReportInfo!['imageUrl'] as String?;
     final reportType = _petReportInfo!['type'] ?? 'report';
     final reportId = _petReportInfo!['id'] as String?;
     
-    String typeLabel = 'إعلان';
+    final t = TranslationService.instance;
+    String typeLabel = t.translate('chat.report_label_listing');
     Color typeColor = AppTheme.primaryGreen;
     IconData typeIcon = Icons.pets;
-    
+
     if (reportType == 'lost') {
-      typeLabel = 'مفقود';
+      typeLabel = t.translate('chat.report_label_lost');
       typeColor = AppTheme.error;
       typeIcon = Icons.search;
     } else if (reportType == 'found') {
-      typeLabel = 'موجود';
+      typeLabel = t.translate('chat.report_label_found');
       typeColor = AppTheme.success;
       typeIcon = Icons.check_circle;
     } else if (reportType == 'adoption') {
-      typeLabel = 'تبني';
+      typeLabel = t.translate('chat.report_label_adoption');
       typeColor = AppTheme.primaryGreen;
       typeIcon = Icons.favorite;
     } else if (reportType == 'breeding') {
-      typeLabel = 'تزاوج';
+      typeLabel = t.translate('chat.report_label_breeding');
       typeColor = AppTheme.primaryOrange;
       typeIcon = Icons.family_restroom;
     }
@@ -630,7 +638,7 @@ class _UserChatScreenState extends State<UserChatScreen>
                   ),
                   SizedBox(height: 4.h),
                   Text(
-                    'محادثة حول: $petName',
+                    '${t.translate('chat.conversation_about')} $petName',
                     style: TextStyle(
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w600,
@@ -641,7 +649,7 @@ class _UserChatScreenState extends State<UserChatScreen>
                   ),
                   SizedBox(height: 2.h),
                   Text(
-                    'اضغط لعرض الإعلان',
+                    t.translate('chat.tap_to_view_listing'),
                     style: TextStyle(
                       fontSize: 10.sp,
                       color: Colors.grey[600],
@@ -710,17 +718,18 @@ class _UserChatScreenState extends State<UserChatScreen>
             if (finalDetailsType == PetDetailsType.report) {
               return UnifiedPetDetailsScreen(
                 type: finalDetailsType,
-                report: {'id': reportId, ...data},
+                report: {...data, 'id': reportId},
+                reportListKind: reportType == 'found' ? 'found' : 'lost',
               );
             } else if (finalDetailsType == PetDetailsType.adoption) {
               return UnifiedPetDetailsScreen(
                 type: finalDetailsType,
-                report: {'id': reportId, ...data},
+                report: {...data, 'id': reportId},
               );
             } else {
               return UnifiedPetDetailsScreen(
                 type: finalDetailsType,
-                report: {'id': reportId, ...data},
+                report: {...data, 'id': reportId},
               );
             }
           },
@@ -790,22 +799,19 @@ class _UserChatScreenState extends State<UserChatScreen>
   }
 
   String _formatDateSeparator(DateTime date) {
+    final lang = TranslationService.instance.currentLanguage;
+    final t = TranslationService.instance;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final messageDate = DateTime(date.year, date.month, date.day);
-    
+
     if (_isSameDay(messageDate, today)) {
-      return 'اليوم';
+      return t.translate('chat.today');
     } else if (_isSameDay(messageDate, yesterday)) {
-      return 'أمس';
+      return t.translate('chat.yesterday');
     } else {
-      // Format: "15 نوفمبر" or "15/11"
-      final months = [
-        'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-        'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
-      ];
-      return '${date.day} ${months[date.month - 1]}';
+      return DateFormat.yMMMd(lang).format(date);
     }
   }
 
@@ -861,7 +867,7 @@ class _UserChatScreenState extends State<UserChatScreen>
           ),
           SizedBox(height: 16.h),
           Text(
-            'ابدأ محادثة',
+            TranslationService.instance.translate('chat.start_conversation'),
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
@@ -870,7 +876,7 @@ class _UserChatScreenState extends State<UserChatScreen>
           ),
           SizedBox(height: 8.h),
           Text(
-            'ارسل رسالة لبدء المحادثة',
+            TranslationService.instance.translate('chat.send_message_to_begin'),
             style: TextStyle(
               fontSize: 14.sp,
               color: Colors.grey[500],
@@ -902,13 +908,13 @@ class _UserChatScreenState extends State<UserChatScreen>
                     children: [
                       _buildAttachmentButton(
                         icon: Icons.camera_alt,
-                        label: 'كاميرا',
+                        label: TranslationService.instance.translate('chat.camera'),
                         color: AppTheme.primaryGreen,
                         onPressed: () => _sendImageMessage(ImageSource.camera),
                       ),
                       _buildAttachmentButton(
                         icon: Icons.photo_library,
-                        label: 'معرض',
+                        label: TranslationService.instance.translate('chat.gallery'),
                         color: AppTheme.primaryOrange,
                         onPressed: () => _sendImageMessage(ImageSource.gallery),
                       ),
@@ -977,7 +983,7 @@ class _UserChatScreenState extends State<UserChatScreen>
                   height: 42.h,
                   controller: _messageController,
                   borderStyleFlag: 4,
-                  hint: 'اكتب رسالة...',
+                  hint: TranslationService.instance.translate('chat.type_message'),
                   onSave: (_) => _sendTextMessage(),
                 ),
                 GestureDetector(

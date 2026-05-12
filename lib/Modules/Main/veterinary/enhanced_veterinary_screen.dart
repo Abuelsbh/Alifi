@@ -2,10 +2,14 @@ import 'dart:async';
 import 'package:alifi/Utilities/text_style_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 import '../../../Widgets/bottom_navbar_widget.dart';
 import '../../../core/Theme/app_theme.dart';
+import '../../../core/Language/app_languages.dart';
+import '../../../core/utils/localized_content.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../Widgets/custom_card.dart';
@@ -16,6 +20,7 @@ import 'real_time_chat_screen.dart';
 import '../../../Widgets/home_header_widget.dart';
 import '../../../core/services/location_service.dart';
 import '../../../Models/location_model.dart';
+import '../../../core/Language/translation_service.dart';
 
 class EnhancedVeterinaryScreen extends StatefulWidget {
   static const String routeName = '/EnhancedVeterinaryScreen';
@@ -239,21 +244,42 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
   void _filterVeterinarians(String query) {
     setState(() {
       _filteredVeterinarians = _veterinarians.where((vet) {
-        final name = vet['name']?.toString().toLowerCase() ?? '';
-        final specialization = vet['specialization']?.toString().toLowerCase() ?? '';
         final searchLower = query.toLowerCase();
-
-        return name.contains(searchLower) ||
-               specialization.contains(searchLower);
+        const keys = [
+          'name',
+          'nameEn',
+          'nameAr',
+          'nameHe',
+          'specialization',
+          'specializationEn',
+          'specializationAr',
+          'specializationHe',
+        ];
+        for (final k in keys) {
+          final v = vet[k]?.toString().toLowerCase() ?? '';
+          if (v.contains(searchLower)) return true;
+        }
+        return false;
       }).toList();
     });
+  }
+
+  bool _isPlaceholderDisplayName(String? name) {
+    if (name == null || name.isEmpty) return true;
+    final n = name.trim();
+    const placeholders = {'مستخدم', 'المستخدم', 'User', 'user', 'משתמש'};
+    if (placeholders.contains(n)) return true;
+    final generic = TranslationService.instance.translate('chat.user');
+    final participant = TranslationService.instance.translate('chat.participant');
+    return n == generic || n == participant;
   }
 
   Future<void> _startChatWithVet(Map<String, dynamic> vet) async {
     if (!AuthService.isAuthenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('يرجى تسجيل الدخول أولاً للتحدث مع الطبيب'),
+        SnackBar(
+          content: Text(
+              TranslationService.instance.translate('chat.login_first_to_talk_vet')),
           backgroundColor: Colors.red,
         ),
       );
@@ -263,12 +289,19 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
     try {
       final userId = AuthService.userId!;
       final vetId = vet['id'] ?? '';
+      final lang = Provider.of<AppLanguage>(context, listen: false).appLang.name;
+      final vetDisplayName = LocalizedContent.pickFromMap(
+        Map<String, dynamic>.from(vet),
+        lang,
+        baseKey: 'name',
+      );
+      final t = TranslationService.instance;
 
       // Create or get existing chat
       final chatId = await ChatService.createChatWithVet(
         userId: userId,
         veterinarianId: vetId,
-        initialMessage: 'مرحباً دكتور، أحتاج استشارة بيطرية',
+        initialMessage: t.translate('chat.vet_consultation_initial_message'),
       );
 
       if (mounted) {
@@ -278,7 +311,9 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
             builder: (context) => UserChatScreen(
               chatId: chatId,
               otherUserId: vetId,
-              otherUserName: vet['name'] ?? 'طبيب بيطري',
+              otherUserName: vetDisplayName.isNotEmpty
+                  ? vetDisplayName
+                  : t.translate('chat.veterinarian_fallback_name'),
               isVeterinaryChat: true,
             ),
           ),
@@ -288,7 +323,8 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطأ في بدء المحادثة: $e'),
+            content: Text(
+                '${TranslationService.instance.translate('chat.error_starting_chat')}: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -298,6 +334,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
 
   @override
   Widget build(BuildContext context) {
+    final t = TranslationService.instance;
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       bottomNavigationBar: BottomNavBarWidget(
@@ -329,9 +366,9 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
               indicatorPadding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 6.h),
               labelColor: AppTheme.primaryGreen,
               unselectedLabelColor: Colors.grey,
-              tabs: const [
-                Tab(text: 'الأطباء المتاحين'),
-                Tab(text: 'محادثاتي'),
+              tabs: [
+                Tab(text: t.translate('chat.tab_available_veterinarians')),
+                Tab(text: t.translate('chat.tab_my_chats')),
               ],
             ),
             
@@ -361,7 +398,8 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
             controller: _searchController,
             onChanged: _filterVeterinarians,
             decoration: InputDecoration(
-              hintText: 'البحث عن طبيب أو تخصص...',
+              hintText:
+                  TranslationService.instance.translate('chat.search_veterinarian_hint'),
               prefixIcon: Icon(Icons.search, color: AppTheme.primaryGreen),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12.r),
@@ -423,9 +461,9 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
               color: Colors.grey,
             ),
             SizedBox(height: 16.h),
-            const Text(
-              'يرجى تسجيل الدخول لعرض محادثاتك',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
+            Text(
+              TranslationService.instance.translate('chat.login_to_view_chats_subtitle'),
+              style: const TextStyle(fontSize: 18, color: Colors.grey),
             ),
           ],
         ),
@@ -444,12 +482,12 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
                 ),
                 SizedBox(height: 16.h),
                 Text(
-                  'لا توجد محادثات بعد',
+                  TranslationService.instance.translate('chat.no_chats_yet'),
                   style: TextStyle(fontSize: 18, color: Colors.grey[600], fontWeight: FontWeight.w500),
                 ),
                 SizedBox(height: 8.h),
                 Text(
-                  'ابدأ محادثة مع طبيب بيطري من التبويب الأول',
+                  TranslationService.instance.translate('chat.start_chat_with_vet_from_tab'),
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                 ),
@@ -459,7 +497,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
                     _tabController.animateTo(0); // Switch to veterinarians tab
                   },
                   icon: Icon(Icons.person),
-                  label: Text('عرض الأطباء البيطريين'),
+                  label: Text(TranslationService.instance.translate('chat.show_veterinarians')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryGreen,
                     foregroundColor: Colors.white,
@@ -469,7 +507,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
                 ElevatedButton.icon(
                   onPressed: _loadData,
                   icon: Icon(Icons.refresh),
-                  label: Text('تحديث المحادثات'),
+                  label: Text(TranslationService.instance.translate('chat.refresh_chats')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
@@ -503,12 +541,12 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
           ),
           SizedBox(height: 16.h),
           Text(
-            'لا يوجد أطباء متاحين حالياً',
+            TranslationService.instance.translate('veterinary.no_vets_available_now'),
             style: TextStyle(fontSize: 18, color: Colors.grey[600]),
           ),
           SizedBox(height: 8.h),
           Text(
-            'جرب تحديث الصفحة أو تأكد من الاتصال بالإنترنت',
+            TranslationService.instance.translate('veterinary.try_refresh_or_network'),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
@@ -516,7 +554,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
           ElevatedButton.icon(
             onPressed: _loadData,
             icon: Icon(Icons.refresh),
-            label: Text('تحديث'),
+            label: Text(TranslationService.instance.translate('home.refresh')),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryGreen,
               foregroundColor: Colors.white,
@@ -531,7 +569,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
               border: Border.all(color: Colors.blue[200]!),
             ),
             child: Text(
-              '💡 إذا استمرت المشكلة، تأكد من أن الأطباء البيطريين مسجلين في النظام',
+              TranslationService.instance.translate('veterinary.vets_register_system_hint'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12.sp,
@@ -545,6 +583,16 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
   }
 
   Widget _buildVeterinarianCard(Map<String, dynamic> vet) {
+    final lang = Provider.of<AppLanguage>(context).appLang.name;
+    final vetMap = Map<String, dynamic>.from(vet);
+    final vetName =
+        LocalizedContent.pickFromMap(vetMap, lang, baseKey: 'name');
+    final vetSpec = LocalizedContent.pickFromMap(
+      vetMap,
+      lang,
+      baseKey: 'specialization',
+    );
+
     return CustomCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -595,14 +643,14 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      vet['name'] ?? '',
+                      vetName,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     SizedBox(height: 4.h),
                     Text(
-                      vet['specialization'] ?? '',
+                      vetSpec,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppTheme.primaryGreen,
                       ),
@@ -620,7 +668,7 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
                   padding: EdgeInsets.symmetric(horizontal: 12.w),
                 ),
                 child: Text(
-                  'محادثة',
+                  TranslationService.instance.translate('chat.open_chat_action'),
                   style: TextStyle(fontSize: 12.sp),
                 ),
               ),
@@ -726,8 +774,8 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
                               final name = isVeterinaryChat
                                   ? (data['name'] as String?)
                                   : (data['username'] as String?) ?? (data['name'] as String?);
-                              if (name != null && name.isNotEmpty && name != 'المستخدم' && name != 'مستخدم') {
-                                displayName = name;
+                              if (!_isPlaceholderDisplayName(name)) {
+                                displayName = name!;
                               }
                             }
                           }
@@ -793,15 +841,16 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
 
   String _getParticipantName(ChatModel chat) {
     final userId = AuthService.userId;
-    if (userId == null) return 'مستخدم';
-    
+    final generic = TranslationService.instance.translate('chat.user');
+    if (userId == null) return generic;
+
     for (final participantId in chat.participants) {
       if (participantId != userId) {
-        return chat.participantNames[participantId] ?? 'مستخدم';
+        return chat.participantNames[participantId] ?? generic;
       }
     }
-    
-    return 'مستخدم';
+
+    return generic;
   }
 
   String? _getOtherUserId(ChatModel chat) {
@@ -818,23 +867,25 @@ class _EnhancedVeterinaryScreenState extends State<EnhancedVeterinaryScreen>
   }
 
   String _formatTime(DateTime dateTime) {
+    final lang = TranslationService.instance.currentLanguage;
+    final t = TranslationService.instance;
     final now = DateTime.now();
     final difference = now.difference(dateTime);
-    
+
     if (difference.inDays > 0) {
       if (difference.inDays == 1) {
-        return 'أمس';
+        return t.translate('chat.yesterday');
       } else if (difference.inDays < 7) {
-        return '${difference.inDays} أيام';
+        return '${difference.inDays} ${t.translate('chat.time_days')}';
       } else {
-        return '${dateTime.day}/${dateTime.month}';
+        return DateFormat.yMd(lang).format(dateTime);
       }
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}س';
+      return '${difference.inHours}${t.translate('chat.time_hours_short')}';
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}د';
+      return '${difference.inMinutes}${t.translate('chat.time_minutes_short')}';
     } else {
-      return 'الآن';
+      return t.translate('chat.time_now');
     }
   }
 

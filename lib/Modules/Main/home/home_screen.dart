@@ -20,6 +20,7 @@ import '../../../core/firebase/firebase_config.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/pet_reports_service.dart';
 import '../../../core/services/chat_service.dart';
+import '../../../core/services/pet_stores_service.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/services/veterinary_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -70,6 +71,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _totalAdoptionPets = 0;
   int _totalBreedingPets = 0;
   int _totalVeterinarians = 0;
+  int _totalPetStores = 0;
   int _unreadMessages = 0;
   int _userUnreadMessages = 0;
   bool _isLoading = true;
@@ -401,6 +403,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         
         // Load breeding pets directly from Firebase
         _loadBreedingPetsCount();
+
+        _loadPetStoresCount();
         
         // Refresh adoption and breeding count every 30 seconds
         _refreshTimer?.cancel(); // Cancel existing timer
@@ -408,6 +412,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           if (mounted) {
             _loadAdoptionPetsCount();
             _loadBreedingPetsCount();
+            _loadPetStoresCount();
           } else {
             timer.cancel();
           }
@@ -492,6 +497,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
       }
 
+      if (mounted) _loadPetStoresCount();
+
       // Listen for location changes from Firebase
       final locationsStream = LocationService.getActiveLocationsStream();
       _locationSubscription = locationsStream.listen((locations) {
@@ -522,6 +529,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               _selectedLocation = null;
             });
           }
+          _loadPetStoresCount();
         }
       }, onError: (error) {
         print('❌ Error in location stream: $error');
@@ -561,6 +569,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       if (mounted) {
         setState(() {
           _totalBreedingPets = 0; // Fallback to 0 on error
+        });
+      }
+    }
+  }
+
+  Future<void> _loadPetStoresCount() async {
+    try {
+      final stores = await PetStoresService.getActivePetStoresForUserLocation();
+      if (mounted) {
+        setState(() {
+          _totalPetStores = stores.length;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _totalPetStores = 0;
         });
       }
     }
@@ -740,7 +765,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           'subtitle': TranslationService.instance.translate('home.pet_stores_subtitle'),
           'footerColor': ThemeClass.of(context).secondaryColor, // Greeue
           'icon': Assets.imagesStore,
-          'badgeNumber': "0",
+          'badgeNumber': _totalPetStores.toString(),
           'badgeColor': ThemeClass.of(context).primaryColor, // Orange
           'onTap': _navigateToStores,
         };

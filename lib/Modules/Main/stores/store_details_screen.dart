@@ -18,6 +18,13 @@ class StoreDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = Provider.of<AppLanguage>(context).appLang.name;
+    final displayName = PetStoresService.storeLocalized(store, lang, 'name');
+    final displayDescription =
+        PetStoresService.storeLocalized(store, lang, 'description');
+    final displayAddress =
+        PetStoresService.storeLocalized(store, lang, 'address');
+    final displayCity = PetStoresService.storeLocalized(store, lang, 'city');
     final rating = (store['rating'] ?? 4.0).toDouble();
 
     return Scaffold(
@@ -71,7 +78,10 @@ class StoreDetailsScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              store['name'] ?? Provider.of<AppLanguage>(context).translate('stores.unknown_store'),
+                              displayName.isNotEmpty
+                                  ? displayName
+                                  : Provider.of<AppLanguage>(context)
+                                      .translate('stores.unknown_store'),
                               style: TextStyle(
                                 fontSize: 24.sp,
                                 fontWeight: FontWeight.bold,
@@ -145,11 +155,11 @@ class StoreDetailsScreen extends StatelessWidget {
                   SizedBox(height: 24.h),
 
                   // Description
-                  if (store['description'] != null && store['description'].isNotEmpty) ...[
+                  if (displayDescription.isNotEmpty) ...[
                     _buildSectionTitle(context, 'stores.description'),
                     SizedBox(height: 8.h),
                     Text(
-                      store['description'],
+                      displayDescription,
                       style: TextStyle(
                         fontSize: 16.sp,
                         color: AppTheme.lightOnBackground,
@@ -162,7 +172,7 @@ class StoreDetailsScreen extends StatelessWidget {
                   // Contact Information
                   _buildSectionTitle(context, 'stores.contact_info'),
                   SizedBox(height: 12.h),
-                  _buildContactCard(),
+                  _buildContactCard(displayAddress, displayCity, displayName),
 
                   SizedBox(height: 24.h),
 
@@ -174,7 +184,11 @@ class StoreDetailsScreen extends StatelessWidget {
                   SizedBox(height: 24.h),
 
                   // Action Buttons
-                  _buildActionButtons(context),
+                  _buildActionButtons(
+                    context,
+                    displayAddress,
+                    displayCity,
+                  ),
 
                   SizedBox(height: 40.h),
                 ],
@@ -220,7 +234,11 @@ class StoreDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildContactCard() {
+  Widget _buildContactCard(
+    String displayAddress,
+    String displayCity,
+    String displayName,
+  ) {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
@@ -237,11 +255,12 @@ class StoreDetailsScreen extends StatelessWidget {
       child: Column(
         children: [
           // Address
-          if (store['address'] != null && store['address'].isNotEmpty)
+          if (displayAddress.isNotEmpty)
             _buildContactItem(
               icon: Icons.location_on,
-              title: '${store['address']}, ${store['city'] ?? ''}',
-              onTap: () => _openMap(),
+              title:
+                  '$displayAddress${displayCity.isNotEmpty ? ', $displayCity' : ''}',
+              onTap: () => _openMap(displayAddress, displayCity),
             ),
 
           // Phone
@@ -257,7 +276,7 @@ class StoreDetailsScreen extends StatelessWidget {
             _buildContactItem(
               icon: Icons.email,
               title: store['email'],
-              onTap: () => _sendEmail(store['email']),
+              onTap: () => _sendEmail(store['email'], displayName),
             ),
 
           // Website
@@ -427,7 +446,11 @@ class StoreDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(
+    BuildContext context,
+    String displayAddress,
+    String displayCity,
+  ) {
     return Column(
       children: [
         // Call Button
@@ -476,7 +499,9 @@ class StoreDetailsScreen extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: _openMap,
+            onPressed: displayAddress.isNotEmpty
+                ? () => _openMap(displayAddress, displayCity)
+                : null,
             icon: const Icon(Icons.directions),
             label: const TranslatedText('stores.get_directions'),
             style: OutlinedButton.styleFrom(
@@ -501,11 +526,12 @@ class StoreDetailsScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _sendEmail(String email) async {
+  Future<void> _sendEmail(String email, String storeDisplayName) async {
     final Uri emailUri = Uri(
       scheme: 'mailto',
       path: email,
-      query: 'subject=Inquiry about ${store['name']}',
+      query:
+          'subject=Inquiry about ${Uri.encodeComponent(storeDisplayName.isNotEmpty ? storeDisplayName : 'store')}',
     );
     if (await canLaunchUrl(emailUri)) {
       await launchUrl(emailUri);
@@ -519,8 +545,8 @@ class StoreDetailsScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _openMap() async {
-    final address = '${store['address']}, ${store['city']}';
+  Future<void> _openMap(String displayAddress, String displayCity) async {
+    final address = '$displayAddress, $displayCity';
     final Uri mapUri = Uri.parse(
       'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(address)}',
     );

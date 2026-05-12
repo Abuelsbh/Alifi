@@ -37,11 +37,9 @@ class _AddPetScreenState extends State<AddPetScreen> {
   
   final List<String> _petTypes = [
     'كلب',
-    'قطة', 
-    'أرنب',
-    'طائر',
-    'سمك',
-    'همستر',
+    'قطة',
+    'طير',
+    'حصان',
     'أخرى',
   ];
   

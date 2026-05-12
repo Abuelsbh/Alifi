@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../firebase/firebase_config.dart';
+import '../utils/localized_content.dart';
 import 'location_service.dart';
 
 class PetStoresService {
@@ -193,18 +194,34 @@ class PetStoresService {
   static Future<List<Map<String, dynamic>>> searchPetStores(String query) async {
     try {
       final stores = await getActivePetStoresForUserLocation();
-      
+      final searchQuery = query.toLowerCase();
+
       return stores.where((store) {
-        final name = store['name']?.toString().toLowerCase() ?? '';
-        final description = store['description']?.toString().toLowerCase() ?? '';
         final category = store['category']?.toString().toLowerCase() ?? '';
-        final city = store['city']?.toString().toLowerCase() ?? '';
-        final searchQuery = query.toLowerCase();
-        
-        return name.contains(searchQuery) || 
-               description.contains(searchQuery) ||
-               category.contains(searchQuery) ||
-               city.contains(searchQuery);
+        if (category.contains(searchQuery)) return true;
+        const textKeys = [
+          'name',
+          'nameEn',
+          'nameAr',
+          'nameHe',
+          'description',
+          'descriptionEn',
+          'descriptionAr',
+          'descriptionHe',
+          'city',
+          'cityEn',
+          'cityAr',
+          'cityHe',
+          'address',
+          'addressEn',
+          'addressAr',
+          'addressHe',
+        ];
+        for (final k in textKeys) {
+          final v = store[k]?.toString().toLowerCase() ?? '';
+          if (v.contains(searchQuery)) return true;
+        }
+        return false;
       }).toList();
     } catch (e) {
       print('Error searching pet stores: $e');
@@ -265,10 +282,38 @@ class PetStoresService {
     }
   }
 
+  // Canonical city key for filtering (prefers English field when present).
+  static String cityCanonical(Map<String, dynamic> store) {
+    final en = store['cityEn']?.toString().trim() ?? '';
+    if (en.isNotEmpty) return en;
+    return store['city']?.toString().trim() ?? '';
+  }
+
+  static String storeLocalized(
+    Map<String, dynamic> store,
+    String languageCode,
+    String baseKey,
+  ) {
+    return LocalizedContent.pickFromMap(store, languageCode, baseKey: baseKey);
+  }
+
+  static String cityLabelForCanonical(
+    List<Map<String, dynamic>> stores,
+    String canonical,
+    String languageCode,
+  ) {
+    for (final store in stores) {
+      if (cityCanonical(store) == canonical) {
+        return storeLocalized(store, languageCode, 'city');
+      }
+    }
+    return canonical;
+  }
+
   // Get available cities from a list of stores (e.g. filtered by location)
   static List<String> getCitiesFromStores(List<Map<String, dynamic>> stores) {
     final cities = stores
-        .map((store) => store['city']?.toString() ?? '')
+        .map(cityCanonical)
         .where((city) => city.isNotEmpty)
         .toSet()
         .toList();

@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/services/veterinary_service.dart';
 import '../../../core/Language/translation_service.dart';
+import '../../../core/utils/localized_content.dart';
 import 'enhanced_chat_screen.dart';
 
 class VeterinarianDashboardScreen extends StatefulWidget {
@@ -77,6 +78,17 @@ class _VeterinarianDashboardScreenState extends State<VeterinarianDashboardScree
       );
     }
 
+    final lang = TranslationService.instance.currentLanguage;
+    final vetMap = _currentVet != null
+        ? Map<String, dynamic>.from(_currentVet!)
+        : <String, dynamic>{};
+    final vetName = _currentVet != null
+        ? LocalizedContent.pickFromMap(vetMap, lang, baseKey: 'name')
+        : '';
+    final vetSpec = _currentVet != null
+        ? LocalizedContent.pickFromMap(vetMap, lang, baseKey: 'specialization')
+        : '';
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
@@ -146,7 +158,7 @@ class _VeterinarianDashboardScreenState extends State<VeterinarianDashboardScree
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _currentVet?['name'] ?? 'دكتور',
+                          vetName.isNotEmpty ? vetName : 'دكتور',
                           style: TextStyle(
                             fontSize: 18.sp,
                             fontWeight: FontWeight.bold,
@@ -155,7 +167,7 @@ class _VeterinarianDashboardScreenState extends State<VeterinarianDashboardScree
                         ),
                         SizedBox(height: 4.h),
                         Text(
-                          _currentVet?['specialization'] ?? 'طبيب بيطري',
+                          vetSpec.isNotEmpty ? vetSpec : 'طبيب بيطري',
                           style: TextStyle(
                             fontSize: 14.sp,
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -409,7 +421,8 @@ class _VeterinarianDashboardScreenState extends State<VeterinarianDashboardScree
                                     builder: (context) => EnhancedChatScreen(
                                       chatId: chat['chatId'],
                                       veterinarianId: _currentVet!['uid'],
-                                      veterinarianName: _currentVet!['name'],
+                                      veterinarianName:
+                                          vetName.isNotEmpty ? vetName : _currentVet!['name'],
                                     ),
                                   ),
                                 );

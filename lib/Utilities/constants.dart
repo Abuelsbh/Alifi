@@ -81,10 +81,7 @@ class AppConstants {
     'Dog',
     'Cat',
     'Bird',
-    'Fish',
-    'Rabbit',
-    'Hamster',
-    'Guinea Pig',
+    'Horse',
     'Other',
   ];
   
@@ -125,6 +122,16 @@ class AppConstants {
       'Finch',
       'Parakeet',
       'Lovebird',
+      'Other',
+    ],
+    'Horse': [
+      'Arabian',
+      'Thoroughbred',
+      'Quarter Horse',
+      'Paint',
+      'Appaloosa',
+      'Welsh Pony',
+      'Shetland Pony',
       'Other',
     ],
   };
